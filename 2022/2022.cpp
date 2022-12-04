@@ -269,12 +269,62 @@ void day3_2()
     file.close();
 }
 
+void day4()
+{
+    string line;
+    std::ifstream file("./input/day4.txt");
+    if (file.is_open())
+    {
+        long long scoreFullOverlap = 0;
+        long long scoreSingleOverlap = 0;
+        while (std::getline(file, line))
+        {
+            std::string l1 = line.substr(0, line.find(","));
+            std::string l2 = line.substr( line.find(",") +1);
+
+            int l1a = atoi(l1.substr(0, l1.find("-")).c_str());
+            int l1b = atoi(l1.substr( l1.find("-") + 1).c_str());
+
+            int l2a = atoi(l2.substr(0, l2.find("-")).c_str());
+            int l2b = atoi(l2.substr(l2.find("-") + 1).c_str());
+
+            if (l1a >= l2a && l1b <= l2b)
+            {
+                ++scoreFullOverlap;
+            }
+            else
+            {
+                if (l2a >= l1a && l2b <= l1b)
+                {
+                    ++scoreFullOverlap;
+                }
+            }
+
+            if (l1a >= l2a && l1a <= l2b)
+            {
+                ++scoreSingleOverlap;
+            }
+            else
+            {
+                if (l2a >= l1a && l2a <= l1b)
+                {
+                    ++scoreSingleOverlap;
+                }
+            }
+
+        }
+        std::cout << "Day4 =>" << scoreFullOverlap << "," << scoreSingleOverlap<<"\n";
+    }
+    file.close();
+}
+
 int main()
 {
     day1();
     day2();
     day3();
     day3_2();
+    day4();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
