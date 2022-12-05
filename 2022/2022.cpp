@@ -11,9 +11,8 @@
 #include <assert.h>     /* assert */
 #include <set>
 #include <map>
-
-#define ALL( X ) X.begin(), X.end()
-
+#include <stack>
+#include <queue>
 
 using namespace std;
 
@@ -318,6 +317,115 @@ void day4()
     file.close();
 }
 
+void day5_buildStacks(std::vector<string> input, std::vector<std::stack<char>>& _stacks, std::vector<std::vector<char>>& _queues)
+{
+    int totalStacks = std::count(input.back().begin(), input.back().end(), '[');
+
+    for (int i = 0; i < totalStacks; ++i)
+    {
+        std::stack<char> _newStack;
+        _stacks.push_back(_newStack);
+
+        std::vector<char> _newQueue;
+        _queues.push_back(_newQueue);
+    }
+
+    for (int i = input.size() - 1; i >= 0; --i)
+    {
+        int actualIndex = 0;
+        int actualStack = 0;
+        string msg = input[i];
+        while (actualIndex < msg.size())
+        {
+            if (msg[actualIndex] == '[')
+            {
+                _stacks[actualStack].push(msg[actualIndex + 1]);
+                _queues[actualStack].push_back(msg[actualIndex + 1]);
+            }
+             actualIndex += 4; "[<Letter>]<space>";
+            ++actualStack;
+        }
+    }
+}
+
+void day5_parseMovements(std::string input, std::vector<std::stack<char>>& _stacks, std::vector<std::vector<char>>& _queues)
+{
+    //move XX from YY to ZZ
+    auto posFrom = input.find("from");
+    auto posTo = input.find("to");
+
+    int totalToMove = atoi(input.substr(5, posFrom - 5).c_str());
+    int from = atoi(input.substr(posFrom + 5, posTo - (posFrom + 5)).c_str()) - 1;
+    int to = atoi(input.substr(posTo + 3).c_str()) - 1;
+
+    for (int i = 0; i < totalToMove; ++i)
+    {
+        {
+            int value = _stacks[from].top();
+            _stacks[to].push(value);
+            _stacks[from].pop();
+        }
+
+        {
+            int value = _queues[from][_queues[from].size() - totalToMove + i];
+            _queues[to].push_back(value);
+        }
+    }
+
+    //remove moved elements from queue
+    for (int i = 0; i < totalToMove; ++i)
+    {
+        _queues[from].pop_back();
+    }
+}
+
+void day5()
+{
+    string line;
+    std::ifstream file("./input/day5.txt");
+    if (file.is_open())
+    {
+        std::vector<std::stack<char>> stacks;
+        std::vector<std::vector<char>> queues;
+
+        //read actual stack info
+        std::vector<string> linesStack;
+        bool findEndStacks = false;
+        while (!findEndStacks)
+        {
+            std::getline(file, line);
+            if (std::find(line.begin(), line.end(), '1') != line.end())
+            {
+                findEndStacks = true;
+            }
+            else
+            {
+                linesStack.push_back(line);
+            }
+        }
+        day5_buildStacks(linesStack, stacks, queues);
+
+        std::getline(file, line);//empty line
+
+        //movements
+        while (std::getline(file, line))
+        {
+            day5_parseMovements(line, stacks, queues);
+        }
+        for (auto s : stacks)
+        {
+            std::cout << s.top();
+        }
+        std::cout << ",";
+        for (auto s : queues)
+        {
+            std::cout << s.back();
+        }
+        std::cout << "\n";
+    }
+    file.close();
+}
+
 int main()
 {
     day1();
@@ -325,6 +433,7 @@ int main()
     day3();
     day3_2();
     day4();
+    day5();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
