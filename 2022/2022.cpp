@@ -241,11 +241,11 @@ void day3_2()
 
             std::set<char> c12;
             std::set<char> c123;
-            
+
             std::set_intersection(c1.begin(), c1.end(),
                 c2.begin(), c2.end(),
                 std::inserter(c12, c12.begin()));
-            
+
             std::set_intersection(c12.begin(), c12.end(),
                 c3.begin(), c3.end(),
                 std::inserter(c123, c123.begin()));
@@ -279,10 +279,10 @@ void day4()
         while (std::getline(file, line))
         {
             std::string l1 = line.substr(0, line.find(","));
-            std::string l2 = line.substr( line.find(",") +1);
+            std::string l2 = line.substr(line.find(",") + 1);
 
             int l1a = atoi(l1.substr(0, l1.find("-")).c_str());
-            int l1b = atoi(l1.substr( l1.find("-") + 1).c_str());
+            int l1b = atoi(l1.substr(l1.find("-") + 1).c_str());
 
             int l2a = atoi(l2.substr(0, l2.find("-")).c_str());
             int l2b = atoi(l2.substr(l2.find("-") + 1).c_str());
@@ -312,7 +312,7 @@ void day4()
             }
 
         }
-        std::cout << "Day4 =>" << scoreFullOverlap << "," << scoreSingleOverlap<<"\n";
+        std::cout << "Day4 =>" << scoreFullOverlap << "," << scoreSingleOverlap << "\n";
     }
     file.close();
 }
@@ -342,7 +342,7 @@ void day5_buildStacks(std::vector<string> input, std::vector<std::stack<char>>& 
                 _stacks[actualStack].push(msg[actualIndex + 1]);
                 _queues[actualStack].push_back(msg[actualIndex + 1]);
             }
-             actualIndex += 4; "[<Letter>]<space>";
+            actualIndex += 4; "[<Letter>]<space>";
             ++actualStack;
         }
     }
@@ -431,7 +431,7 @@ bool day6_allDiferent(const string& s, int startEndIndex, int totalDifferent)
 {
     std::set<char> cache;
 
-    for(int i = startEndIndex - totalDifferent; i < startEndIndex; ++i)
+    for (int i = startEndIndex - totalDifferent; i < startEndIndex; ++i)
     {
         if (cache.find(s[i]) != cache.end())
         {
@@ -456,7 +456,7 @@ void day6()
             {
                 if (day6_allDiferent(line, indexFirstPart, 4))
                 {
-                    std::cout << "day 6 =>" << (indexFirstPart)<<",";
+                    std::cout << "day 6 =>" << (indexFirstPart) << ",";
                     break;
                 }
                 ++indexFirstPart;
@@ -467,7 +467,7 @@ void day6()
             {
                 if (day6_allDiferent(line, indexSecondPart, 14))
                 {
-                    std::cout << (indexSecondPart)<< "\n";
+                    std::cout << (indexSecondPart) << "\n";
                     break;
                 }
                 ++indexSecondPart;
@@ -476,6 +476,190 @@ void day6()
         }
     }
     file.close();
+}
+
+class FileSystem
+{
+public:
+    string name = "";
+    long long size = 0;
+    vector<FileSystem*> folders;
+    vector<FileSystem*> files;
+    FileSystem* parent = nullptr;
+    bool isFolder;
+};
+
+FileSystem* day7_commandCD(FileSystem* root, FileSystem* now, const string& line)
+{
+    //cd /
+    if (line.substr(5, 1) == "/")
+    {
+        return root;
+    }
+    //cd ..
+    if (line.substr(5, 2) == "..")
+    {
+        return now->parent;
+    }
+
+    //cd <name>
+    string nameFolder = line.substr(5);
+    for (int i = 0; i < now->folders.size(); ++i)
+    {
+        if (now->folders[i]->name == nameFolder)
+        {
+            return now->folders[i];
+        }
+    }
+}
+
+void day7_addFolder(FileSystem* now, string name)
+{
+    for (int i = 0; i < now->folders.size(); ++i)
+    {
+        if (now->folders[i]->name == name)
+        {
+            return;
+        }
+    }
+    FileSystem* newFolder = new FileSystem();
+    newFolder->name = name;
+    newFolder->isFolder = true;
+    newFolder->parent = now;
+    now->folders.push_back(newFolder);
+}
+
+void day7_addFile(FileSystem* now, string name, long long size)
+{
+    for (int i = 0; i < now->files.size(); ++i)
+    {
+        if (now->files[i]->name == name)
+        {
+            return;
+        }
+    }
+    FileSystem* newFile = new FileSystem();
+    newFile->name = name;
+    newFile->size = size;
+    newFile->isFolder = false;
+    newFile->parent = now;
+    now->files.push_back(newFile);
+}
+
+void day7_calculateSize(FileSystem* position)
+{
+    if (position == nullptr)
+    {
+        return;
+    }
+
+    for (int i = 0; i < position->folders.size(); ++i)
+    {
+        day7_calculateSize(position->folders[i]);
+        position->size += position->folders[i]->size;
+    }
+
+    for (int i = 0; i < position->files.size(); ++i)
+    {
+        position->size += position->files[i]->size;
+    }
+}
+
+void day7_calculateSolution_1(FileSystem* now, long long& solution, long long maxValue)
+{
+    if (!now->isFolder)
+    {
+        return;
+    }
+    for (int i = 0; i < now->folders.size(); ++i)
+    {
+        if (now->folders[i]->size < maxValue)
+        {
+            solution += now->folders[i]->size;
+        }
+        day7_calculateSolution_1(now->folders[i], solution, maxValue);
+    }
+}
+
+void day7_calculateSolution_2(FileSystem* now, long long minSize, long long& solution)
+{
+    if (!now->isFolder)
+    {
+        return;
+    }
+    for (int i = 0; i < now->folders.size(); ++i)
+    {
+        if (now->folders[i]->size >= minSize)
+        {
+            if (now->folders[i]->size < solution)
+            {
+                solution = now->folders[i]->size;
+            }
+        }
+        day7_calculateSolution_2(now->folders[i], minSize, solution);
+    }
+}
+
+void day7()
+{
+    std::ifstream file("./input/day7.txt");
+    if (file.is_open())
+    {
+        string line;
+        FileSystem* root = new FileSystem();
+        root->name = "/";
+        root->isFolder = true;
+        FileSystem* actualPosition = root;
+        bool inLS = false;
+        while (std::getline(file, line))
+        {
+            if (line.substr(2, 2) == "cd")
+            {
+                actualPosition = day7_commandCD(root, actualPosition, line);
+                inLS = false;
+                continue;
+            }
+            if (line.substr(2, 2) == "ls")
+            {
+                inLS = true;
+                continue;
+            }
+
+            if (inLS && line.substr(0, 3) == "dir")
+            {
+                //new directory
+                string nameFolder = line.substr(4);
+                day7_addFolder(actualPosition, nameFolder);
+                continue;
+            }
+            if (inLS && line[0] >= '0' && line[1] <= '9')
+            {
+                //folder
+                auto index = line.find(' ');
+                long long size = atoll(line.substr(0, index).c_str());
+                string name = line.substr(index + 1);
+                day7_addFile(actualPosition, name, size);
+                continue;
+            }
+        }
+        day7_calculateSize(root);
+        long long solution1 = 0;
+        day7_calculateSolution_1(root, solution1, 100000);
+        std::cout << "day7 => " << solution1;
+
+        long long maxSize = 70000000;
+        long long spaceNeed = 30000000;
+        long long unusedSpace = maxSize - root->size;
+        long long spaceToDelete = spaceNeed - unusedSpace;
+        long long solution2 = root->size;
+            day7_calculateSolution_2(root, spaceToDelete, solution2);
+        std::cout << "," << solution2 <<"\n";
+
+        if (unusedSpace + solution2 > spaceNeed)
+        {
+            std::cout << "encontrado";
+        }
+    }
 }
 
 int main()
@@ -487,6 +671,7 @@ int main()
     day4();
     day5();
     day6();
+    day7();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
