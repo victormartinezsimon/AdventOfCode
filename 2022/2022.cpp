@@ -412,6 +412,7 @@ void day5()
         {
             day5_parseMovements(line, stacks, queues);
         }
+        std::cout << "day5 =>";
         for (auto s : stacks)
         {
             std::cout << s.top();
@@ -426,6 +427,57 @@ void day5()
     file.close();
 }
 
+bool day6_allDiferent(const string& s, int startEndIndex, int totalDifferent)
+{
+    std::set<char> cache;
+
+    for(int i = startEndIndex - totalDifferent; i < startEndIndex; ++i)
+    {
+        if (cache.find(s[i]) != cache.end())
+        {
+            return false;
+        }
+        cache.insert(s[i]);
+    }
+    return true;
+}
+
+void day6()
+{
+    std::ifstream file("./input/day6.txt");
+    if (file.is_open())
+    {
+        string line;
+        if (std::getline(file, line))
+        {
+            int indexFirstPart = 4;
+
+            while (indexFirstPart < line.size())
+            {
+                if (day6_allDiferent(line, indexFirstPart, 4))
+                {
+                    std::cout << "day 6 =>" << (indexFirstPart)<<",";
+                    break;
+                }
+                ++indexFirstPart;
+            }
+
+            int indexSecondPart = 14;
+            while (indexSecondPart < line.size())
+            {
+                if (day6_allDiferent(line, indexSecondPart, 14))
+                {
+                    std::cout << (indexSecondPart)<< "\n";
+                    break;
+                }
+                ++indexSecondPart;
+            }
+
+        }
+    }
+    file.close();
+}
+
 int main()
 {
     day1();
@@ -434,6 +486,7 @@ int main()
     day3_2();
     day4();
     day5();
+    day6();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
