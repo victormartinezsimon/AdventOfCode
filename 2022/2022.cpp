@@ -654,12 +654,113 @@ void day7()
         long long solution2 = root->size;
             day7_calculateSolution_2(root, spaceToDelete, solution2);
         std::cout << "," << solution2 <<"\n";
-
-        if (unusedSpace + solution2 > spaceNeed)
-        {
-            std::cout << "encontrado";
-        }
     }
+}
+
+void day8_count(const vector<vector<int>>& board, int startRow, int startCol, int increaseRow, int increaseCol, set<pair<int, int>>& uniqueTrees)
+{
+    int actualRow = startRow;
+    int actualCol = startCol;
+
+    int maxValue = -1;
+
+    while (actualRow >= 0 && actualCol >= 0 && actualRow < board.size() && actualCol < board[0].size())
+    {
+        if (board[actualRow][actualCol] > maxValue)
+        {
+            uniqueTrees.insert({ actualCol, actualRow });
+            maxValue = board[actualRow][actualCol];
+        }
+        actualRow += increaseRow;
+        actualCol += increaseCol;
+    }
+}
+
+long long day8_getTreeScore(const vector<vector<int>>& board, int startRow, int startCol, int increaseRow, int increaseCol)
+{
+    int currentValue = board[startRow][startCol];
+
+    int actualRow = startRow + increaseRow;
+    int actualCol = startCol + increaseCol;
+    long long toReturn = 0;
+
+    while (actualRow >= 0 && actualCol >= 0 && actualRow < board.size() && actualCol < board[0].size())
+    {
+        ++toReturn;
+        if (board[actualRow][actualCol] < currentValue)
+        {
+            actualRow += increaseRow;
+            actualCol += increaseCol;
+        }
+        else
+        {
+            return toReturn;
+        }
+       
+    }
+    return toReturn;
+}
+
+long long day8_getTreeScore(const vector<vector<int>>& board, int startRow, int startCol)
+{
+    long long toReturn = day8_getTreeScore(board, startRow, startCol, 0, 1);
+    toReturn *= day8_getTreeScore(board, startRow, startCol, 0, -1);
+    toReturn *= day8_getTreeScore(board, startRow, startCol, 1, 0);
+    toReturn *= day8_getTreeScore(board, startRow, startCol, -1, 0);
+
+    return toReturn;
+}
+
+void day8()
+{
+    std::ifstream file("./input/day8.txt");
+    if (file.is_open())
+    {
+        string line;
+        vector<vector<int>> board;
+        while (std::getline(file, line))
+        {
+            vector<int> lineToAdd;
+            for (auto c : line)
+            {
+                lineToAdd.push_back(c - '0');
+            }
+            board.push_back(lineToAdd);
+        }
+
+        set<pair<int, int>> unique_trees;
+        for (int i = 0; i < board[0].size(); ++i)
+        {
+            //top
+            day8_count(board, 0, i, 1, 0, unique_trees);
+            //bottom
+            day8_count(board, board.size()-1, i, -1, 0, unique_trees);
+        }
+
+        for (int i = 0; i < board.size(); ++i)
+        {
+            //left
+            day8_count(board, i, 0, 0, 1, unique_trees);
+            //right
+            day8_count(board, i, board[i].size() - 1, 0, -1, unique_trees);
+        }
+        std::cout << "day8 => " << unique_trees.size();
+
+        long long bestTreeScore = -1;
+        for (int row = 0; row < board.size(); ++row)
+        {
+            for (int col = 0; col < board[row].size(); ++col)
+            {
+                long long value = day8_getTreeScore(board, row, col);
+                if (value > bestTreeScore)
+                {
+                    bestTreeScore = value;
+                }
+            }
+        }
+        std::cout << "," <<bestTreeScore << "\n";
+    }
+    file.close();
 }
 
 int main()
@@ -672,6 +773,7 @@ int main()
     day5();
     day6();
     day7();
+    day8();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
