@@ -763,6 +763,99 @@ void day8()
     file.close();
 }
 
+struct day9_position
+{
+public:
+    int row;
+    int col;
+};
+void day9_doMovement(char direction, day9_position& head, day9_position& tail)
+{
+    
+    switch (direction)
+    {
+    case 'R': head.col += 1; break;//increase col
+    case 'L': head.col -= 1; break;//decrease col
+    case 'D': head.row += 1; break;//increase row
+    case 'U': head.row -= 1; break;//decrease row
+    }
+    
+}
+
+void day9_updatePosition(day9_position& head, day9_position& tail)
+{
+    //check if move horizontal
+    int distanceHorizontal = head.col - tail.col;
+    int distanceVertical = head.row - tail.row;
+
+    if (abs(distanceHorizontal) == 2 || (abs(distanceHorizontal) == 1 && abs(distanceVertical) == 2))
+    {
+        if (distanceHorizontal > 0)
+        {
+            tail.col += 1;
+        }
+        else
+        {
+            tail.col -= 1;
+        }
+    }
+
+    if (abs(distanceVertical) == 2 || (abs(distanceVertical) == 1 && abs(distanceHorizontal) == 2))
+    {
+        if (distanceVertical > 0)
+        {
+            tail.row += 1;
+        }
+        else
+        {
+            tail.row -= 1;
+        }
+    }
+}
+
+void day9_doMovement(char direction, vector<day9_position>& elements)
+{
+    day9_doMovement(direction, elements[0], elements[1]);//move head
+
+    for (int i = 0; i < elements.size() - 1; ++i)
+    {
+        day9_updatePosition(elements[i], elements[i + 1]);
+    }
+}
+
+void day9()
+{
+    std::ifstream file("./input/day9.txt");
+    if (file.is_open())
+    {
+        string line;
+        set<pair<int, int>> positionsVisitedSingle;
+        set<pair<int, int>> positionsVisitedMultiple;
+        day9_position tailPosition = { 0,0 };
+        day9_position headPosition = { 0,0 };
+
+        int totalElements = 10;
+        vector<day9_position> multiplePositions(totalElements);
+
+        while (std::getline(file, line))
+        {
+            char movement = line[0];
+            int totalMovements = atoi(line.substr(2).c_str());
+
+            for (int i = 0; i < totalMovements; ++i)
+            {
+                day9_doMovement(movement, headPosition, tailPosition);
+                day9_updatePosition(headPosition, tailPosition);
+                positionsVisitedSingle.insert({ tailPosition.row, tailPosition.col });
+
+                day9_doMovement(movement, multiplePositions);
+                positionsVisitedMultiple.insert({ multiplePositions.back().row, multiplePositions.back().col});
+            }
+        }
+        std::cout << "Day9=>" << positionsVisitedSingle.size() << "," << positionsVisitedMultiple.size() << "\n";
+    }
+}
+
 int main()
 {
     day1();
@@ -774,6 +867,7 @@ int main()
     day6();
     day7();
     day8();
+    day9();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
