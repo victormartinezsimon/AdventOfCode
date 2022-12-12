@@ -856,6 +856,59 @@ void day9()
     }
 }
 
+void day10()
+{
+    std::ifstream file("./input/day10.txt");
+    if (file.is_open())
+    {
+        int currentCycle = 1; 
+        int valueX = 1;
+        std::map<string, int> cyclesConverter({ { "noop", 1 } , { "addx", 2 } });
+        string line;
+        long long toReturn = 0;
+        int startCycleToCount = 20;
+        int increaseCycle = 40;
+        while (std::getline(file, line))
+        {
+            string instruction = line.substr(0, 4);
+            int value = 0;
+            if (instruction == "addx")
+            {
+                value = atoi(line.substr(5).c_str());
+            }
+
+            int totalCycles = cyclesConverter[instruction];
+
+            for (int i = 0; i < totalCycles; ++i)
+            {
+                if ((currentCycle - startCycleToCount) % increaseCycle == 0)
+                {
+                    toReturn += (valueX * currentCycle);
+                }
+
+                int currentPixelPainting = (currentCycle-1) % 40;
+                if (valueX - 1 <= currentPixelPainting && currentPixelPainting <= valueX + 1)
+                {
+                    std::cout << "#";
+                }
+                else
+                {
+                    std::cout << ".";
+                }
+                if (currentPixelPainting == 39)
+                {
+                    std::cout << "\n";
+                }
+
+                ++currentCycle;
+            }
+            valueX += value;
+        }
+
+        std::cout << "Day10=>" << toReturn << "\n";
+    }
+}
+
 int main()
 {
     day1();
@@ -868,6 +921,7 @@ int main()
     day7();
     day8();
     day9();
+    day10();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
