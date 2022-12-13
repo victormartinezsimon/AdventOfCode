@@ -13,6 +13,7 @@
 #include <map>
 #include <stack>
 #include <queue>
+#include <functional>
 
 using namespace std;
 
@@ -652,8 +653,8 @@ void day7()
         long long unusedSpace = maxSize - root->size;
         long long spaceToDelete = spaceNeed - unusedSpace;
         long long solution2 = root->size;
-            day7_calculateSolution_2(root, spaceToDelete, solution2);
-        std::cout << "," << solution2 <<"\n";
+        day7_calculateSolution_2(root, spaceToDelete, solution2);
+        std::cout << "," << solution2 << "\n";
     }
 }
 
@@ -696,7 +697,7 @@ long long day8_getTreeScore(const vector<vector<int>>& board, int startRow, int 
         {
             return toReturn;
         }
-       
+
     }
     return toReturn;
 }
@@ -734,7 +735,7 @@ void day8()
             //top
             day8_count(board, 0, i, 1, 0, unique_trees);
             //bottom
-            day8_count(board, board.size()-1, i, -1, 0, unique_trees);
+            day8_count(board, board.size() - 1, i, -1, 0, unique_trees);
         }
 
         for (int i = 0; i < board.size(); ++i)
@@ -758,7 +759,7 @@ void day8()
                 }
             }
         }
-        std::cout << "," <<bestTreeScore << "\n";
+        std::cout << "," << bestTreeScore << "\n";
     }
     file.close();
 }
@@ -771,7 +772,7 @@ public:
 };
 void day9_doMovement(char direction, day9_position& head, day9_position& tail)
 {
-    
+
     switch (direction)
     {
     case 'R': head.col += 1; break;//increase col
@@ -779,7 +780,7 @@ void day9_doMovement(char direction, day9_position& head, day9_position& tail)
     case 'D': head.row += 1; break;//increase row
     case 'U': head.row -= 1; break;//decrease row
     }
-    
+
 }
 
 void day9_updatePosition(day9_position& head, day9_position& tail)
@@ -849,7 +850,7 @@ void day9()
                 positionsVisitedSingle.insert({ tailPosition.row, tailPosition.col });
 
                 day9_doMovement(movement, multiplePositions);
-                positionsVisitedMultiple.insert({ multiplePositions.back().row, multiplePositions.back().col});
+                positionsVisitedMultiple.insert({ multiplePositions.back().row, multiplePositions.back().col });
             }
         }
         std::cout << "Day9=>" << positionsVisitedSingle.size() << "," << positionsVisitedMultiple.size() << "\n";
@@ -861,7 +862,7 @@ void day10()
     std::ifstream file("./input/day10.txt");
     if (file.is_open())
     {
-        int currentCycle = 1; 
+        int currentCycle = 1;
         int valueX = 1;
         std::map<string, int> cyclesConverter({ { "noop", 1 } , { "addx", 2 } });
         string line;
@@ -886,7 +887,7 @@ void day10()
                     toReturn += (valueX * currentCycle);
                 }
 
-                int currentPixelPainting = (currentCycle-1) % 40;
+                int currentPixelPainting = (currentCycle - 1) % 40;
                 if (valueX - 1 <= currentPixelPainting && currentPixelPainting <= valueX + 1)
                 {
                     std::cout << "#";
@@ -909,6 +910,321 @@ void day10()
     }
 }
 
+struct day11_monkeyNumber
+{
+public:
+    int originalValue = 0;
+    vector<string> lastOperations;
+};
+
+
+struct day11_monkey
+{
+public:
+    int id = -1;
+    vector<long long> objects;
+    std::vector<int> monkeyToPass;
+    int valueCheckToPass = 1;
+    int totalInspected = 0;
+    string functionUpdate_str = "";
+    vector< day11_monkeyNumber> objects_2;
+};
+
+
+vector<string> day11_split(string s, const string& delimiter)
+{
+    vector<string> toReturn;
+
+    size_t pos = 0;
+    std::string token;
+    while ((pos = s.find(delimiter)) != std::string::npos) {
+        token = s.substr(0, pos);
+        toReturn.push_back(token);
+        s.erase(0, pos + delimiter.length());
+    }
+    toReturn.push_back(s);
+
+    return toReturn;
+}
+
+long long day11_parseFunction(string function, long long currentValue)
+{
+    long long toReturn = currentValue;
+
+    long long secondOperator = 0;
+    if (function.find("old") != std::string::npos)
+    {
+        secondOperator = currentValue;
+    }
+    else
+    {
+        secondOperator = atoll(function.substr(2).c_str());
+    }
+
+    switch (function[0])
+    {
+    case '+': toReturn += secondOperator; break;
+    case '-': toReturn -= secondOperator; break;
+    case '*': toReturn *= secondOperator; break;
+    case '/': toReturn /= secondOperator; break;
+    }
+    return toReturn;
+}
+
+long long day11_parseFunction_2(string function, long long currentValue)
+{
+    long long toReturn = currentValue;
+
+    long long secondOperator = 0;
+    if (function.find("old") != std::string::npos)
+    {
+        return currentValue;
+    }
+    else
+    {
+        secondOperator = atoll(function.substr(2).c_str());
+    }
+
+    switch (function[0])
+    {
+    case '+': toReturn += secondOperator; break;
+    case '-': toReturn -= secondOperator; break;
+    case '*': toReturn *= secondOperator; break;
+    case '/': toReturn /= secondOperator; break;
+    }
+    return toReturn;
+}
+
+bool day11_passOperator(day11_monkeyNumber& monkeyNumber, long long valueCheck)
+{
+    long long acum = 0;
+    for (int i = monkeyNumber.lastOperations.size() - 1; i >= 0; --i)
+    {
+        if (monkeyNumber.lastOperations[i].find("*") != std::string::npos)
+        {
+            return ((atoi(monkeyNumber.lastOperations[i].substr(2).c_str()) + acum) % valueCheck) == 0;
+        }
+        else
+        {
+            acum += atoi(monkeyNumber.lastOperations[i].substr(2).c_str());
+        }
+    }
+    //here we reach the beggining
+    return ((monkeyNumber.originalValue + acum) % valueCheck) == 0;
+}
+
+void day11(bool runPart2 = false)
+{
+    std::ifstream file("./input/day11.txt");
+    if (file.is_open())
+    {
+        vector<day11_monkey> monkeys;
+        vector<day11_monkey> monkeys_2;
+
+        string line;
+        while (std::getline(file, line))
+        {
+            string starting_items, operation, test1, test2, test3;
+            std::getline(file, starting_items);
+            std::getline(file, operation);
+            std::getline(file, test1);
+            std::getline(file, test2);
+            std::getline(file, test3);
+            std::getline(file, line);//empty line
+
+            day11_monkey monkey;
+            monkey.id = monkeys.size() + 1;
+            starting_items = starting_items.substr(18);
+            auto items_str = day11_split(starting_items, ",");
+            for (auto str : items_str)
+            {
+                monkey.objects.push_back(atoll(str.c_str()));
+
+                day11_monkeyNumber mn;
+                mn.originalValue = atoll(str.c_str());
+                monkey.objects_2.push_back(mn);
+            }
+
+            monkey.functionUpdate_str = operation.substr(23); // * <value>
+
+            monkey.valueCheckToPass = atoi(test1.substr(21).c_str());
+            monkey.monkeyToPass.push_back(atoi(test2.substr(29).c_str()));
+            monkey.monkeyToPass.push_back(atoi(test3.substr(30).c_str()));
+
+
+
+            monkeys.push_back(monkey);
+            monkeys_2.push_back(monkey);
+        }
+
+
+        int totalCycles = 20;
+        for (int cycle = 0; cycle < totalCycles; ++cycle)
+        {
+            for (auto& monkey : monkeys)
+            {
+                for (int obj : monkey.objects)
+                {
+                    int newValue = day11_parseFunction(monkey.functionUpdate_str, obj);
+                    newValue = newValue / 3;
+                    bool passTest = (newValue % (monkey.valueCheckToPass) == 0);
+                    int newMonkey = monkey.monkeyToPass[0];
+                    if (!passTest)
+                    {
+                        newMonkey = monkey.monkeyToPass[1];
+                    }
+                    monkeys[newMonkey].objects.push_back(newValue);
+                    monkey.totalInspected++;
+                }
+                monkey.objects.clear();
+            }
+        }
+
+        std::sort(monkeys.begin(), monkeys.end(), [](const day11_monkey& a, const day11_monkey& b) {
+            return a.totalInspected > b.totalInspected;
+            });
+
+        if (runPart2)
+        {
+            int totalCycles_2 = 10000;
+            const long long valueToDivide = (13 * 3 * 17 * 5 * 19 * 2 * 11 * 7);
+            for (int cycle = 0; cycle < totalCycles_2; ++cycle)
+            {
+                for (auto& monkey : monkeys_2)
+                {
+                    for (int obj : monkey.objects)
+                    {
+                        auto newValue = day11_parseFunction(monkey.functionUpdate_str, obj);
+                        newValue = (newValue % valueToDivide);
+                        bool passTest = (newValue % (monkey.valueCheckToPass) == 0);
+                        int newMonkey = monkey.monkeyToPass[0];
+                        if (!passTest)
+                        {
+                            newMonkey = monkey.monkeyToPass[1];
+                        }
+                        monkeys_2[newMonkey].objects.push_back(newValue);
+                        monkey.totalInspected++;
+                    }
+                    monkey.objects.clear();
+                }
+            }
+
+            std::sort(monkeys_2.begin(), monkeys_2.end(), [](const day11_monkey& a, const day11_monkey& b) {
+                return a.totalInspected > b.totalInspected;
+                });
+        }
+
+        std::cout << "Day11=>" << (monkeys[0].totalInspected * monkeys[1].totalInspected) << ", Real => 27267163742 (Mio=>" << (monkeys_2[0].totalInspected * monkeys_2[1].totalInspected) << ")\n";
+    }
+    file.close();
+}
+
+struct day12_node
+{
+public:
+    char height = 'a';
+    int timesToReach = 0;
+    int row = -1;
+    int col = -1;
+};
+
+bool day12_validNode(int actualRow, int actualCol, int newRow, int newCol, const vector<string>& maze)
+{
+    if (newRow < 0 || newCol < 0 || newRow >= maze.size() || newCol >= maze[0].size())
+    {
+        return false;
+    }
+
+    char origin = maze[actualRow][actualCol];
+    char destiny = maze[newRow][newCol];
+    if (origin == 'S') { origin = 'a'; } if (origin == 'E') { origin = 'z'; }
+    if (destiny == 'S') { destiny = 'a'; } if (destiny == 'E') { destiny = 'z'; }
+
+    return abs(origin - destiny) <= 1;
+}
+
+void day12()
+{
+    std::ifstream file("./input/day12.txt");
+    if (file.is_open())
+    {
+        string line;
+        int startCol = -1;
+        int startRow = -1;
+        int endCol = -1;
+        int endRow = -1;
+        vector<string> maze;
+        while (std::getline(file, line))
+        {
+            maze.push_back(line);
+            if (line.find("S") != std::string::npos)
+            {
+                startRow = maze.size() - 1;
+                startCol = line.find("S");
+            }
+
+            if (line.find("E") != std::string::npos)
+            {
+                endRow = maze.size() - 1;
+                endCol = line.find("E");
+            }
+        }
+
+        std::vector<pair<int, int>> startIndex = { {startRow, startCol},{endRow, endCol} };
+        std::vector<char> endElement = { 'E', 'a' };
+
+        std::cout << "day12 =>";
+
+        for (int i = 0; i < 2; ++i)
+        {
+            vector<day12_node> nodesToInspect;
+            day12_node start{ maze[startIndex[i].first][startIndex[i].second], 0, startIndex[i].first, startIndex[i].second};
+            nodesToInspect.push_back(start);
+
+            day12_node destiny;
+            set<pair<int, int>> visited;
+
+            while (nodesToInspect.size() > 0)
+            {
+                day12_node node = nodesToInspect[0];
+                nodesToInspect.erase(nodesToInspect.begin());
+
+                if (visited.find({ node.row, node.col }) != visited.end())
+                {
+                    continue;
+                }
+
+                visited.insert({ node.row, node.col });
+
+                if (maze[node.row][node.col] == endElement[i])
+                {
+                    destiny = node;
+                    nodesToInspect.clear();
+                    continue;
+                }
+                else
+                {
+                    const std::vector<std::pair<int, int>> movements = { {0,1},{0,-1},{1,0},{-1,0} };
+                    for (std::pair<int, int> movement : movements)
+                    {
+                        if (day12_validNode(node.row, node.col, node.row + movement.first, node.col + movement.second, maze)
+                            && visited.find({ node.row + movement.first, node.col + movement.second }) == visited.end())
+                        {
+                            day12_node newNode{ maze[node.row + movement.first][node.col + movement.second], node.timesToReach + 1, node.row + movement.first, node.col + movement.second };
+                            nodesToInspect.push_back(newNode);
+                        }
+                    }
+                }
+            }
+
+            std::cout << destiny.timesToReach<<",";
+        }
+        std::cout << "\n";
+
+    }
+    file.close();
+}
+
 int main()
 {
     day1();
@@ -922,6 +1238,8 @@ int main()
     day8();
     day9();
     day10();
+    day11(false);
+    day12();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
