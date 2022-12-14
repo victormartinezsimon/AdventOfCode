@@ -1225,6 +1225,276 @@ void day12()
     file.close();
 }
 
+struct day13_node
+{
+public:
+    long long valueInt =-1;
+    day13_node* valueList;
+    day13_node* next = nullptr;
+    day13_node* parent = nullptr;
+    int totalElements = 0;
+    bool isNumber = false;
+    string txt;
+};
+
+day13_node* day13_parseLine(const std::string& line)
+{
+    day13_node* toReturn = new day13_node();
+    toReturn->txt = line;
+    day13_node* whereToAdd = toReturn;
+
+    int actualIndex = 0;
+    while(actualIndex < line.size())
+    {
+        char c = line[actualIndex];//can be [ ] , <number>
+        if (c == '[')
+        {
+            //go deep
+            day13_node* toAdd = new day13_node();
+            toAdd->parent = whereToAdd;
+            //first [
+            whereToAdd->valueList = toAdd;
+            whereToAdd = toAdd;
+        }
+        else
+        {
+            if (c == ']')
+            {
+                if (whereToAdd->parent)
+                {
+                    whereToAdd->parent->totalElements++;
+                }
+                whereToAdd = whereToAdd->parent;
+            }
+            else
+            {
+                if (c == ',')
+                {
+                    //create node
+                    day13_node * toAdd = new day13_node();
+                    toAdd->parent = whereToAdd->parent;
+                    whereToAdd->next = toAdd;
+
+                    if (whereToAdd->parent)
+                    {
+                        whereToAdd->parent->totalElements++;
+                    }
+
+                    whereToAdd = toAdd;
+                }
+                else
+                {
+                    //get value
+                    string tmp = line.substr(actualIndex);
+                    auto positionComma = tmp.find(",");
+                    auto positionBracket = tmp.find("]");
+
+                    auto realPos = min(positionBracket, positionComma);
+                    long long value = atoll(tmp.substr(0, realPos).c_str());
+                    actualIndex += realPos-1;//still in the comma or the ]
+                    
+                    whereToAdd->valueInt = value;
+                    whereToAdd->isNumber = true;
+                }
+            }
+        }
+        ++actualIndex;
+    }
+    return toReturn;
+}
+
+/*
+int day13_compare_old(day13_node* a, day13_node* b)
+{
+    day13_node* pointerA = a;
+    day13_node* pointerB = b;
+
+    while (pointerA != nullptr && pointerB != nullptr)
+    {
+        if (pointerA->value == nullptr && pointerB->value == nullptr)
+        {
+            if (pointerA->valueInt == -1 && pointerB->valueInt != -1) { return -1; }
+            if (pointerA->valueInt != -1 && pointerB->valueInt == -1) { return 1; }
+            if (pointerA->valueInt < pointerB->valueInt) { return -1; }
+            if (pointerA->valueInt > pointerB->valueInt) { return 1; }
+
+            //move to next
+            if (pointerA->next == nullptr && pointerB->next != nullptr)
+            {
+                return -1;
+            }
+            if (pointerA->next != nullptr && pointerB->next == nullptr)
+            {
+                return 1;
+            }
+            //here, next for both is null or a value
+            if (pointerA->next == nullptr)
+            {
+                pointerA = pointerA->parent->next;
+            }
+            else
+            {
+                pointerA = pointerA->next;
+            }
+
+            if (pointerB->next == nullptr)
+            {
+                pointerB = pointerB->parent->next;
+            }
+            else
+            {
+                pointerB = pointerB->next;
+            }
+        }
+        else
+        {
+            if (pointerA->value != nullptr && pointerB->value != nullptr)
+            {
+                pointerB = pointerB->value;
+                pointerA = pointerA->value;
+                continue;
+            }
+
+            //here one is list, and the other not
+            if (pointerA->next == nullptr && pointerB->next != nullptr)
+            {
+                //a list short
+                return -1;
+            }
+            if (pointerA->next != nullptr && pointerB->next == nullptr)
+            {
+                //b list short
+                return 1;
+            }
+
+
+            ////at least one is a list, go inside
+            if (pointerA->value != nullptr)
+            {
+                pointerA = pointerA->value;
+            }
+            if (pointerB->value != nullptr)
+            {
+                pointerB = pointerB->value;
+            }
+        }
+    }
+
+    if (pointerA == nullptr && pointerB != nullptr)
+    {
+        return 1;
+    }
+    if (pointerA != nullptr && pointerB == nullptr)
+    {
+        return -1;
+    }
+
+    return 0;
+}
+*/
+int day13_compare(day13_node* a, day13_node* b)
+{
+    if (a == nullptr && b == nullptr) { return 0; }
+    if (a == nullptr && b != nullptr) { return -1; }
+    if (a != nullptr && b == nullptr) { return 1; }
+
+    if (a->isNumber && b->isNumber)
+    {
+        if (a->valueInt < b->valueInt) { return -1; }
+        if (a->valueInt > b->valueInt) { return 1; }
+        return 0;
+    }
+
+    if (a->isNumber && !b->isNumber)
+    {
+        return day13_compare(a, b->valueList);
+    }
+
+    if (!a->isNumber && b->isNumber)
+    {
+        return day13_compare(a->valueList, b);
+    }
+
+    //here a is list, b is list
+    if (a->totalElements == 0 && b->totalElements == 0) { return 0; }
+    if (a->totalElements == 0 && b->totalElements != 0) { return -1; }
+    if (a->totalElements != 0 && b->totalElements == 0) { return 1; }
+
+    day13_node* pointerA = a->valueList;
+    day13_node* pointerB = b->valueList;
+
+    while (pointerA && pointerB)
+    {
+        auto result = day13_compare(pointerA, pointerB);
+
+        if (result == 0)
+        {
+            pointerA = pointerA->next;
+            pointerB = pointerB->next;
+        }
+        else
+        {
+            return result;
+        }
+    }
+
+    if (pointerA && !pointerB) { return 1; }
+    if (!pointerA && pointerB) { return -1; }
+    return 0;
+
+}
+
+void day13()
+{
+    std::ifstream file("./input/day13.txt");
+    if (file.is_open())
+    {
+        string line;
+        string line2;
+        long long result = 0;
+        int index = 1;
+        vector<day13_node*> allNodes;
+        while (std::getline(file, line))
+        {
+            auto a = day13_parseLine(line);
+            std::getline(file, line2);
+            auto b = day13_parseLine(line2);
+
+            int comparation = day13_compare(a, b);
+            if (comparation < 0)
+            {
+                result += index;
+            }
+
+            allNodes.push_back(a);
+            allNodes.push_back(b);
+            std::getline(file, line);
+            ++index;
+        }
+
+        allNodes.push_back(day13_parseLine("[[2]]"));
+        allNodes.push_back(day13_parseLine("[[6]]"));
+
+        std::sort(allNodes.begin(), allNodes.end(), [](day13_node* a, day13_node* b) 
+            {
+                int v = day13_compare(a, b); 
+                return v == -1;
+            });
+
+
+        long long result2 = 1;
+
+        for (int i = 0; i < allNodes.size(); ++i)
+        {
+            if (allNodes[i]->txt == "[[2]]") { result2 *= (i + 1); }
+            if (allNodes[i]->txt == "[[6]]") { result2 *= (i + 1); }
+        }
+
+        std::cout << "day 13 => " << result << "," << result2 << "\n";
+    }
+    file.close();
+}
+
 int main()
 {
     day1();
@@ -1240,6 +1510,7 @@ int main()
     day10();
     day11(false);
     day12();
+    day13();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
