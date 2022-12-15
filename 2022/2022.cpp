@@ -1649,7 +1649,7 @@ void day14()
             }
         }
 
-        std::cout << "day14 =>" << result;
+        std::cout << "day14 =>" << result << "\n";
     }
     file.close();
 }
@@ -1722,7 +1722,104 @@ void day14_2()
             }
         }
 
-        std::cout << "," << (result+1) << "\n";
+        std::cout << "day14_2" << (result+1) << "\n";
+    }
+    file.close();
+}
+
+struct day15_sensor
+{
+public:
+    int x;
+    int y;
+    int bX;
+    int bY;
+    int manhattan;
+};
+
+void day15()
+{
+    std::ifstream file("./input/day15.txt");
+    if (file.is_open())
+    {
+        string line;
+        std::vector<day15_sensor> sensors;
+
+        int minX = -1;
+        int maxX = -1;
+
+        while (std::getline(file, line))
+        {
+            day15_sensor sensor;
+
+            auto equalPos = line.find("=");
+            line = line.substr(equalPos + 1);
+            //search first comma
+            auto commaPos = line.find(",");
+            sensor.x = atoi(line.substr(0, commaPos).c_str());
+            line = line.substr(commaPos + 4);
+            auto twoPointsPos = line.find(":");
+            sensor.y = atoi(line.substr(0, twoPointsPos).c_str());
+            equalPos = line.find("=");
+            line = line.substr(equalPos +1);
+            commaPos = line.find(",");
+            string tmp = line.substr(0,commaPos);
+            sensor.bX = atoi(line.substr(0,commaPos).c_str());
+            line = line.substr(commaPos + 4);
+            sensor.bY = atoi(line.c_str());
+
+            int distanceX = abs(sensor.x - sensor.bX);
+            int distanceY = abs(sensor.y - sensor.bY);
+            sensor.manhattan = distanceX + distanceY;
+
+            sensors.push_back(sensor);
+
+            if (sensors.size() == 1)
+            {
+                minX = sensor.x - sensor.manhattan;
+                maxX = sensor.x + sensor.manhattan;
+            }
+            else
+            {
+                if (sensor.x - sensor.manhattan < minX) { minX = sensor.x - sensor.manhattan; }
+                if (sensor.x + sensor.manhattan > maxX) { maxX = sensor.x + sensor.manhattan; }
+            }
+
+        }
+
+        int desiredY = 2000000;
+
+        set<int> positions;
+
+        for (auto sensor : sensors)
+        {
+            //if impossible, skip
+            if (sensor.y - sensor.manhattan > desiredY || sensor.y + sensor.manhattan < desiredY)
+            {
+                continue; 
+            }
+
+            int distanceToDesired = abs(sensor.y - desiredY);
+            int width = sensor.manhattan - distanceToDesired;
+
+            for (int i = -width; i <= width; ++i)
+            {
+                positions.insert(i + sensor.x);
+            }
+
+        }
+
+        //remove beacons(if exist)
+        for (auto sensor : sensors)
+        {
+            if (sensor.bY == desiredY)
+            {
+                positions.erase(sensor.bX);
+            }
+        }
+
+        std::cout << "day15 =>" << positions.size() << "\n";
+
     }
     file.close();
 }
@@ -1744,7 +1841,8 @@ int main()
     day12();
     day13();
     day14();
-    day14_2();
+    //day14_2();//to slow
+    day15();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
