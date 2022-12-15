@@ -1495,6 +1495,238 @@ void day13()
     file.close();
 }
 
+
+
+int day14_moveSand(std::vector<std::vector<bool>>& occuped, int startX, int startY, int maxDepth)
+{
+    if (startY > maxDepth) {
+        return -1;
+    }//bottom position
+
+    if (occuped[startX][startY])
+    {
+        return 0;
+    }
+
+    //move down
+    int resultDown = day14_moveSand(occuped, startX, startY + 1, maxDepth);
+    if (resultDown == 0)
+    {
+        //move left down
+        int resultLeft = day14_moveSand(occuped, startX - 1, startY + 1, maxDepth);
+        if (resultLeft == 0)
+        {
+            //move right down
+            int resultRight = day14_moveSand(occuped, startX + 1, startY + 1, maxDepth);
+            if (resultRight == 0)
+            {
+                //stop in this position
+                occuped[startX][startY] = true;
+                return 1;
+            }
+            return resultRight;
+        }
+        return resultLeft;
+    }
+    return resultDown;
+}
+
+
+int day14_moveSand_2(std::vector<std::vector<bool>>& occuped, int startX, int startY)
+{
+    if (occuped[startX][startY])
+    {
+        return 0;
+    }
+
+    //move down
+    int resultDown = day14_moveSand_2(occuped, startX, startY + 1);
+    if (resultDown == 0)
+    {
+        //move left down
+        int resultLeft = day14_moveSand_2(occuped, startX - 1, startY + 1);
+        if (resultLeft == 0)
+        {
+            //move right down
+            int resultRight = day14_moveSand_2(occuped, startX + 1, startY + 1);
+            if (resultRight == 0)
+            {
+                //stop in this position
+                occuped[startX][startY] = true;
+                if (startX == 500 && startY == 0)
+                {
+                    return -1;//stop case
+                }
+                return 1;
+            }
+            return resultRight;
+        }
+        return resultLeft;
+    }
+    return resultDown;
+}
+
+void day14_printBoard(const std::vector<std::vector<bool>>& board)
+{
+    int startX = 493;
+    int startY = 0;
+    int endX = 503;
+    int endY = 10;
+
+    for (int y = startY; y < endY; ++y)
+    {
+        for (int x = startX; x < endX; ++x)
+        {
+            if (board[x][y])std::cout << "#";
+            else std::cout << ".";
+        }
+        std::cout << "\n";
+    }
+    std::cout << "\n";
+}
+
+void day14()
+{
+    std::ifstream file("./input/day14.txt");
+    if (file.is_open())
+    {
+        std::vector<std::vector<bool>> occuped(1000, std::vector<bool>(5000, false));
+        string line;
+        int bottomY = -1;
+        //build board
+        while (std::getline(file, line))
+        {
+            std::vector<string> Allcoords = day11_split(line, "->");
+            std::vector<string> coordStart = day11_split(Allcoords[0], ",");
+            int coordX = atoi(coordStart[0].c_str());
+            int coordY = atoi(coordStart[1].c_str());
+
+            for (int i = 1; i < Allcoords.size(); ++i)
+            {
+                std::vector<string> coordDest = day11_split(Allcoords[i], ",");
+                int coordDestX = atoi(coordDest[0].c_str());
+                int coordDestY = atoi(coordDest[1].c_str());
+
+                while (coordX != coordDestX || coordY != coordDestY)
+                {
+                    occuped[coordX][coordY] = true;
+
+                    if (coordY > bottomY) {
+                        bottomY = coordY;
+                    }
+
+                    int diffX = coordDestX - coordX;
+                    int diffY = coordDestY - coordY;
+
+                    if (diffX < 0) { --coordX; }
+                    if (diffX > 0) { ++coordX; }
+                    if (diffY < 0) { --coordY; }
+                    if (diffY > 0) { ++coordY; }
+                }
+                occuped[coordX][coordY] = true;
+
+                if (coordY > bottomY) {
+                    bottomY = coordY;
+                }
+            }
+        }
+
+        //board builded
+        int startX = 500;
+        int startY = 0;
+
+        bool detectAnyFalling = false;
+
+        long long result = 0;
+
+        while (!detectAnyFalling)
+        {
+            int colocateSand = day14_moveSand(occuped, startX, startY, bottomY);
+            detectAnyFalling = (colocateSand == -1);
+            if (colocateSand != -1)
+            {
+                ++result;
+            }
+        }
+
+        std::cout << "day14 =>" << result;
+    }
+    file.close();
+}
+void day14_2()
+{
+    std::ifstream file("./input/day14.txt");
+    if (file.is_open())
+    {
+        std::vector<std::vector<bool>> occuped(1000, std::vector<bool>(5000, false));
+        string line;
+        int bottomY = -1;
+        //build board
+        while (std::getline(file, line))
+        {
+            std::vector<string> Allcoords = day11_split(line, "->");
+            std::vector<string> coordStart = day11_split(Allcoords[0], ",");
+            int coordX = atoi(coordStart[0].c_str());
+            int coordY = atoi(coordStart[1].c_str());
+
+            for (int i = 1; i < Allcoords.size(); ++i)
+            {
+                std::vector<string> coordDest = day11_split(Allcoords[i], ",");
+                int coordDestX = atoi(coordDest[0].c_str());
+                int coordDestY = atoi(coordDest[1].c_str());
+
+                while (coordX != coordDestX || coordY != coordDestY)
+                {
+                    occuped[coordX][coordY] = true;
+
+                    if (coordY > bottomY) {
+                        bottomY = coordY;
+                    }
+
+                    int diffX = coordDestX - coordX;
+                    int diffY = coordDestY - coordY;
+
+                    if (diffX < 0) { --coordX; }
+                    if (diffX > 0) { ++coordX; }
+                    if (diffY < 0) { --coordY; }
+                    if (diffY > 0) { ++coordY; }
+                }
+                occuped[coordX][coordY] = true;
+
+                if (coordY > bottomY) {
+                    bottomY = coordY;
+                }
+            }
+        }
+
+        for (int i = 0; i < occuped.size(); ++i)
+        {
+            occuped[i][bottomY + 2] = true;
+        }
+
+        //board builded
+        int startX = 500;
+        int startY = 0;
+
+        bool detectAnyFalling = false;
+
+        long long result = 0;
+
+        while (!detectAnyFalling)
+        {
+            int colocateSand = day14_moveSand_2(occuped, startX, startY);
+            detectAnyFalling = (colocateSand == -1);
+            if (colocateSand != -1)
+            {
+                ++result;
+            }
+        }
+
+        std::cout << "," << (result+1) << "\n";
+    }
+    file.close();
+}
+
 int main()
 {
     day1();
@@ -1511,6 +1743,8 @@ int main()
     day11(false);
     day12();
     day13();
+    day14();
+    day14_2();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
