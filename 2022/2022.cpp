@@ -14,6 +14,8 @@
 #include <stack>
 #include <queue>
 #include <functional>
+#include <thread>
+#include <regex>
 
 using namespace std;
 
@@ -1013,7 +1015,7 @@ bool day11_passOperator(day11_monkeyNumber& monkeyNumber, long long valueCheck)
     return ((monkeyNumber.originalValue + acum) % valueCheck) == 0;
 }
 
-void day11(bool runPart2 = false)
+void day11()
 {
     std::ifstream file("./input/day11.txt");
     if (file.is_open())
@@ -1084,7 +1086,7 @@ void day11(bool runPart2 = false)
             return a.totalInspected > b.totalInspected;
             });
 
-        if (runPart2)
+#if !defined(_DEBUG)
         {
             int totalCycles_2 = 10000;
             const long long valueToDivide = (13 * 3 * 17 * 5 * 19 * 2 * 11 * 7);
@@ -1113,8 +1115,8 @@ void day11(bool runPart2 = false)
                 return a.totalInspected > b.totalInspected;
                 });
         }
-
-        std::cout << "Day11=>" << (monkeys[0].totalInspected * monkeys[1].totalInspected) << ", Real => 27267163742 (Mio=>" << (monkeys_2[0].totalInspected * monkeys_2[1].totalInspected) << ")\n";
+#endif
+        std::cout << "Day11=>" << (monkeys[0].totalInspected * monkeys[1].totalInspected) << ", Real => 27267163742 (Mio=>" << monkeys_2[0].totalInspected << " * " << monkeys_2[1].totalInspected << ")\n";
     }
     file.close();
 }
@@ -1178,7 +1180,7 @@ void day12()
         for (int i = 0; i < 2; ++i)
         {
             vector<day12_node> nodesToInspect;
-            day12_node start{ maze[startIndex[i].first][startIndex[i].second], 0, startIndex[i].first, startIndex[i].second};
+            day12_node start{ maze[startIndex[i].first][startIndex[i].second], 0, startIndex[i].first, startIndex[i].second };
             nodesToInspect.push_back(start);
 
             day12_node destiny;
@@ -1217,7 +1219,7 @@ void day12()
                 }
             }
 
-            std::cout << destiny.timesToReach<<",";
+            std::cout << destiny.timesToReach << ",";
         }
         std::cout << "\n";
 
@@ -1228,7 +1230,7 @@ void day12()
 struct day13_node
 {
 public:
-    long long valueInt =-1;
+    long long valueInt = -1;
     day13_node* valueList;
     day13_node* next = nullptr;
     day13_node* parent = nullptr;
@@ -1244,7 +1246,7 @@ day13_node* day13_parseLine(const std::string& line)
     day13_node* whereToAdd = toReturn;
 
     int actualIndex = 0;
-    while(actualIndex < line.size())
+    while (actualIndex < line.size())
     {
         char c = line[actualIndex];//can be [ ] , <number>
         if (c == '[')
@@ -1271,7 +1273,7 @@ day13_node* day13_parseLine(const std::string& line)
                 if (c == ',')
                 {
                     //create node
-                    day13_node * toAdd = new day13_node();
+                    day13_node* toAdd = new day13_node();
                     toAdd->parent = whereToAdd->parent;
                     whereToAdd->next = toAdd;
 
@@ -1291,8 +1293,8 @@ day13_node* day13_parseLine(const std::string& line)
 
                     auto realPos = min(positionBracket, positionComma);
                     long long value = atoll(tmp.substr(0, realPos).c_str());
-                    actualIndex += realPos-1;//still in the comma or the ]
-                    
+                    actualIndex += realPos - 1;//still in the comma or the ]
+
                     whereToAdd->valueInt = value;
                     whereToAdd->isNumber = true;
                 }
@@ -1303,95 +1305,6 @@ day13_node* day13_parseLine(const std::string& line)
     return toReturn;
 }
 
-/*
-int day13_compare_old(day13_node* a, day13_node* b)
-{
-    day13_node* pointerA = a;
-    day13_node* pointerB = b;
-
-    while (pointerA != nullptr && pointerB != nullptr)
-    {
-        if (pointerA->value == nullptr && pointerB->value == nullptr)
-        {
-            if (pointerA->valueInt == -1 && pointerB->valueInt != -1) { return -1; }
-            if (pointerA->valueInt != -1 && pointerB->valueInt == -1) { return 1; }
-            if (pointerA->valueInt < pointerB->valueInt) { return -1; }
-            if (pointerA->valueInt > pointerB->valueInt) { return 1; }
-
-            //move to next
-            if (pointerA->next == nullptr && pointerB->next != nullptr)
-            {
-                return -1;
-            }
-            if (pointerA->next != nullptr && pointerB->next == nullptr)
-            {
-                return 1;
-            }
-            //here, next for both is null or a value
-            if (pointerA->next == nullptr)
-            {
-                pointerA = pointerA->parent->next;
-            }
-            else
-            {
-                pointerA = pointerA->next;
-            }
-
-            if (pointerB->next == nullptr)
-            {
-                pointerB = pointerB->parent->next;
-            }
-            else
-            {
-                pointerB = pointerB->next;
-            }
-        }
-        else
-        {
-            if (pointerA->value != nullptr && pointerB->value != nullptr)
-            {
-                pointerB = pointerB->value;
-                pointerA = pointerA->value;
-                continue;
-            }
-
-            //here one is list, and the other not
-            if (pointerA->next == nullptr && pointerB->next != nullptr)
-            {
-                //a list short
-                return -1;
-            }
-            if (pointerA->next != nullptr && pointerB->next == nullptr)
-            {
-                //b list short
-                return 1;
-            }
-
-
-            ////at least one is a list, go inside
-            if (pointerA->value != nullptr)
-            {
-                pointerA = pointerA->value;
-            }
-            if (pointerB->value != nullptr)
-            {
-                pointerB = pointerB->value;
-            }
-        }
-    }
-
-    if (pointerA == nullptr && pointerB != nullptr)
-    {
-        return 1;
-    }
-    if (pointerA != nullptr && pointerB == nullptr)
-    {
-        return -1;
-    }
-
-    return 0;
-}
-*/
 int day13_compare(day13_node* a, day13_node* b)
 {
     if (a == nullptr && b == nullptr) { return 0; }
@@ -1475,9 +1388,9 @@ void day13()
         allNodes.push_back(day13_parseLine("[[2]]"));
         allNodes.push_back(day13_parseLine("[[6]]"));
 
-        std::sort(allNodes.begin(), allNodes.end(), [](day13_node* a, day13_node* b) 
+        std::sort(allNodes.begin(), allNodes.end(), [](day13_node* a, day13_node* b)
             {
-                int v = day13_compare(a, b); 
+                int v = day13_compare(a, b);
                 return v == -1;
             });
 
@@ -1722,7 +1635,7 @@ void day14_2()
             }
         }
 
-        std::cout << "day14_2" << (result+1) << "\n";
+        std::cout << "day14_2 =>" << (result + 1) << "\n";
     }
     file.close();
 }
@@ -1737,6 +1650,127 @@ public:
     int manhattan;
 };
 
+std::vector<std::pair<int, int>> day15_getBlockedElements(const  std::vector<day15_sensor>& sensors, int Y)
+{
+    std::vector<std::pair<int, int>> blocks;
+
+    for (auto sensor : sensors)
+    {
+        //if impossible, skip
+        if (sensor.y - sensor.manhattan > Y || sensor.y + sensor.manhattan < Y)
+        {
+            continue;
+        }
+
+        int distanceToDesired = abs(sensor.y - Y);
+        int width = sensor.manhattan - distanceToDesired;
+
+        blocks.push_back({ sensor.x - width, sensor.x + width });
+    }
+
+    std::sort(blocks.begin(), blocks.end(), [](pair<int, int> a, pair<int, int> b) {return a.first < b.first; });
+
+    //merge blocks
+
+    int currentBlock = 0;
+    int inspectedBlock = 1;
+
+    while (inspectedBlock < blocks.size())
+    {
+        if (blocks[currentBlock].second > blocks[inspectedBlock].second)
+        {
+            //current fills inspected => delete inspected, dont change inspected because will go to the next value
+            blocks.erase(blocks.begin() + inspectedBlock);
+            continue;
+        }
+
+        if (blocks[inspectedBlock].first <= blocks[currentBlock].second && blocks[currentBlock].second <= blocks[inspectedBlock].second)
+        {
+            //merge them
+            blocks[currentBlock].second = blocks[inspectedBlock].second;
+            blocks.erase(blocks.begin() + inspectedBlock);//remove second because now is inside first
+            continue;
+        }
+
+        //here the blocks are different
+        ++currentBlock;
+        ++inspectedBlock;
+    }
+    return blocks;
+
+}
+
+void day15_part1(const  std::vector<day15_sensor>& sensors)
+{
+    int desiredY = 2000000;
+
+    auto blocks = day15_getBlockedElements(sensors, desiredY);
+
+    long long count = 0;
+
+    for (auto block : blocks)
+    {
+        count += (block.second - block.first);
+    }
+
+    for (auto sensor : sensors)
+    {
+        if (sensor.bY == desiredY)
+        {
+            --count;
+        }
+    }
+
+    std::cout << "day15_1 =>" << count << "\n";
+}
+
+int day15_findX = -1;
+int day15_findY = 1;
+
+void day15_part2_thread(const  std::vector<day15_sensor>& sensors, int startY, int endY)
+{
+    for (int y = startY; y < endY; ++y)
+    {
+        auto blocks = day15_getBlockedElements(sensors, y);
+        if (blocks.size() != 1)
+        {
+            day15_findY = y;
+            day15_findX = blocks[0].second + 1;
+        }
+
+        if (day15_findX != -1 && day15_findY != -1)
+        {
+            return;
+        }
+    }
+}
+
+void day15_part2(const  std::vector<day15_sensor>& sensors, int minX, int maxX, int minY, int maxY)
+{
+    int startY = max(0, minY);
+    int endY = min(4000000, maxY);
+
+    int totalThreads = std::thread::hardware_concurrency();
+
+    int step = (endY - startY) / totalThreads;
+
+    std::vector<thread> threads;
+
+    for (int i = 0; i < totalThreads; ++i)
+    {
+        int y0 = startY + (i * step);
+        int y1 = startY + ((i + 1) * step);
+        threads.push_back(thread(day15_part2_thread, sensors, y0, y1));
+    }
+
+    for (int i = 0; i < totalThreads; ++i)
+    {
+        threads[i].join();
+    }
+
+    std::cout << "day15_2 => " << day15_findX << "," << day15_findY << "\n";
+}
+
 void day15()
 {
     std::ifstream file("./input/day15.txt");
@@ -1747,6 +1781,8 @@ void day15()
 
         int minX = -1;
         int maxX = -1;
+        int minY = -1;
+        int maxY = -1;
 
         while (std::getline(file, line))
         {
@@ -1761,10 +1797,10 @@ void day15()
             auto twoPointsPos = line.find(":");
             sensor.y = atoi(line.substr(0, twoPointsPos).c_str());
             equalPos = line.find("=");
-            line = line.substr(equalPos +1);
+            line = line.substr(equalPos + 1);
             commaPos = line.find(",");
-            string tmp = line.substr(0,commaPos);
-            sensor.bX = atoi(line.substr(0,commaPos).c_str());
+            string tmp = line.substr(0, commaPos);
+            sensor.bX = atoi(line.substr(0, commaPos).c_str());
             line = line.substr(commaPos + 4);
             sensor.bY = atoi(line.c_str());
 
@@ -1778,50 +1814,202 @@ void day15()
             {
                 minX = sensor.x - sensor.manhattan;
                 maxX = sensor.x + sensor.manhattan;
+                minY = sensor.y - sensor.manhattan;
+                maxY = sensor.y + sensor.manhattan;
             }
             else
             {
                 if (sensor.x - sensor.manhattan < minX) { minX = sensor.x - sensor.manhattan; }
                 if (sensor.x + sensor.manhattan > maxX) { maxX = sensor.x + sensor.manhattan; }
+                if (sensor.y - sensor.manhattan < minY) { minY = sensor.y - sensor.manhattan; }
+                if (sensor.y + sensor.manhattan > maxY) { maxY = sensor.y + sensor.manhattan; }
             }
 
         }
 
-        int desiredY = 2000000;
-
-        set<int> positions;
-
-        for (auto sensor : sensors)
-        {
-            //if impossible, skip
-            if (sensor.y - sensor.manhattan > desiredY || sensor.y + sensor.manhattan < desiredY)
-            {
-                continue; 
-            }
-
-            int distanceToDesired = abs(sensor.y - desiredY);
-            int width = sensor.manhattan - distanceToDesired;
-
-            for (int i = -width; i <= width; ++i)
-            {
-                positions.insert(i + sensor.x);
-            }
-
-        }
-
-        //remove beacons(if exist)
-        for (auto sensor : sensors)
-        {
-            if (sensor.bY == desiredY)
-            {
-                positions.erase(sensor.bX);
-            }
-        }
-
-        std::cout << "day15 =>" << positions.size() << "\n";
+        day15_part1(sensors);
+#if !defined(_DEBUG)
+        day15_part2(sensors, minX, maxX, minY, maxY);
+#endif
 
     }
     file.close();
+}
+
+struct day16_node
+{
+    string name;
+    int value;
+    vector<day16_node*> neightbours;
+    int id;
+};
+
+const std::string WHITESPACE = " \n\r\t\f\v";
+
+std::string ltrim(const std::string& s)
+{
+    size_t start = s.find_first_not_of(WHITESPACE);
+    return (start == std::string::npos) ? "" : s.substr(start);
+}
+
+std::string rtrim(const std::string& s)
+{
+    size_t end = s.find_last_not_of(WHITESPACE);
+    return (end == std::string::npos) ? "" : s.substr(0, end + 1);
+}
+
+std::string trim(const std::string& s) {
+    return rtrim(ltrim(s));
+}
+
+void day16_addNode(string name, string value, std::vector<day16_node*>& nodes, std::map<string, int>& nodesIds)
+{
+    day16_node* node = new day16_node();
+    node->name = name;
+    node->value = atoi(value.c_str());
+    node->id = nodes.size();
+
+    nodes.push_back(node);
+    nodesIds.insert({ name, node->id });
+}
+
+void day16_addNeightbour(const string& name, const string& neightbourName, std::vector<day16_node*>& nodes, const std::map<string, int>& nodesIds)
+{
+    if (nodesIds.find(neightbourName) != nodesIds.end())
+    {
+        int nodeId = nodesIds.at(name);
+        int neightbourdID = nodesIds.at(neightbourName);
+
+        nodes[nodeId]->neightbours.push_back(nodes[neightbourdID]);
+        nodes[neightbourdID]->neightbours.push_back(nodes[nodeId]);
+    }
+}
+
+void day16_FloidWarshall(const std::vector<day16_node*>& nodes, std::vector<std::vector<int>>& output)
+{
+    output.clear();
+
+    //fill with "infinite"
+    for (int i = 0; i < nodes.size(); ++i)
+    {
+        std::vector<int> dist(nodes.size(), nodes.size() + 10);
+        output.push_back(dist);
+    }
+
+    //initial fill
+    for (int i = 0; i < nodes.size(); ++i)
+    {
+        output[i][i] = 0;
+        for (auto n : nodes[i]->neightbours)
+        {
+            int pos = n->id;
+            output[i][pos] = 1;
+        }
+    }
+
+    //algorithm
+    for (int k = 0; k < nodes.size(); ++k)
+    {
+        for (int j = 0; j < nodes.size(); ++j)
+        {
+            for (int i = 0; i < nodes.size(); ++i)
+            {
+                if (output[i][j] > output[i][k] + output[k][j])
+                {
+                    output[i][j] = output[i][k] + output[k][j];
+                }
+            }
+        }
+    }
+}
+
+int day16_calculate(int actualNode, std::set<int> visited, int actualTime, std::map<string, int>& cache, const std::vector<std::vector<int>>& distances, const std::vector<day16_node*>& nodes)
+{
+    if (actualTime <= 0) { return 0; }
+
+    int bestValue = 0;
+
+    visited.insert(actualNode);
+
+    string key = std::to_string(actualTime) + "_";
+
+    for (auto id : visited)
+    {
+        key += std::to_string(id) + "_";
+    }
+
+    key += std::to_string(actualNode);
+
+    if (cache.find(key) != cache.end())
+    {
+       return cache.at(key);//cache hit
+    }
+
+    for (int nodeIdx = 0; nodeIdx < nodes.size(); ++nodeIdx)
+    {
+        if (nodes[nodeIdx]->value == 0) { continue; }//node without value
+        if (visited.find(nodes[nodeIdx]->id) != visited.end()) { continue; }//node already visited
+
+        int newTime = actualTime - (distances[actualNode][nodeIdx]) - 1;
+
+        int valueAfterVisitNode = day16_calculate(nodeIdx, visited, newTime, cache, distances, nodes);
+
+        valueAfterVisitNode += (nodes[nodeIdx]->value * newTime);
+
+
+        if (valueAfterVisitNode > bestValue)
+        {
+            bestValue = valueAfterVisitNode;
+        }
+    }
+   
+    cache.insert({ key, bestValue });
+    return bestValue;
+}
+
+void day16()
+{
+    std::ifstream file("./input/day16.txt");
+    if (file.is_open())
+    {
+        string line;
+        const std::regex txt_regex("Valve ([A-Z]{2}) has flow rate=([0-9]+).*");
+
+        std::vector<day16_node*> nodes;
+        std::map<string, int> idNodes;
+
+        while (std::getline(file, line))
+        {
+            std::cmatch m;
+            std::regex_search(line.c_str(), m, txt_regex);
+
+            string nameNode = trim(m[1]);
+            string valueNode = m[2];
+
+            line = line.substr( line.find(";") + 24).c_str();
+
+            std::vector<std::string> neightbours = day11_split(line, ",");
+
+            day16_addNode(nameNode, valueNode, nodes, idNodes);
+
+            for (auto n : neightbours)
+            {
+                day16_addNeightbour(nameNode, trim(n), nodes, idNodes);
+            }
+        }
+
+        std::vector<std::vector<int>> distances;
+        day16_FloidWarshall(nodes, distances);
+
+        int initialNodeID = idNodes.at("AA");
+        std::set<int> visited;
+        std::map<string, int> cache;
+
+        int result = day16_calculate(initialNodeID, visited, 30, cache, distances, nodes);
+
+        std::cout << "day16 =>" << result << "\n";
+    }
+
 }
 
 int main()
@@ -1837,12 +2025,15 @@ int main()
     day8();
     day9();
     day10();
-    day11(false);
+    day11();
     day12();
     day13();
     day14();
-    //day14_2();//to slow
+#if !defined(_DEBUG)
+    day14_2();//to slow
+#endif
     day15();
+    day16();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
