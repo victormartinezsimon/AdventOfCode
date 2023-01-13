@@ -1956,13 +1956,73 @@ int day16_calculate(int actualNode, std::set<int> visited, int actualTime, std::
 
         valueAfterVisitNode += (nodes[nodeIdx]->value * newTime);
 
-
         if (valueAfterVisitNode > bestValue)
         {
             bestValue = valueAfterVisitNode;
         }
     }
    
+    cache.insert({ key, bestValue });
+    return bestValue;
+}
+
+int day16_calculate_b(int actualNode_a, int actualNode_b, int timeTo_a, int timeTo_b, std::set<int> visited, int actualTime, std::map<string, int>& cache, const std::vector<std::vector<int>>& distances, const std::vector<day16_node*>& nodes)
+{
+    if (actualTime <= 0) { return 0; }
+
+    string key = std::to_string(actualTime) + "_";
+    for (auto id : visited)
+    {
+        key += std::to_string(id) + "_";
+    }
+    key += std::to_string(actualNode_a);
+    key += "_";
+    key += std::to_string(timeTo_a);
+    key += "_";
+    std::to_string(actualNode_b);
+    key += "_";
+    key += std::to_string(timeTo_b);
+
+    if (cache.find(key) != cache.end())
+    {
+        return cache.at(key);//cache hit
+    }
+
+    if (timeTo_a > timeTo_b)
+    {
+        return day16_calculate_b(actualNode_b, actualNode_a, timeTo_b, timeTo_a, visited, actualTime, cache, distances, nodes);
+    }
+
+    int bestValue = 0;
+    for (int nextA = 0; nextA < nodes.size(); ++nextA)
+    {
+        if (nodes[nextA]->value == 0) { continue; }//node without value
+        if (visited.find(nodes[nextA]->id) != visited.end()) { continue; }//node already visited
+
+        int distanceA = distances[actualNode_a][nextA] + 1;
+        int distanceB = timeTo_b;
+
+
+        std::set<int> visitedTmp = visited;
+        visitedTmp.insert(nextA);
+
+        int value = 0;
+        if (distanceA <= distanceB)
+        {
+            value = day16_calculate_b(nextA, actualNode_b, 0, distanceB - distanceA, visitedTmp, actualTime - distanceA, cache, distances, nodes);
+        }
+        else
+        {
+            //nothing to change, in the next will interchange values
+            value = day16_calculate_b(nextA, actualNode_b, distanceA - distanceB, 0, visitedTmp, actualTime - distanceB, cache, distances, nodes);
+        }
+        value += (nodes[nextA]->value * (actualTime - distanceA));
+
+        if (value > bestValue)
+        {
+            bestValue = value;
+        }
+    }
     cache.insert({ key, bestValue });
     return bestValue;
 }
@@ -2006,8 +2066,13 @@ void day16()
         std::map<string, int> cache;
 
         int result = day16_calculate(initialNodeID, visited, 30, cache, distances, nodes);
+        std::cout << "day16 a=>" << result << "\n";
 
-        std::cout << "day16 =>" << result << "\n";
+        std::map<string, int> cache_b;
+        std::set<int> visited_b;
+
+        int result_b = day16_calculate_b(initialNodeID, initialNodeID,0,0, visited_b, 26, cache_b, distances, nodes);
+        std::cout << "day16 b=>" << result_b << "\n";
     }
 
 }
@@ -2033,7 +2098,9 @@ int main()
     day14_2();//to slow
 #endif
     day15();
-    day16();
+#if !defined(_DEBUG)
+    day16();//to slow
+#endif
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
