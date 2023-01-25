@@ -2077,6 +2077,246 @@ void day16()
 
 }
 
+const std::array<std::array<bool, 4>, 4> day17_figure1 = { {
+    {true, true, true, true},
+    {false, false, false, false},
+    {false, false, false, false},
+    {false, false, false, false},
+} };
+
+const std::array<std::array<bool, 4>, 4> day17_figure2 = { {
+    {false, true, false, false},
+    {true, true, true, false},
+    {false, true, false, false},
+    {false, false, false, false},
+} };
+
+const std::array<std::array<bool, 4>, 4> day17_figure3 = { {
+    {true, true, true, false},
+    {false, false, true, false},
+    {false, false, true, false},
+    {false, false, false, false},
+} };
+
+const std::array<std::array<bool, 4>, 4> day17_figure4 = { {
+    {true, false, false, false},
+    {true, false, false, false},
+    {true, false, false, false},
+    {true, false, false, false},
+} };
+
+const std::array<std::array<bool, 4>, 4> day17_figure5 = { {
+    {true, true, false, false},
+    {true, true, false, false},
+    {false, false, false, false},
+    {false, false, false, false},
+} };
+
+const std::array<std::array<std::array<bool, 4>, 4>, 5> day17_shapes = { day17_figure1, day17_figure2, 
+day17_figure3, day17_figure4, day17_figure5 };
+
+struct day17_fallingFigure
+{
+public:
+    int posX;
+    int posY;
+    std::array<std::array<bool, 4>, 4> shape;
+};
+
+enum class day17_MOVE_HORIZONTAL_RESULT { OK, COLLIDE_WALL, COLLIDE_FIGURE };
+
+day17_MOVE_HORIZONTAL_RESULT day17_moveFigureHorizontal(day17_fallingFigure& fig, char position, int totalWidht, const std::array<std::vector<int>, 7>& positions)
+{
+    int movement = position == '>' ? 1 : -1;
+
+    if (fig.posX + movement < 0) { return day17_MOVE_HORIZONTAL_RESULT::COLLIDE_WALL; }//cant move left <= work because all figures aligned to 0
+    //check right
+    for (int h = 0; h < 4; ++h)
+    {
+        for (int w = 0; w < 4; ++w)
+        {
+            if (fig.shape[h][w])
+            {
+                if (fig.posX + movement + w >= totalWidht)
+                {
+                    return  day17_MOVE_HORIZONTAL_RESULT::COLLIDE_WALL;
+                }
+                if (positions[0].size() <= fig.posY + h) { continue; }
+                if (positions[fig.posX + movement + w][fig.posY + h]) { return  day17_MOVE_HORIZONTAL_RESULT::COLLIDE_FIGURE; }
+            }
+        }
+    }
+
+    fig.posX += movement;
+    return  day17_MOVE_HORIZONTAL_RESULT::OK;
+}
+
+bool day17_moveFigureDown(day17_fallingFigure& fig, const std::array<std::vector<int>, 7>& positions)
+{
+    if (fig.posY - 1 < 0) { return false; }
+
+    for (int h = 0; h < 4; ++h)
+    {
+        for (int w = 0; w < 4; ++w)
+        {
+            if (fig.shape[h][w])
+            {
+                int realH = fig.posY + h;
+                if (realH - 1 < 0) { return false; }//below bottom
+                if (positions[0].size() <= realH - 1) { continue; }//does not exist
+                if (positions[fig.posX + w][realH - 1]) { return false; }
+            }
+        }
+    }
+    fig.posY -= 1;
+    return true;
+}
+
+int day17_addFigure(const day17_fallingFigure& fig, std::array<std::vector<int>, 7>& positions)
+{
+    int diff = fig.posY + 4 - positions[0].size();
+
+    for (int i = 0; i < diff; ++i)
+    {
+        for (int j = 0; j < 7; ++j)
+        {
+            positions[j].push_back(false);
+        }
+    }
+    int bestY = 0;
+    for (int h = 0; h < 4; ++h)
+    {
+        for (int w = 0; w < 4; ++w)
+        {
+            if (fig.shape[h][w])
+            {
+                if (fig.posY + h > bestY)
+                {
+                    bestY = fig.posY + h;
+                }
+                positions[fig.posX + w][fig.posY + h] = true;
+            }
+        }
+    }
+
+    return bestY;
+}
+
+void day17_removeFigure(const day17_fallingFigure& fig, std::array<std::vector<int>, 7>& positions)
+{
+    for (int h = 0; h < 4; ++h)
+    {
+        for (int w = 0; w < 4; ++w)
+        {
+            if (fig.shape[h][w])
+            {
+                positions[fig.posX + w][fig.posY + h] = false;
+            }
+        }
+    }
+}
+
+void day17_printBoard(const std::array<std::vector<int>, 7>& board)
+{
+    for (int h = board[0].size() - 1; h >= 0; --h)
+    {
+        std::cout << "|";
+        for (int j = 0; j < 7; ++j)
+        {
+            if (board[j][h])
+            {
+                std::cout << "#";
+            }
+            else
+            {
+                std::cout << ".";
+            }
+        }
+        std::cout << "|";
+        std::cout << "\n";
+    }
+    std::cout << "+";
+    for (int j = 0; j < 7; ++j)
+    {
+        std::cout << "-";
+    }
+    std::cout << "+";
+
+    std::cout << "\n";
+    std::cout << "\n";
+}
+
+void day17_paintFigureInWorld(std::string key, const day17_fallingFigure& fig, std::array<std::vector<int>, 7>& positions)
+{
+    std::cout << key << "\n";
+    day17_addFigure(fig, positions);
+    day17_printBoard(positions);
+    day17_removeFigure(fig, positions);
+}
+
+void day17(long long totalFigures)
+{
+    std::ifstream file("./input/day17.txt");
+    if (file.is_open())
+    {
+        string line;
+        std::getline(file, line);
+
+        std::string input = line;
+
+        const int startLeft = 2;
+        const int startUp = 4;
+        int currentHeight = -1;
+
+        int totalWidth = 7;
+
+        std::array<std::vector<int>, 7> positions;
+        int indexFigure = 0;
+
+        for (int j = 0; j < 7; ++j)
+        {
+            for (int i = 0; i < 4; ++i)
+            {
+                positions[j].push_back(false);
+            }
+        }
+        int indexInput = 0;
+
+        for (long long i = 0; i < totalFigures; ++i)
+        {
+            day17_fallingFigure fig;
+            fig.posX = 2;
+            fig.posY = currentHeight + startUp;
+            fig.shape = day17_shapes[indexFigure];
+            indexFigure = (indexFigure + 1) % 5;
+
+            bool stop = false;
+            if (i % 1000 == 0)
+            {
+                std::cout << i << " of " << totalFigures << "\n";
+            }
+            //paintFigureInWorld( "start", fig, positions );
+            while (!stop)
+            {
+                auto moveHorizontalResult = day17_moveFigureHorizontal(fig, input[indexInput], totalWidth, positions);
+                //paintFigureInWorld( input.substr(indexInput, 1), fig, positions );
+                stop = !day17_moveFigureDown(fig, positions);
+                //paintFigureInWorld( "^", fig, positions );
+                indexInput = (indexInput + 1) % input.size();
+            }
+
+            int positionAdd = day17_addFigure(fig, positions);
+            if (positionAdd > currentHeight)
+            {
+                currentHeight = positionAdd;
+            }
+            //printBoard( positions );
+        }
+        //day17_printBoard(positions);
+        std::cout << "sol => " << currentHeight +1<< "\n";
+    }
+}
+
 int main()
 {
     day1();
@@ -2099,7 +2339,12 @@ int main()
 #endif
     day15();
 #if !defined(_DEBUG)
-    day16();//to slow
+    //day16();//to slow
+#endif
+    day17(2022);
+#if !defined(_DEBUG)
+    day17(1000000000000);
+
 #endif
 }
 
