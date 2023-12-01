@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <algorithm>
+#include <regex>
 
 using namespace std;
 
@@ -97,13 +99,111 @@ std::vector<string> ReadFile(string path)
 }
 
 
+int GetFirstNumber_day1(const string& line, int start, int end, int increment, int& position)
+{
+    int index = start;
+
+    while (index != end)
+    {
+        if (line[index] >= '0' && line[index] <= '9')
+        {
+            position = index;
+            return line[index] - '0';
+        }
+
+        index = index + increment;
+    }
+
+    return -1;
+}
+
+void GetStringPositions(string& line, int& leftValue, int& leftPosition, int& rightValue, int& rightPosition)
+{
+    std::vector<string> numbers = {"zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"};
+
+    leftValue = -1;
+    leftPosition = line.size();
+    rightValue = -1;
+    rightPosition = -1;
+
+
+    for (int i = 0; i < numbers.size(); ++i)
+    {
+        auto foundLeftPosition = line.find(numbers[i].c_str());
+
+        if (foundLeftPosition != std::string::npos)
+        {
+            if (foundLeftPosition < leftPosition)
+            {
+                leftPosition = foundLeftPosition;
+                leftValue = i;
+            }
+        }
+
+        std::size_t foundRightPosition = line.rfind(numbers[i].c_str());
+
+        if (foundRightPosition != std::string::npos)
+        {
+            if ((int)foundRightPosition > rightPosition)
+            {
+                rightPosition = foundRightPosition;
+                rightValue = i;
+            }
+        }
+    }
+}
+
+
 void day1()
 {
     std::vector<string> fileTxt = ReadFile("./input/day1.txt");
 
-    for (auto l : fileTxt)
+    //part 1
     {
-        //std::cout << l << "\n";
+        long long acum = 0;
+
+        for (auto l : fileTxt)
+        {
+            int dummy;
+            int firstValue = GetFirstNumber_day1(l, 0, l.size(), +1, dummy);
+            int secondValue = GetFirstNumber_day1(l,l.size()-1, -1, -1, dummy);
+
+            acum += firstValue * 10 + secondValue;
+        }
+
+        std::cout << "Day 1 => " << acum << "\n";
+    }
+    //part 2
+    {
+        long long acum = 0;
+
+        for (auto l : fileTxt)
+        {
+            int leftValue;
+            int leftPosition;
+            int rightValue;
+            int rightPosition;
+            GetStringPositions(l, leftValue, leftPosition, rightValue, rightPosition);
+
+            int positionFirst;
+            int firstValue = GetFirstNumber_day1(l, 0, l.size(), +1, positionFirst);
+            int positionSecond;
+            int secondValue = GetFirstNumber_day1(l, l.size() - 1, -1, -1,positionSecond);
+
+            if (positionFirst > leftPosition)
+            {
+                firstValue = leftValue;
+            }
+
+            if (positionSecond < rightPosition)
+            {
+                secondValue = rightValue;
+            }
+
+            acum += firstValue * 10 + secondValue;
+        }
+
+        std::cout << "Day 1_2 => " << acum << "\n";
     }
 }
 
