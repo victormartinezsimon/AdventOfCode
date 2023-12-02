@@ -98,6 +98,22 @@ std::vector<string> ReadFile(string path)
     return result;
 }
 
+vector<string> split(string s, const string& delimiter)
+{
+    vector<string> toReturn;
+
+    size_t pos = 0;
+    std::string token;
+    while ((pos = s.find(delimiter)) != std::string::npos) {
+        token = s.substr(0, pos);
+        toReturn.push_back(token);
+        s.erase(0, pos + delimiter.length());
+    }
+    toReturn.push_back(s);
+
+    return toReturn;
+}
+
 
 int GetFirstNumber_day1(const string& line, int start, int end, int increment, int& position)
 {
@@ -207,9 +223,76 @@ void day1()
     }
 }
 
+
 void day2()
 {
+    std::vector<string> fileTxt = ReadFile("./input/day2.txt");
 
+    std::map<string, int> maxPerColor = { {"red", 12},{"green", 13},{"blue", 14}};
+
+    int count_a = 0;
+    long long count_b = 0;
+
+    for (int i = 0; i < fileTxt.size(); ++i)
+    {
+        auto match = split(fileTxt[i], ":")[1];
+      
+        auto plays = split(match, ";");
+
+        std::map<string, int> currentMax = { {"red", 0},{"green", 0},{"blue", 0} };
+
+        for (auto play : plays)
+        {
+            auto cubes = split(play, ",");
+
+            for (auto cube : cubes)
+            {
+                for (auto max : maxPerColor)
+                {
+                    auto color = split(cube, max.first);
+                    if (color.size() >= 2)
+                    {
+                        int value = atoi(color[0].c_str());
+                        
+                        if (currentMax[max.first] < value)
+                        {
+                            currentMax[max.first] = value;
+                        }
+
+                        break;
+                    }
+                }
+            }
+        }
+       
+        {
+            bool valid_a = true;
+            for (auto max : maxPerColor)
+            {
+                if (max.second < currentMax[max.first])
+                {
+                    valid_a = false;
+                    break;
+                }
+            }
+
+            if (valid_a)
+            {
+                count_a += (i + 1);
+            }
+        }
+        {
+            long long pow = 1;
+            for (auto max : currentMax)
+            {
+                pow = pow * max.second;
+            }
+            count_b += pow;
+        }
+    }
+
+    std::cout << "Day 2 => " << count_a << "\n";
+    std::cout << "Day 2_2 => " << count_b << "\n";
 }
 void day3()
 {
@@ -307,6 +390,7 @@ void day25()
 int main()
 {
     day1();
+    day2();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
