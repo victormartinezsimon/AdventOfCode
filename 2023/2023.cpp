@@ -8,6 +8,8 @@
 #include <map>
 #include <algorithm>
 #include <regex>
+#include <functional>
+
 
 using namespace std;
 
@@ -294,10 +296,267 @@ void day2()
     std::cout << "Day 2 => " << count_a << "\n";
     std::cout << "Day 2_2 => " << count_b << "\n";
 }
-void day3()
+
+vector<vector<char>> ParseFile_day3(const std::vector<string>& file)
+{
+    vector<vector<char>> result;
+
+    for (string s : file)
+    {
+        vector<char> v;
+        for (char c : s)
+        {
+            v.push_back(c);
+        }
+        result.push_back(v);
+    }
+    return result;
+}
+
+vector<pair<int, int>> ExtractNumbers_day3(const vector<char>& board)
+{
+    vector<pair<int, int>> result;
+
+    int start = 0;
+    bool inNumber = false;
+
+
+    for (int i = 0; i <= board.size(); ++i)
+    {
+        if (i< board.size() && board[i] >= '0' && board[i] <= '9')
+        {
+            if (!inNumber)
+            {
+                inNumber = true;
+                start = i;
+            }
+        }
+        else
+        {
+            if (inNumber)
+            {
+                inNumber = false;
+                result.push_back({ start, i - 1 });
+            }
+        }
+    }
+    return result;
+}
+
+bool anySymbol_day3(char c)
+{
+    return c != '.' && (c < '0' || c > '9');
+}
+
+bool anyNumber_day3(char c)
+{
+    return  (c >= '0' && c <= '9');
+}
+
+bool validPosition_day3(const vector<vector<char>>& board, int row, int col )
+{
+    //a b c
+    //d X e
+    //f g h
+
+    if (row > 0 && col > 0)
+    {
+        char a = board[row - 1][col - 1];
+        if (anySymbol_day3(a)) { return true; }
+    }
+
+    if (row > 0)
+    {
+        char b = board[row - 1][col];
+        if (anySymbol_day3(b)) { return true; }
+    }
+
+    if (row > 0 && col < board[row].size() - 1)
+    {
+        char c = board[row - 1][col + 1];
+        if (anySymbol_day3(c)) { return true; }
+    }
+
+    if (col > 0)
+    {
+        char d = board[row][col - 1];
+        if (anySymbol_day3(d)) { return true; }
+    }
+
+    if (col < board[row].size() - 1)
+    {
+        char e = board[row][col + 1];
+        if (anySymbol_day3(e)) { return true; }
+    }
+
+    if (row < board.size() - 1 && col > 0)
+    {
+        char f = board[row + 1][col - 1];
+        if (anySymbol_day3(f)) { return true; }
+    }
+
+    if (row < board.size() - 1)
+    {
+        char g = board[row + 1][col];
+        if (anySymbol_day3(g)) { return true; }
+    }
+
+    if (row < board.size()-1 && col < board[row].size() - 1)
+    {
+        char h = board[row + 1][col + 1];
+        if (anySymbol_day3(h)) { return true; }
+    }
+    
+    return false;
+}
+
+bool validNumber_day3(const vector<vector<char>>& board, int row, const pair<int, int> position)
 {
 
+    for (int i = position.first; i <= position.second; ++i)
+    {
+        if (validPosition_day3(board, row, i) >= 1)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
+
+int buildNumber_day3(const vector<vector<char>>& board, int row, const pair<int, int> position)
+{
+    int solution = 0;
+
+    std::string number = "";
+
+    for (int col = position.first; col <= position.second; ++col)
+    {
+        number += board[row][col];
+    }
+    return atoi(number.c_str());
+}
+
+int getGearNumberRow_day3(const vector<vector<char>>& board, const std::vector < std::vector<pair<int, int>>>& numbers, int rowInvestigate, int colGear, int& numbersUsed)
+{
+    int sol = 1;
+    for (auto number : numbers[rowInvestigate])
+    {
+       //inside
+        if (colGear >= number.first && colGear <= number.second)
+        {
+            //premio
+            sol *= buildNumber_day3(board, rowInvestigate, number);
+            numbersUsed += 1;
+        }
+        
+        //left
+        if ( number.second == colGear - 1)
+        {
+            sol *= buildNumber_day3(board, rowInvestigate, number);
+            numbersUsed += 1;
+        }
+
+        //right
+        if (number.first == colGear + 1)
+        {
+            sol *= buildNumber_day3(board, rowInvestigate, number);
+            numbersUsed += 1;
+        }
+    }
+    
+    return sol;
+}
+
+int getGearNumbers_day3(const vector<vector<char>>& board, const std::vector < std::vector<pair<int, int>>>& numbers, int row, int col)
+{
+   // int validNumbers = validGearPosition_day3(board, row, col);
+    //if (validNumbers < 2) { return 0; }
+
+    int result = 1;
+
+    int numbersUsed = 0;
+    if (row > 0)
+    {
+        result *= getGearNumberRow_day3(board, numbers, row - 1,  col, numbersUsed);
+    }
+
+    {
+        result *= getGearNumberRow_day3(board, numbers, row,  col, numbersUsed);
+    }
+
+    if (row < board.size())
+    {
+        result *= getGearNumberRow_day3(board, numbers, row + 1,  col, numbersUsed);
+    }
+    if (numbersUsed < 2) { return 0; }
+    return result;
+}
+
+void day3_a()
+{
+    std::vector<string> fileTxt = ReadFile("./input/day3.txt");
+
+    auto board = ParseFile_day3(fileTxt);
+
+    long long solution_a = 0;
+
+    for (int row = 0; row < board.size(); ++row)
+    {
+        auto numbers = ExtractNumbers_day3(board[row]);
+
+        for (auto number : numbers)
+        {
+            int n = buildNumber_day3(board, row, number);
+            if (validNumber_day3(board, row, number))
+            {
+                solution_a += n;
+            }
+        }
+    }
+
+    std::cout << "Day 3 => " << solution_a << "\n";
+}
+
+void day3_b()
+{
+    std::vector<string> fileTxt = ReadFile("./input/day3.txt");
+
+    auto board = ParseFile_day3(fileTxt);
+
+    std::vector < std::vector<pair<int, int>>> numbersPerRow;
+    for (int row = 0; row < board.size(); ++row)
+    {
+        auto numbers = ExtractNumbers_day3(board[row]);
+
+        numbersPerRow.push_back(numbers);
+    }
+
+    long long solution_b = 0;
+
+    for (int row = 0; row < board.size(); ++row)
+    {
+        for (int col = 0; col < board[row].size(); ++col)
+        {
+            if (board[row][col] == '*')
+            {
+                int number = getGearNumbers_day3(board, numbersPerRow, row, col);
+                solution_b += number;
+            }
+        }
+    }
+
+
+    
+    std::cout << "Day 3_b => " << solution_b << "\n";
+}
+
+void day3()
+{
+    day3_a();
+    day3_b();
+}
+
 void day4()
 {
 
@@ -391,6 +650,8 @@ int main()
 {
     day1();
     day2();
+    day3();
+    //day3a();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
