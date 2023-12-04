@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <regex>
 #include <functional>
+#include <set>
+#include <numeric>
 
 
 using namespace std;
@@ -545,9 +547,7 @@ void day3_b()
             }
         }
     }
-
-
-    
+       
     std::cout << "Day 3_b => " << solution_b << "\n";
 }
 
@@ -557,9 +557,86 @@ void day3()
     day3_b();
 }
 
+int getTotalWinningNumbers_day4(const string& s)
+{
+    std::vector<string> initialSeparation = split(s, "|");
+    std::vector<string> prizeNumbers = split(split(initialSeparation[0], ":")[1], " ");
+    std::vector<string> myNumbers = split(initialSeparation[1], " ");
+
+    std::set<int> prizeSet;
+    for (auto number : prizeNumbers)
+    {
+        if (number.size() > 0)
+        {
+            prizeSet.insert(atoi(number.c_str()));
+        }
+    }
+
+    int count = 0;
+    for (auto number : myNumbers)
+    {
+        if (number.size() > 0)
+        {
+            if (prizeSet.find(atoi(number.c_str())) != prizeSet.end())
+            {
+                ++count;
+            }
+        }
+    }
+    return count;
+}
+
+void day4_a()
+{
+    std::vector<string> fileTxt = ReadFile("./input/day4.txt");
+
+    long long result = 0;
+    for (int i = 0; i < fileTxt.size(); ++i)
+    {
+        int count = getTotalWinningNumbers_day4(fileTxt[i]);
+        
+        if (count > 0)
+        {
+            result += pow(2, count - 1);
+        }
+    }
+
+    std::cout << "Day 4 => " << result << "\n";
+}
+
+void day4_b()
+{
+    std::vector<string> fileTxt = ReadFile("./input/day4.txt");
+
+    std::vector<int> winsPerCard;
+    std::vector<int> extraWins;
+    std::vector<int> totalCardboards;
+
+    for (int i = 0; i < fileTxt.size(); ++i)
+    {
+        winsPerCard.push_back( getTotalWinningNumbers_day4(fileTxt[i]));
+        extraWins.push_back(0);
+        totalCardboards.push_back(1);
+    }
+
+    for (int cardboardIdx = 0; cardboardIdx < winsPerCard.size(); ++cardboardIdx)
+    {
+        totalCardboards[cardboardIdx] += extraWins[cardboardIdx];
+
+        for (int i = cardboardIdx + 1; i < cardboardIdx + 1 + winsPerCard[cardboardIdx]; ++i)
+        {
+            extraWins[i] += totalCardboards[cardboardIdx];
+        }
+    }
+
+    long long solution = std::accumulate(totalCardboards.begin(), totalCardboards.end(), 0);
+    std::cout << "Day 4_b => " << solution << "\n";
+}
+
 void day4()
 {
-
+    day4_a();
+    day4_b();
 }
 void day5()
 {
@@ -651,7 +728,7 @@ int main()
     day1();
     day2();
     day3();
-    //day3a();
+    day4();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
