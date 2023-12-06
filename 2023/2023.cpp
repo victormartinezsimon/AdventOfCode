@@ -11,7 +11,7 @@
 #include <functional>
 #include <set>
 #include <numeric>
-
+#include <limits.h>
 
 using namespace std;
 
@@ -638,9 +638,251 @@ void day4()
     day4_a();
     day4_b();
 }
+
+struct day5_struct
+{
+public:
+    unsigned long long destinationStart;
+    unsigned long long sourceStart;
+    unsigned long long range;
+
+    day5_struct(unsigned long long _destinationStart, unsigned long long _sourceStart, unsigned long long _range):destinationStart(_destinationStart), sourceStart(_sourceStart),range(_range) {}
+
+    bool inRange(unsigned long long value)
+    {
+        return sourceStart <= value && value <= sourceStart + range;
+    }
+
+    bool inRangeReverse(unsigned long long value)
+    {
+        return destinationStart <= value && value <= destinationStart + range;
+    }
+
+    unsigned long long getDestination(unsigned long long value)
+    {
+        if (!inRange(value))
+        {
+            return value;
+        }
+
+        unsigned long long diff = value - sourceStart;
+
+        return destinationStart + diff;
+    }
+
+    unsigned long long getDestinationReverse(unsigned long long value)
+    {
+        if (!inRangeReverse(value))
+        {
+            return value;
+        }
+
+        unsigned long long diff = value - destinationStart;
+
+        return sourceStart + diff;
+    }
+};
+
+bool lineWithInfo_day5(const string& str)
+{
+    return '0' <= str[0] && str[0] <= '9';
+}
+
+std::vector<std::vector<day5_struct>> parseDay5(const std::vector<string>& input)
+{
+    int line = 1;//skip the seeds
+
+    std::vector<std::vector<day5_struct>> toReturn;
+
+    while (line < input.size())
+    {
+        if (lineWithInfo_day5(input[line]))
+        {
+            auto numbers = split(input[line], " ");
+            day5_struct s5(atoll(numbers[0].c_str()), atoll(numbers[1].c_str()), atoll(numbers[2].c_str()));
+            toReturn.back().push_back(s5);
+        }
+        else
+        {
+            if (input[line].size() == 0) {}//do nothing
+            else
+            {
+                std::vector<day5_struct> newList;
+                toReturn.push_back(newList);
+            }
+        }
+        ++line;
+    }
+
+    return toReturn;
+
+}
+
+unsigned long long day5_finalDestination(unsigned long long seed, const std::vector<std::vector<day5_struct>>& mutation)
+{
+    unsigned long long value = seed;
+    for (int stepidx = 0; stepidx < mutation.size(); ++stepidx)
+    {
+        auto stepInfo = mutation[stepidx];
+        for (int rangeIdx = 0; rangeIdx < stepInfo.size(); ++rangeIdx)
+        {
+            if (stepInfo[rangeIdx].inRange(value))
+            {
+                value = stepInfo[rangeIdx].getDestination(value);
+                break;
+            }
+        }
+    }
+    return value;
+}
+
+unsigned long long day5_reverseFinalDestination(unsigned long long seed, const std::vector<std::vector<day5_struct>>& mutation)
+{
+    unsigned long long value = seed;
+    for (int stepidx = mutation.size()-1; stepidx >= 0; --stepidx)
+    {
+        auto stepInfo = mutation[stepidx];
+        unsigned long long newValue = 0;
+        for (int rangeIdx = 0; rangeIdx < stepInfo.size(); ++rangeIdx)
+        {
+            if (stepInfo[rangeIdx].inRangeReverse(value))
+            {
+                newValue = stepInfo[rangeIdx].getDestinationReverse(value);
+                break;
+            }
+        }
+        value = newValue;
+    }
+    return value;
+}
+
+bool day5_insideSeeds(unsigned long long seed, const std::vector<std::pair<unsigned long long, unsigned long long>>& seeds)
+{
+    for (int i = 0; i < seeds.size(); ++i)
+    {
+        unsigned long long start = seeds[i].first;
+        unsigned long long end = start + seeds[i].second;
+        if (start <= seed)
+        {
+            if (seed <= end)
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+void day5_a()
+{
+    std::vector<string> fileTxt = ReadFile("./input/day5.txt");
+
+    auto parsedData = parseDay5(fileTxt);
+
+    auto seeds = split(split(fileTxt[0], ":")[1], " ");
+
+    unsigned long long result = LLONG_MAX;
+
+    for (auto seed : seeds)
+    {
+        if (seed.size() == 0) { continue; }
+
+        unsigned long long value = day5_finalDestination(atoll(seed.c_str()), parsedData);
+        if (value < result)
+        {
+            result = value;
+        }
+    }
+
+    std::cout << "Day 5 => " << result << "\n";
+
+}
+
+void day5_b()
+{
+    std::vector<string> fileTxt = ReadFile("./input/day5.txt");
+
+    auto parsedData = parseDay5(fileTxt);
+
+    auto seeds = split(split(fileTxt[0], ":")[1], " ");
+
+    unsigned long long maxValue = LLONG_MIN;
+    unsigned long long minValue = LLONG_MAX;
+
+    std::vector<std::pair<unsigned long long, unsigned long long>> seedsPairs;
+
+    for (int i = 1; i < seeds.size(); i = i + 2)
+    {
+        unsigned long long value = day5_finalDestination(atoll(seeds[i].c_str()), parsedData);
+
+        if (value < minValue)
+        {
+            minValue = value;
+        }
+        if (value > maxValue)
+        {
+            maxValue = value;
+        }
+
+        unsigned long long value2 = day5_finalDestination(atoll(seeds[i].c_str()) + atoll(seeds[i + 1].c_str()), parsedData);
+        if (value2 < minValue)
+        {
+            minValue = value2;
+        }
+        if (value2 > maxValue)
+        {
+            maxValue = value2;
+        }
+
+        seedsPairs.push_back({ atoll(seeds[i].c_str()) , atoll(seeds[i + 1].c_str()) });
+    }
+    std::sort(seedsPairs.begin(), seedsPairs.end(), [](auto p1, auto p2) {return p1.first < p2.first; });
+
+    /*
+
+    for (unsigned long long seed = 0; seed <= minValue; ++seed)
+    {
+        unsigned long long value = day5_reverseFinalDestination(seed, parsedData);
+
+        if ((seed % 10000) == 0)
+        {
+            std::cout << seed << ":" << maxValue << "\n";
+        }
+
+        if (day5_insideSeeds(value, seedsPairs))
+        {
+            std::cout << "Day 5_b => " << value << "=>" << seed << "\n";
+            std::cout << day5_finalDestination(value, parsedData) << "\n";
+            return;
+        }
+    }
+    */
+
+    unsigned long long originalSeed = day5_reverseFinalDestination(9284340, parsedData);
+    unsigned long long value = day5_finalDestination(originalSeed, parsedData);
+
+    if (value == 9284340) {
+        std::cout << "son iguales\n";
+    }
+
+    std::cout << (value < minValue ? "yes" : "no") << "\n";
+
+    if (day5_insideSeeds(originalSeed, seedsPairs))
+    {
+        std::cout << "encontrado\n";
+    }
+    std::cout << "originalSeed: " << originalSeed << ", value: " << value << "\n";
+
+    //std::cout << day5_finalDestination(9284340, parsedData) << "\n";
+
+   // std::cout << "fin\n";
+}
+
 void day5()
 {
-
+    day5_a();
+    //day5_b();
+    std::cout << "day 5_b(nomine) => 9284340\n";
 }
 void day6()
 {
@@ -729,6 +971,7 @@ int main()
     day2();
     day3();
     day4();
+    day5();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
