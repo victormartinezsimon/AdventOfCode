@@ -885,7 +885,7 @@ void day5()
     std::cout << "day 5_b(from internet) => 9284340\n";
 }
 
-pair<int, int> day6_equation(int d, int s)
+pair<double, double> day6_equation(long long d, long long s)
 {
     double a = s * s;
     double b = 4 * d;
@@ -950,8 +950,41 @@ void day6_a()
 
 void day6_b()
 {
-    
-    std::cout << "day6_b => " << "30077773" << " obtained using maths, no code" << "\n";
+    auto fileTxt = ReadFile("./input/day6.txt");
+    string distances;
+    string times;
+
+    {
+        string distancesTxt = fileTxt[1];
+        distancesTxt.erase(0, 10);
+        auto distanceSplit = split(distancesTxt, " ");
+        for (int i = 0; i < distanceSplit.size(); ++i)
+        {
+            if (distanceSplit[i].size() > 0)
+            {
+                distances += distanceSplit[i];
+            }
+        }
+    }
+    {
+        string timesTxt = fileTxt[0];
+        timesTxt.erase(0, 10);
+        auto timesSplit = split(timesTxt, " ");
+        for (int i = 0; i < timesSplit.size(); ++i)
+        {
+            if (timesSplit[i].size() > 0)
+            {
+                times += timesSplit[i];
+            }
+        }
+    }
+
+    {
+        auto sols = day6_equation(atoll(distances.c_str()), atoll(times.c_str()));
+        long long diff = abs(sols.second - sols.first) + 1;
+        std::cout << "day6_b => " << diff << ", Using calc: 30077773" << "\n";
+    }
+
 }
 
 void day6()
