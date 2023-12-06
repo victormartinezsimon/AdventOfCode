@@ -882,11 +882,82 @@ void day5()
 {
     day5_a();
     //day5_b();
-    std::cout << "day 5_b(nomine) => 9284340\n";
+    std::cout << "day 5_b(from internet) => 9284340\n";
 }
+
+pair<int, int> day6_equation(int d, int s)
+{
+    double a = s * s;
+    double b = 4 * d;
+    double _sqrt = sqrt(a - b);
+
+    double solution1 = (- s + _sqrt) / -2;
+    double solution2 = (-s - _sqrt) / -2;
+
+    if (solution1 > solution2)
+    {
+        return { floor(solution2 + 1), ceil(solution1 - 1) };
+    }
+    else
+    {
+        return { floor(solution1 +1), ceil(solution2 - 1)};
+    }
+}
+
+void day6_a()
+{
+    auto fileTxt = ReadFile("./input/day6.txt");
+
+    std::vector<int> distances;
+    std::vector<int> times;
+
+    {
+        string distancesTxt = fileTxt[1];
+        distancesTxt.erase(0, 10);
+        auto distanceSplit = split(distancesTxt, " ");
+        for (int i = 0; i < distanceSplit.size(); ++i)
+        {
+            if (distanceSplit[i].size() > 0)
+            {
+                distances.push_back(atoi(distanceSplit[i].c_str()));
+            }
+        }
+    }
+    {
+        string timesTxt = fileTxt[0];
+        timesTxt.erase(0, 10);
+        auto timesSplit = split(timesTxt, " ");
+        for (int i = 0; i < timesSplit.size(); ++i)
+        {
+            if (timesSplit[i].size() > 0)
+            {
+                times.push_back(atoi(timesSplit[i].c_str()));
+            }
+        }
+    }
+
+    auto solution = 1;
+
+    for (int i = 0; i < distances.size(); ++i)
+    {
+        auto sols = day6_equation(distances[i], times[i]);
+        long long diff = abs(sols.second - sols.first) + 1;
+        solution *= diff;
+    }
+     
+    std::cout << "day6 => " << solution << "\n";
+}
+
+void day6_b()
+{
+    
+    std::cout << "day6_b => " << "30077773" << " obtained using maths, no code" << "\n";
+}
+
 void day6()
 {
-
+    day6_a();
+    day6_b();
 }
 void day7()
 {
@@ -972,6 +1043,7 @@ int main()
     day3();
     day4();
     day5();
+    day6();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
