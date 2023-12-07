@@ -658,6 +658,16 @@ public:
         return destinationStart <= value && value <= destinationStart + range;
     }
 
+    unsigned long long lastSourceValue()const 
+    {
+        return sourceStart + range;
+    }
+
+    unsigned long long lastDestinationValue() const
+    {
+        return destinationStart + range;
+    }
+
     unsigned long long getDestination(unsigned long long value)
     {
         if (!inRange(value))
@@ -773,6 +783,45 @@ bool day5_insideSeeds(unsigned long long seed, const std::vector<std::pair<unsig
     return false;
 }
 
+std::vector< std::pair<unsigned long long, unsigned long long>> day5_getGroups(const std::pair<unsigned long long, unsigned long long>& seedPair, day5_struct& mutation)
+{
+    std::vector< std::pair<unsigned long long, unsigned long long>> result;
+
+    //before mutation
+    if (seedPair.second < mutation.sourceStart)
+    {
+        //result.push_back(seedPair);
+        return result;
+    }
+
+    //after mutation
+    if (seedPair.first > mutation.lastSourceValue())
+    {
+        //result.push_back(seedPair);
+        return result;
+    }
+
+    //here some collision
+    //left part
+    if (seedPair.first < mutation.sourceStart)
+    {
+        result.push_back({ seedPair.first, mutation.sourceStart - 1 });
+    }
+
+    //right part
+    if (seedPair.second > mutation.lastSourceValue())
+    {
+        result.push_back({ mutation.lastSourceValue() + 1, seedPair.second });
+    }
+
+    unsigned long long start = max(seedPair.first, mutation.sourceStart);
+    unsigned long long end = min(seedPair.second, mutation.lastSourceValue());
+
+    result.push_back({mutation.getDestination(start), mutation.getDestination(end)});
+
+    return result;
+}
+
 void day5_a()
 {
     std::vector<string> fileTxt = ReadFile("./input/day5.txt");
@@ -800,43 +849,52 @@ void day5_a()
 
 void day5_b()
 {
-    std::vector<string> fileTxt = ReadFile("./input/day5.txt");
+    /*
+    * WIP
+    std::vector<string> fileTxt = ReadFile("./input/day5_b.txt");
 
-    auto parsedData = parseDay5(fileTxt);
+    auto mutations = parseDay5(fileTxt);
 
     auto seeds = split(split(fileTxt[0], ":")[1], " ");
-
-    unsigned long long maxValue = LLONG_MIN;
-    unsigned long long minValue = LLONG_MAX;
 
     std::vector<std::pair<unsigned long long, unsigned long long>> seedsPairs;
 
     for (int i = 1; i < seeds.size(); i = i + 2)
     {
-        unsigned long long value = day5_finalDestination(atoll(seeds[i].c_str()), parsedData);
-
-        if (value < minValue)
-        {
-            minValue = value;
-        }
-        if (value > maxValue)
-        {
-            maxValue = value;
-        }
-
-        unsigned long long value2 = day5_finalDestination(atoll(seeds[i].c_str()) + atoll(seeds[i + 1].c_str()), parsedData);
-        if (value2 < minValue)
-        {
-            minValue = value2;
-        }
-        if (value2 > maxValue)
-        {
-            maxValue = value2;
-        }
-
-        seedsPairs.push_back({ atoll(seeds[i].c_str()) , atoll(seeds[i + 1].c_str()) });
+        long long start = atoll(seeds[i].c_str());
+        long long end = start + atoll(seeds[i + 1].c_str());
+        seedsPairs.push_back({  start, end });
     }
-    std::sort(seedsPairs.begin(), seedsPairs.end(), [](auto p1, auto p2) {return p1.first < p2.first; });
+    //std::sort(seedsPairs.begin(), seedsPairs.end(), [](auto p1, auto p2) {return p1.first < p2.first; });
+
+    std::vector<std::pair<unsigned long long, unsigned long long>> currentPairs = seedsPairs;
+
+    for (int mutationIdx = 0; mutationIdx < mutations.size(); ++mutationIdx)
+    {
+        std::vector<std::pair<unsigned long long, unsigned long long>> newPairs;
+
+        auto mutation = mutations[mutationIdx];
+
+        for (auto mut : mutation)
+        {
+            for (auto seedPair : currentPairs)
+            {
+                std::vector< std::pair<unsigned long long, unsigned long long>> newPair =  day5_getGroups(seedPair, mut);
+                newPairs.insert(newPairs.end(), newPair.begin(), newPair.end());
+            }
+        }
+        if (newPairs.size() > 0)
+        {
+            currentPairs = newPairs;
+            std::sort(currentPairs.begin(), currentPairs.end(), [](auto p1, auto p2) {return p1.first < p2.first; });
+        }
+
+    }
+
+    std::sort(currentPairs.begin(), currentPairs.end(), [](auto p1, auto p2) {return p1.first < p2.first; });
+    std::cout << "day 5_b => " << currentPairs[0].first << "\n";
+    */
+
 
     /*
 
@@ -858,6 +916,7 @@ void day5_b()
     }
     */
 
+    /*
     unsigned long long originalSeed = day5_reverseFinalDestination(9284340, parsedData);
     unsigned long long value = day5_finalDestination(originalSeed, parsedData);
 
@@ -876,12 +935,13 @@ void day5_b()
     //std::cout << day5_finalDestination(9284340, parsedData) << "\n";
 
    // std::cout << "fin\n";
+   */
 }
 
 void day5()
 {
     day5_a();
-    //day5_b();
+    day5_b();
     std::cout << "day 5_b(from internet) => 9284340\n";
 }
 
@@ -992,9 +1052,180 @@ void day6()
     day6_a();
     day6_b();
 }
+
+struct day7_play
+{
+public:
+    int _value;
+    string _play;
+    std::map<char, int> _countSymbols;
+    bool _hasJokers;
+
+    std::map<char, int> _cardOrderNormal = { {'A', 1},{'K', 2} ,{'Q', 3} ,{'J', 4} ,{'T', 5} ,{'9', 6} ,{'8', 7} ,{'7', 8} ,{'6', 9},{'5', 10} ,{'4', 11} ,{'3', 12} ,{'2', 13} };
+    std::map<char, int> _cardOrderJoker = { {'A', 1},{'K', 2} ,{'Q', 3},{'T', 5} ,{'9', 6} ,{'8', 7} ,{'7', 8} ,{'6', 9},{'5', 10} ,{'4', 11} ,{'3', 12} ,{'2', 13}, {'J', 14} };
+
+    day7_play(string play, int value, bool hasJokers) :_value(value), _play(play), _hasJokers(hasJokers)
+    {
+        GetCountSymbols();
+    }
+
+    void GetCountSymbols()
+    {
+        _countSymbols.insert({ 'J', 0});
+        for (char c : _play)
+        {
+            if (_countSymbols.find(c) == _countSymbols.end())
+            {
+                _countSymbols.insert({ c, 0 });
+            }
+            ++_countSymbols[c];
+        }
+    }
+
+public:
+    //5, 4, 3, 2 equals
+    bool HasNumber( int number, bool useJokers) const
+    {
+        int countJokers = _countSymbols.at('J');
+        for (auto count : _countSymbols)
+        {
+            int myCount = count.second;
+
+            if (useJokers && count.first != 'J')
+            {
+                myCount += countJokers;
+            }
+
+            if (myCount == number) { return true; }
+        }
+        return false;
+    }
+
+    bool HasFullHouse() const
+    {
+        if (!_hasJokers)
+        {
+            return HasNumber(3, _hasJokers) && HasNumber(2, _hasJokers);
+        }
+        else
+        {
+            int countJokers = _countSymbols.at('J');
+
+            bool hasThree = HasNumber(3, false);
+            bool hasTwo = HasNumber(2, false);
+            bool hasDoublePair = HasDoublePair();
+
+            if (countJokers >= 4) { return true; }
+            if (countJokers == 0) { return hasThree && hasTwo; }
+            if (countJokers == 3) { return hasTwo || hasDoublePair; }
+            if (countJokers == 2) { return hasThree || hasDoublePair; }//if double pair and 2 jokers then, the 2 jokers makes the trio
+            if (countJokers == 1) { return hasThree || hasDoublePair; }
+            return false;
+        }
+
+    }
+
+    bool HasDoublePair() const
+    {
+        int totalPairs = 0;
+
+        for (auto count : _countSymbols)
+        {
+            if (count.second == 2) {++totalPairs; }
+        }
+
+        return totalPairs == 2;
+    }
+
+    bool IsBetterCard(char c1, char c2) const
+    {
+        if (_hasJokers)
+        {
+            return _cardOrderJoker.at(c1) < _cardOrderJoker.at(c2);
+        }
+        else
+        {
+            return _cardOrderNormal.at(c1) < _cardOrderNormal.at(c2);
+        }
+    }
+
+    bool IsBestCardPlay(const day7_play& p2) const
+    {
+        for (int i = 0; i < _play.size(); ++i)
+        {
+            if (_play[i] == p2._play[i]) { continue; }
+            return IsBetterCard(_play[i], p2._play[i]);
+        }
+        return true;
+    }
+
+    bool IsBetter(const day7_play& p2) const
+    {
+        if (HasNumber(5, _hasJokers) && p2.HasNumber(5, _hasJokers)) { return IsBestCardPlay(p2); }
+        if (HasNumber(5, _hasJokers) && !p2.HasNumber(5, _hasJokers)) { return true; }
+        if (!HasNumber(5, _hasJokers) && p2.HasNumber(5, _hasJokers)) { return false; }
+
+        if (HasNumber(4, _hasJokers) && p2.HasNumber(4, _hasJokers)) { return IsBestCardPlay(p2); }
+        if (HasNumber(4, _hasJokers) && !p2.HasNumber(4, _hasJokers)) { return true; }
+        if (!HasNumber(4, _hasJokers) && p2.HasNumber(4, _hasJokers)) { return false; }
+
+        if (HasFullHouse() && p2.HasFullHouse()) { return IsBestCardPlay(p2); }
+        if (HasFullHouse() && !p2.HasFullHouse()) { return true; }
+        if (!HasFullHouse() && p2.HasFullHouse()) { return false; }
+
+        if (HasNumber(3, _hasJokers) && p2.HasNumber(3, _hasJokers)) { return IsBestCardPlay(p2); }
+        if (HasNumber(3, _hasJokers) && !p2.HasNumber(3, _hasJokers)) { return true; }
+        if (!HasNumber(3, _hasJokers) && p2.HasNumber(3, _hasJokers)) { return false; }
+
+        if (HasDoublePair() && p2.HasDoublePair()) { return IsBestCardPlay(p2); }
+        if (HasDoublePair() && !p2.HasDoublePair()) { return true; }
+        if (!HasDoublePair() && p2.HasDoublePair()) { return false; }
+
+        if (HasNumber(2, _hasJokers) && p2.HasNumber(2, _hasJokers)) { return IsBestCardPlay(p2); }
+        if (HasNumber(2, _hasJokers) && !p2.HasNumber(2, _hasJokers)) { return true; }
+        if (!HasNumber(2, _hasJokers) && p2.HasNumber(2, _hasJokers)) { return false; }
+
+        return IsBestCardPlay(p2);
+    }
+
+};
+
+struct day7_comparator
+{
+    bool operator()(const day7_play& p1, const day7_play& p2) const
+    {
+        return !p1.IsBetter(p2);
+    }
+};
+
+void day7_Task(bool hasJokers)
+{
+    auto fileTxt = ReadFile("./input/day7.txt");
+
+   set<day7_play, day7_comparator> plays;
+
+    for (auto f : fileTxt)
+    {
+        auto info = split(f, " ");
+        day7_play play(info[0], atoi(info[1].c_str()), hasJokers);
+        plays.insert(play);
+    }
+
+    long long acum = 0;
+
+    int count = 1;
+    for (auto play: plays)
+    {
+        acum += (count) * play._value;
+        ++count;
+    }
+    std::cout << "day7" << (hasJokers ? "_b => " : " => ") << acum << "\n";
+}
+
 void day7()
 {
-
+    day7_Task(false);
+    day7_Task(true);
 }
 void day8()
 {
@@ -1077,6 +1308,7 @@ int main()
     day4();
     day5();
     day6();
+    day7();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
