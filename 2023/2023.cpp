@@ -13,6 +13,7 @@
 #include <numeric>
 #include <limits.h>
 
+
 using namespace std;
 
 
@@ -648,14 +649,9 @@ public:
 
     day5_struct(unsigned long long _destinationStart, unsigned long long _sourceStart, unsigned long long _range):destinationStart(_destinationStart), sourceStart(_sourceStart),range(_range) {}
 
-    bool inRange(unsigned long long value)
+    bool inRange(unsigned long long value) const
     {
         return sourceStart <= value && value <= sourceStart + range;
-    }
-
-    bool inRangeReverse(unsigned long long value)
-    {
-        return destinationStart <= value && value <= destinationStart + range;
     }
 
     unsigned long long lastSourceValue()const 
@@ -668,7 +664,7 @@ public:
         return destinationStart + range;
     }
 
-    unsigned long long getDestination(unsigned long long value)
+    unsigned long long getDestination(unsigned long long value) const
     {
         if (!inRange(value))
         {
@@ -678,18 +674,6 @@ public:
         unsigned long long diff = value - sourceStart;
 
         return destinationStart + diff;
-    }
-
-    unsigned long long getDestinationReverse(unsigned long long value)
-    {
-        if (!inRangeReverse(value))
-        {
-            return value;
-        }
-
-        unsigned long long diff = value - destinationStart;
-
-        return sourceStart + diff;
     }
 };
 
@@ -728,6 +712,7 @@ std::vector<std::vector<day5_struct>> parseDay5(const std::vector<string>& input
 
 }
 
+
 unsigned long long day5_finalDestination(unsigned long long seed, const std::vector<std::vector<day5_struct>>& mutation)
 {
     unsigned long long value = seed;
@@ -746,81 +731,6 @@ unsigned long long day5_finalDestination(unsigned long long seed, const std::vec
     return value;
 }
 
-unsigned long long day5_reverseFinalDestination(unsigned long long seed, const std::vector<std::vector<day5_struct>>& mutation)
-{
-    unsigned long long value = seed;
-    for (int stepidx = mutation.size()-1; stepidx >= 0; --stepidx)
-    {
-        auto stepInfo = mutation[stepidx];
-        unsigned long long newValue = 0;
-        for (int rangeIdx = 0; rangeIdx < stepInfo.size(); ++rangeIdx)
-        {
-            if (stepInfo[rangeIdx].inRangeReverse(value))
-            {
-                newValue = stepInfo[rangeIdx].getDestinationReverse(value);
-                break;
-            }
-        }
-        value = newValue;
-    }
-    return value;
-}
-
-bool day5_insideSeeds(unsigned long long seed, const std::vector<std::pair<unsigned long long, unsigned long long>>& seeds)
-{
-    for (int i = 0; i < seeds.size(); ++i)
-    {
-        unsigned long long start = seeds[i].first;
-        unsigned long long end = start + seeds[i].second;
-        if (start <= seed)
-        {
-            if (seed <= end)
-            {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-std::vector< std::pair<unsigned long long, unsigned long long>> day5_getGroups(const std::pair<unsigned long long, unsigned long long>& seedPair, day5_struct& mutation)
-{
-    std::vector< std::pair<unsigned long long, unsigned long long>> result;
-
-    //before mutation
-    if (seedPair.second < mutation.sourceStart)
-    {
-        //result.push_back(seedPair);
-        return result;
-    }
-
-    //after mutation
-    if (seedPair.first > mutation.lastSourceValue())
-    {
-        //result.push_back(seedPair);
-        return result;
-    }
-
-    //here some collision
-    //left part
-    if (seedPair.first < mutation.sourceStart)
-    {
-        result.push_back({ seedPair.first, mutation.sourceStart - 1 });
-    }
-
-    //right part
-    if (seedPair.second > mutation.lastSourceValue())
-    {
-        result.push_back({ mutation.lastSourceValue() + 1, seedPair.second });
-    }
-
-    unsigned long long start = max(seedPair.first, mutation.sourceStart);
-    unsigned long long end = min(seedPair.second, mutation.lastSourceValue());
-
-    result.push_back({mutation.getDestination(start), mutation.getDestination(end)});
-
-    return result;
-}
 
 void day5_a()
 {
@@ -837,6 +747,7 @@ void day5_a()
         if (seed.size() == 0) { continue; }
 
         unsigned long long value = day5_finalDestination(atoll(seed.c_str()), parsedData);
+
         if (value < result)
         {
             result = value;
@@ -847,102 +758,122 @@ void day5_a()
 
 }
 
+bool day5_analyzePairSeed(const day5_struct& mutation, std::pair<unsigned long long, unsigned long long> seed, pair<unsigned long long, unsigned long long>& mutatedSeed, std::vector<pair<unsigned long long, unsigned long long>>& leftSeed)
+{
+    //before mutation
+    if (seed.second < mutation.sourceStart)
+    {
+        return false;
+    }
+
+    //after mutation
+    if (seed.first > mutation.lastSourceValue())
+    {
+        return false;
+    }
+
+    //here some collision
+    //left part
+    if (seed.first < mutation.sourceStart)
+    {
+        leftSeed.push_back({ seed.first,  mutation.sourceStart - 1 });
+    }
+
+    //right part
+    if (seed.second > mutation.lastSourceValue())
+    {
+        leftSeed.push_back({ mutation.lastSourceValue(),  seed.second });
+    }
+
+    //mutated part
+    unsigned long long start = max(seed.first, mutation.sourceStart);
+    unsigned long long end = min(seed.second, mutation.lastSourceValue());
+
+    auto valueStart = mutation.getDestination(start);
+    auto valueEnd = mutation.getDestination(end);
+
+    mutatedSeed = std::make_pair( valueStart, valueEnd);
+    return true;
+}
+
+std::vector<pair<unsigned long long, unsigned long long>> day5_mutateSeeds(const std::vector<day5_struct>& mutation, const std::pair<unsigned long long, unsigned long long>& seed)
+{
+    std::vector<pair<unsigned long long, unsigned long long>> seedsToAnalyze = { seed };
+    std::vector<pair<unsigned long long, unsigned long long>> result;
+
+    for (auto mut : mutation)
+    {
+        std::vector<pair<unsigned long long, unsigned long long>> remainingSeeds;
+        for (auto seed : seedsToAnalyze)
+        {
+            std::vector<pair<unsigned long long, unsigned long long>> leftSeed;
+            pair<unsigned long long, unsigned long long> mutatedSeed;
+            if (day5_analyzePairSeed(mut, seed, mutatedSeed, leftSeed))
+            {
+                //some part mutated, maybe the rest will be mutated next
+                remainingSeeds.insert(remainingSeeds.end(), leftSeed.begin(), leftSeed.end());
+                result.push_back(mutatedSeed);
+            }
+            else
+            {
+                remainingSeeds.push_back(seed);
+            }
+        }
+        seedsToAnalyze.clear();
+        seedsToAnalyze.insert(seedsToAnalyze.end(), remainingSeeds.begin(), remainingSeeds.end());
+    }
+
+    result.insert(result.end(), seedsToAnalyze.begin(), seedsToAnalyze.end());
+
+    return result;
+}
+
+std::vector<std::pair<unsigned long long, unsigned long long>> day5_evaluateDepth(const std::vector<day5_struct>& mutation, const std::vector<std::pair<unsigned long long, unsigned long long>>& seeds)
+{
+
+    std::vector<std::pair<unsigned long long, unsigned long long>> toReturn;
+
+    for (auto seed : seeds)
+    {
+        auto newSeeds = day5_mutateSeeds(mutation, seed);
+        toReturn.insert(toReturn.end(), newSeeds.begin(), newSeeds.end());
+    }
+
+    return toReturn;
+}
+
 void day5_b()
 {
-    /*
-    * WIP
-    std::vector<string> fileTxt = ReadFile("./input/day5_b.txt");
-
+    std::vector<string> fileTxt = ReadFile("./input/day5.txt");
     auto mutations = parseDay5(fileTxt);
-
     auto seeds = split(split(fileTxt[0], ":")[1], " ");
-
     std::vector<std::pair<unsigned long long, unsigned long long>> seedsPairs;
 
     for (int i = 1; i < seeds.size(); i = i + 2)
     {
         long long start = atoll(seeds[i].c_str());
-        long long end = start + atoll(seeds[i + 1].c_str());
-        seedsPairs.push_back({  start, end });
+        long long end = start + atoll(seeds[i + 1].c_str()) - 1;
+        seedsPairs.push_back({ start, end });
     }
-    //std::sort(seedsPairs.begin(), seedsPairs.end(), [](auto p1, auto p2) {return p1.first < p2.first; });
 
-    std::vector<std::pair<unsigned long long, unsigned long long>> currentPairs = seedsPairs;
+    std::vector<std::pair<unsigned long long, unsigned long long>> pairsAlive = seedsPairs;
 
     for (int mutationIdx = 0; mutationIdx < mutations.size(); ++mutationIdx)
     {
-        std::vector<std::pair<unsigned long long, unsigned long long>> newPairs;
+        pairsAlive = day5_evaluateDepth(mutations[mutationIdx], pairsAlive);
 
-        auto mutation = mutations[mutationIdx];
-
-        for (auto mut : mutation)
-        {
-            for (auto seedPair : currentPairs)
-            {
-                std::vector< std::pair<unsigned long long, unsigned long long>> newPair =  day5_getGroups(seedPair, mut);
-                newPairs.insert(newPairs.end(), newPair.begin(), newPair.end());
-            }
-        }
-        if (newPairs.size() > 0)
-        {
-            currentPairs = newPairs;
-            std::sort(currentPairs.begin(), currentPairs.end(), [](auto p1, auto p2) {return p1.first < p2.first; });
-        }
-
+        std::sort(pairsAlive.begin(), pairsAlive.end(), [](auto p1, auto p2) {return p1.first < p2.first; });
     }
 
-    std::sort(currentPairs.begin(), currentPairs.end(), [](auto p1, auto p2) {return p1.first < p2.first; });
-    std::cout << "day 5_b => " << currentPairs[0].first << "\n";
-    */
+    std::sort(pairsAlive.begin(), pairsAlive.end(), [](auto p1, auto p2) {return p1.first < p2.first; });
 
-
-    /*
-
-    for (unsigned long long seed = 0; seed <= minValue; ++seed)
-    {
-        unsigned long long value = day5_reverseFinalDestination(seed, parsedData);
-
-        if ((seed % 10000) == 0)
-        {
-            std::cout << seed << ":" << maxValue << "\n";
-        }
-
-        if (day5_insideSeeds(value, seedsPairs))
-        {
-            std::cout << "Day 5_b => " << value << "=>" << seed << "\n";
-            std::cout << day5_finalDestination(value, parsedData) << "\n";
-            return;
-        }
-    }
-    */
-
-    /*
-    unsigned long long originalSeed = day5_reverseFinalDestination(9284340, parsedData);
-    unsigned long long value = day5_finalDestination(originalSeed, parsedData);
-
-    if (value == 9284340) {
-        std::cout << "son iguales\n";
-    }
-
-    std::cout << (value < minValue ? "yes" : "no") << "\n";
-
-    if (day5_insideSeeds(originalSeed, seedsPairs))
-    {
-        std::cout << "encontrado\n";
-    }
-    std::cout << "originalSeed: " << originalSeed << ", value: " << value << "\n";
-
-    //std::cout << day5_finalDestination(9284340, parsedData) << "\n";
-
-   // std::cout << "fin\n";
-   */
+    std::cout << "day 5_b => " << pairsAlive[0].first << "\n";
 }
 
 void day5()
 {
     day5_a();
     day5_b();
-    std::cout << "day 5_b(from internet) => 9284340\n";
 }
 
 pair<double, double> day6_equation(long long d, long long s)
