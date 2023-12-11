@@ -12,6 +12,7 @@
 #include <set>
 #include <numeric>
 #include <limits.h>
+#include <numeric>
 
 
 using namespace std;
@@ -1158,10 +1159,150 @@ void day7()
     day7_Task(false);
     day7_Task(true);
 }
-void day8()
+
+struct day8_node
+{
+public:
+    string name;
+    day8_node* left = nullptr;
+    day8_node* right = nullptr;
+};
+
+
+day8_node* day8_getNode(map<string, day8_node*>& nodes, string name)
+{
+    if (nodes.find(name) == nodes.end())
+    {
+        day8_node* node = new day8_node();
+        node->name = name;
+        nodes.insert({ name, node });
+    }
+    return nodes[name];
+}
+
+void day8_buildStruct(const vector<string>& input, map<string, day8_node*>& nodes)
 {
 
+    for (int lineIndex = 2; lineIndex < input.size(); ++lineIndex)
+    {
+        auto nodeInfo = split(input[lineIndex], " ");
+        string left = nodeInfo[2].substr(1, 3);
+        string right = nodeInfo[3].substr(0, 3);
+
+        auto node = day8_getNode(nodes, nodeInfo[0]);
+        auto nodeLeft = day8_getNode(nodes, left);
+        auto nodeRight = day8_getNode(nodes, right);
+
+        node->left = nodeLeft;
+        node->right = nodeRight;
+    }
 }
+
+long long day8_countToLoop(day8_node* start, day8_node* end, const string& input)
+{
+    long long count = 0;
+    int indexInput = 0;
+    day8_node* current = start;
+    while (current != nullptr && current != end)
+    {
+        char movement = input[indexInput];
+        indexInput = (indexInput + 1) % input.size();
+
+        if (movement == 'L')
+        {
+            current = current->left;
+        }
+        else
+        {
+            current = current->right;
+        }
+        ++count;
+    }
+    return count;
+}
+
+long long day8_countToLoopAnyEnd(day8_node* start, day8_node*& endNode, const string& input)
+{
+    long long count = 0;
+    int indexInput = 0;
+    day8_node* current = start;
+    while (current != nullptr && current->name.back() != 'Z')
+    {
+        char movement = input[indexInput];
+        indexInput = (indexInput + 1) % input.size();
+
+        if (movement == 'L')
+        {
+            current = current->left;
+        }
+        else
+        {
+            current = current->right;
+        }
+        ++count;
+    }
+    endNode = current;
+    return count;
+}
+
+void day8_a()
+{
+    auto fileTxt = ReadFile("./input/day8.txt");
+    map<string, day8_node*> nodes;
+    day8_buildStruct(fileTxt, nodes);
+
+    day8_node* start = day8_getNode(nodes, "AAA");
+    day8_node* end = day8_getNode(nodes, "ZZZ");
+
+    std::cout << "day8 =>" << day8_countToLoop(start, end, fileTxt[0]) << "\n";
+}
+
+void day8_b()
+{
+    auto fileTxt = ReadFile("./input/day8.txt");
+    map<string, day8_node*> nodes;
+    day8_buildStruct(fileTxt, nodes);
+
+    std::vector<day8_node*> allStart;
+    for (auto n : nodes)
+    {
+        if (n.first.back() == 'A')
+        {
+            allStart.push_back(n.second);
+        }
+    }
+
+    std::cout << "day8 b info =>" << fileTxt[0].size() << "\n";
+
+    vector<long long> gdcs;
+
+    for (auto n : allStart)
+    {
+        day8_node* endNode = nullptr;
+        long long times = day8_countToLoopAnyEnd(n, endNode, fileTxt[0]);
+        if (endNode != nullptr)
+        {
+            std::cout << "[" << n->name << "," << endNode->name << "]: " << times << "\n";
+            gdcs.push_back(times);
+        }
+    }
+
+    long long result = gdcs[0];
+
+    for (int i = 1; i < gdcs.size(); ++i)
+    {
+        result = std::lcm(result, gdcs[i]);
+    }
+
+    std::cout << "day8 b result =>" << result << "\n";
+}
+
+void day8()
+{
+    day8_a();
+    day8_b();
+}
+
 void day9()
 {
 
@@ -1240,6 +1381,7 @@ int main()
     day5();
     day6();
     day7();
+    day8();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
