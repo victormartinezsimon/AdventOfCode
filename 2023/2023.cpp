@@ -1303,18 +1303,454 @@ void day8()
     day8_b();
 }
 
+pair<int, int> day9_calculateSum(std::vector<int> numbers)
+{
+    if (numbers.size() == 1) 
+    { 
+        return { 0,0 };
+    }
+
+    std::vector<int> newValues;
+
+    for (int nIdx = 1; nIdx < numbers.size(); ++nIdx)
+    {
+        int value = numbers[nIdx] - numbers[nIdx - 1];
+        newValues.push_back(value);
+    }
+
+    auto depthValue = day9_calculateSum(newValues);
+
+    return {numbers.front() - depthValue.first, numbers.back() + depthValue.second };
+}
+
 void day9()
 {
+    auto fileTxt = ReadFile("./input/day9.txt");
+
+    std::vector<std::vector<int>> inputs;
+
+    for (auto x : fileTxt)
+    {
+        auto tmp = split(x, " ");
+
+        std::vector<int> input;
+        for (auto n : tmp)
+        {
+            input.push_back(atoi(n.c_str()));
+        }
+        inputs.push_back(input);
+    }
+    long long result_a = 0;
+    long long result_b = 0;
+
+    for (auto input : inputs)
+    {
+        result_a += day9_calculateSum(input).second;
+        result_b += day9_calculateSum(input).first;
+    }
+
+    std::cout << "day9 =>" << result_a << "\n";
+    std::cout << "day9_b =>" << result_b << "\n";
+}
+
+struct day10_node
+{
+public:
+    int _row;
+    int _col;
+    int _currentDepth;
+
+    day10_node(int row, int col, int currentDepth) :_row(row), _col(col), _currentDepth(currentDepth) {}
+};
+
+std::vector<day10_node> day10_getNeightboursChar(const day10_node& node, const std::vector<string>& fileTxt, std::vector<pair<int, int>> directions)
+{
+    std::vector<day10_node> toReturn;
+
+    int width = fileTxt[0].size();
+    int height = fileTxt.size();
+
+    for (auto dir : directions)
+    {
+        int newRow = node._row + dir.first;
+        int newCol = node._col + dir.second;
+
+        if (newRow >= 0 && newCol >= 0 && newRow < height && newCol < width)
+        {
+            day10_node n(newRow, newCol, 0);
+            toReturn.push_back(n);
+        }
+    }
+    return toReturn;
+}
+
+std::vector<day10_node> day10_getNeightbours(const day10_node& node, const std::vector<string>& fileTxt)
+{
+    char c = fileTxt[node._row][node._col];
+
+    const pair<int, int> top = { -1 ,0 };
+    const pair<int, int> bottom = { 1 ,0 };
+    const pair<int, int> left = { 0 ,-1 };
+    const pair<int, int> right = { 0, 1 };
+
+
+    switch (c)
+    {
+   
+    case '|':
+        return day10_getNeightboursChar(node, fileTxt, { top, bottom });//top, bottom
+    case '-': 
+        return day10_getNeightboursChar(node, fileTxt, { left, right });//left, right
+    case 'L':
+        return day10_getNeightboursChar(node, fileTxt, { top, right});//top, right
+    case 'J':
+        return day10_getNeightboursChar(node, fileTxt, { top, left });//top, left
+    case '7':
+        return day10_getNeightboursChar(node, fileTxt, { bottom, left });//bottom, left
+    case 'F':
+        return day10_getNeightboursChar(node, fileTxt, { bottom, right });//bottom, right
+    case 'S':
+        return day10_getNeightboursChar(node, fileTxt, {top, left });//top, bottom, left, right
+
+    default:
+        case '.': return {};
+    }
 
 }
+
+std::vector<day10_node> day10_getAnyNeightbour(const day10_node& node, const std::vector<string>& fileTxt)
+{
+    const pair<int, int> top = { -1 ,0 };
+    const pair<int, int> bottom = { 1 ,0 };
+    const pair<int, int> left = { 0 ,-1 };
+    const pair<int, int> right = { 0, 1 };
+
+    return day10_getNeightboursChar(node, fileTxt, { top, left, bottom, right });//top, bottom, left, right
+}
+
+void day10_cleanOutsidePoints(std::vector<std::vector<int>>& graphDepth, const std::vector<string>& fileTxt)
+{
+    int count = 0;
+    for (int row = 0; row < fileTxt.size(); ++row)
+    {
+        bool inside = false;
+
+        for (int col = 0; col < fileTxt[0].size(); ++col)
+        {
+            if (graphDepth[row][col] == -1)
+            {
+                if (!inside)
+                {
+                    graphDepth[row][col] = -2;
+                }
+            }
+            else
+            {
+                char c = fileTxt[row][col];
+                if (c == '|' || c == 'L' || c == 'J' || c == 'S')
+                {
+                    inside = !inside;
+                }
+            }
+        }
+    }
+}
+
+void day10_print(const std::vector<string>& fileTxt, const std::vector<std::vector<int>>& graphDepth)
+{
+    for (int row = 0; row < graphDepth.size(); ++row)
+    {
+        for (int col = 0; col < graphDepth[0].size(); ++col)
+        {
+            if (graphDepth[row][col] == -1)
+            {
+                std::cout << ".";
+            }
+            else
+            {
+                if (graphDepth[row][col] == -2)
+                {
+                    std::cout << " ";
+                }
+                else
+                {
+                    char c = fileTxt[row][col];
+
+                    switch (c)
+                    {
+
+                    case '|':
+                        std::cout << char(186); break;
+                    case '-':
+                        std::cout << char(205); break;
+                    case 'L':
+                        std::cout << char(200); break;
+                    case 'J':
+                        std::cout << char(188); break;
+                    case '7':
+                        std::cout << char(187); break;
+                    case 'F':
+                        std::cout << char(201); break;
+                    case 'S':
+                        //  std::cout << char(206); break;
+                        std::cout << "S"; break;
+                    }
+                }
+            }
+        }
+        std::cout << "\n";
+    }
+}
+
+void day10_a()
+{
+    auto fileTxt = ReadFile("./input/day10.txt");
+
+    int width = fileTxt[0].size();
+    int height = fileTxt.size();
+
+    std::vector<std::vector<int>> graphDepth;
+
+    int startCol = 0;
+    int startRow = 0;
+
+    for (int row = 0; row < height; ++row)
+    {
+        std::vector<int> line(width, -1);
+
+        auto pos = fileTxt[row].find('S');
+        if (pos != std::string::npos)
+        {
+            startCol = pos;
+            startRow = row;
+        }
+        graphDepth.push_back(line);
+    }
+
+    std::vector< day10_node> nodesToAnalyze;
+
+    day10_node startNode(startRow, startCol, 0);
+    nodesToAnalyze.push_back(startNode);
+    graphDepth[startRow][startCol] = 0;
+
+    long long maxValue = -1;
+
+    while (nodesToAnalyze.size() > 0)
+    {
+        day10_node node = nodesToAnalyze[0];
+
+        nodesToAnalyze.erase(nodesToAnalyze.begin());
+
+        auto neightbours = day10_getNeightbours(node, fileTxt);
+
+        for (auto neightbour : neightbours)
+        {
+            if (graphDepth[neightbour._row][neightbour._col] == -1 && fileTxt[neightbour._row][neightbour._col] != '.')
+            {
+                graphDepth[neightbour._row][neightbour._col] = node._currentDepth + 1;
+                day10_node newNode(neightbour._row, neightbour._col, node._currentDepth + 1);
+                nodesToAnalyze.push_back(newNode);
+                if (node._currentDepth + 1 > maxValue)
+                {
+                    maxValue = node._currentDepth + 1;
+                }
+            }
+        }
+    }
+    std::cout << "day10 =>" << maxValue << "\n";
+}
+
+void day10_b( bool print)
+{
+    auto fileTxt = ReadFile("./input/day10.txt");
+
+    int width = fileTxt[0].size();
+    int height = fileTxt.size();
+
+    std::vector<std::vector<int>> graphDepth;
+
+    int startCol = 0;
+    int startRow = 0;
+
+    for (int row = 0; row < height; ++row)
+    {
+        std::vector<int> line(width, -1);
+
+        auto pos = fileTxt[row].find('S');
+        if (pos != std::string::npos)
+        {
+            startCol = pos;
+            startRow = row;
+        }
+        graphDepth.push_back(line);
+    }
+
+
+    {
+        std::vector< day10_node> nodesToAnalyze;
+        day10_node startNode(startRow, startCol, 0);
+        nodesToAnalyze.push_back(startNode);
+        graphDepth[startRow][startCol] = 0;
+
+        while (nodesToAnalyze.size() > 0)
+        {
+            day10_node node = nodesToAnalyze[0];
+
+            nodesToAnalyze.erase(nodesToAnalyze.begin());
+
+            auto neightbours = day10_getNeightbours(node, fileTxt);
+
+            for (auto neightbour : neightbours)
+            {
+                if (graphDepth[neightbour._row][neightbour._col] == -1 && fileTxt[neightbour._row][neightbour._col] != '.')
+                {
+                    graphDepth[neightbour._row][neightbour._col] = node._currentDepth + 1;
+                    day10_node newNode(neightbour._row, neightbour._col, node._currentDepth + 1);
+                    nodesToAnalyze.push_back(newNode);
+                }
+            }
+        }
+    }
+    
+    day10_cleanOutsidePoints(graphDepth, fileTxt);
+
+    int count = 0;
+    for (int row = 0; row < fileTxt.size(); ++row)
+    {
+        bool inside = false;
+
+        for (int col = 0; col < fileTxt[0].size(); ++col)
+        {
+            if (graphDepth[row][col] == -1)
+            {
+                ++count;
+            }
+        }
+    }
+
+    std::cout << "day10_b =>" << count << "\n";
+    if (print)
+    {
+        day10_print(fileTxt, graphDepth);
+    }
+}
+
 void day10()
 {
-
+    day10_a();
+    day10_b(false);
 }
+
+void day11_parseSpace(const std::vector<string>& fileTxt, std::vector<pair<int, int>>& galaxies, std::vector<int>& emptyRow, std::vector<int>& emptyCol)
+{
+    std::vector<bool> colStatus(fileTxt[0].size(), false);
+    std::vector<bool> rowStatus(fileTxt.size(), false);
+
+    for (int row = 0; row < fileTxt.size(); ++row)
+    {
+        for (int col = 0; col < fileTxt[row].size(); ++col)
+        {
+            if (fileTxt[row][col] == '#')
+            {
+                colStatus[col] = true;
+                galaxies.push_back({ row, col });
+                rowStatus[row] = true;
+            }
+        }
+    }
+
+    for (int i = 0; i < colStatus.size(); ++i)
+    {
+        if (!colStatus[i])
+        {
+            emptyCol.push_back(i);
+        }
+    }
+
+    for (int i = 0; i < rowStatus.size(); ++i)
+    {
+        if (!rowStatus[i])
+        {
+            emptyRow.push_back(i);
+        }
+    }
+}
+
+int day11_manhattanDistance(std::pair<int, int>a, std::pair<int, int> b)
+{
+    return abs(a.first - b.first) + abs(a.second - b.second);
+}
+
+int day11_getVerticalExtra(std::pair<int, int>a, std::pair<int, int> b, const std::vector<int>& emptyCol)
+{
+    int minValue = min(a.second, b.second);
+    int maxValue = max(a.second, b.second);
+
+    int count = 0;
+    for (auto col : emptyCol)
+    {
+        if (minValue < col && col < maxValue)
+        {
+            ++count;
+        }
+    }
+    return count;
+}
+
+int day11_getHorizontalExtra(std::pair<int, int>a, std::pair<int, int> b, const std::vector<int>& emptyRow)
+{
+    int minValue = min(a.first, b.first);
+    int maxValue = max(a.first, b.first);
+
+    int count = 0;
+    for (auto row : emptyRow)
+    {
+        if (minValue < row && row < maxValue)
+        {
+            ++count;
+        }
+    }
+    return count;
+}
+
+
+
+long long day11_solver(long long increase)
+{
+    auto fileTxt = ReadFile("./input/day11.txt");
+
+    std::vector<pair<int, int>> galaxies;
+    std::vector<int> emptyRow;
+    std::vector<int> emptyCol;
+
+    day11_parseSpace(fileTxt, galaxies, emptyRow, emptyCol);
+
+    long long solution = 0;
+
+    for (int galIndxA = 0; galIndxA < galaxies.size(); ++galIndxA)
+    {
+        for (int galIndxB = galIndxA + 1; galIndxB < galaxies.size(); ++galIndxB)
+        {
+            int currentDist = day11_manhattanDistance(galaxies[galIndxA], galaxies[galIndxB]);
+
+            int extraCol = day11_getVerticalExtra(galaxies[galIndxA], galaxies[galIndxB], emptyCol);
+            int extraRow = day11_getHorizontalExtra(galaxies[galIndxA], galaxies[galIndxB], emptyRow);
+
+            currentDist += (extraCol * (increase -1)) + (extraRow * (increase-1));
+            //std::cout << galIndxA << " => " << galIndxB << " =" << currentDist << "\n";
+            solution += currentDist;
+        }
+    }
+
+    return solution;
+}
+
 void day11()
 {
-
+    std::cout << "day 11 => " << day11_solver(2) << "\n";
+    std::cout << "day 11_B => " << day11_solver(1000000) << "\n";
 }
+
 void day12()
 {
 
@@ -1374,14 +1810,17 @@ void day25()
 
 int main()
 {
-    day1();
-    day2();
-    day3();
-    day4();
-    day5();
-    day6();
-    day7();
-    day8();
+   //day1();
+   //day2();
+   //day3();
+   //day4();
+   //day5();
+   //day6();
+   //day7();
+   //day8();
+   //day9();
+   //day10();
+   day11();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
