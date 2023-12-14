@@ -1291,7 +1291,7 @@ void day8_b()
 
     for (int i = 1; i < gdcs.size(); ++i)
     {
-        result = std::lcm(result, gdcs[i]);
+        //result = std::lcm(result, gdcs[i]);
     }
 
     std::cout << "day8 b result =>" << result << "\n";
@@ -1751,9 +1751,242 @@ void day11()
     std::cout << "day 11_B => " << day11_solver(1000000) << "\n";
 }
 
+bool day12_stillValid(const string& line, const std::vector<int>& numbers, int positionIdx, int numberIdx)
+{
+    
+    string newLine = line;
+    
+    for (int i = 0; i < positionIdx; ++i)
+    {
+        if (newLine[i] == '?')
+        {
+            newLine[i] = '.';
+        }
+    }
+
+    for (int i = positionIdx; i < positionIdx + numbers[numberIdx]; ++i)
+    {
+        newLine[i] = '#';
+    }
+
+    bool findStart = false;
+    int countConsecutives = 0;
+    int currentNumberIndex = 0;
+    for (int i = 0; i < positionIdx + numbers[numberIdx]; ++i)
+    {
+        ////somehow we excede the number, with a bad combination,like .#.#? 
+        //if (currentNumberIndex >= numbers.size())
+        //{
+        //    return false;
+        //}
+
+        if (newLine[i] == '#')
+        {
+            ++countConsecutives;
+            findStart = true;
+        }
+        else
+        {
+            //? or .
+            if (findStart)
+            {
+                if (countConsecutives != numbers[currentNumberIndex])
+                {
+                    return false;
+                }
+                ++currentNumberIndex;
+            }
+            findStart = false;
+            countConsecutives = 0;
+        }
+    }
+
+    if (findStart)
+    {
+        if (countConsecutives != numbers[currentNumberIndex])
+        {
+            return false;
+        }  
+        ++currentNumberIndex;
+    }
+
+
+    //if we are in the end, cant be any more #
+    if (currentNumberIndex == numbers.size())
+    {
+        for (int i = positionIdx + numbers[numberIdx]; i < newLine.size(); ++i)
+        {
+            if (newLine[i] == '#')
+            {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+bool day12_enterNumber(const string& line, const std::vector<int>& numbers, int positionIdx, int numberIdx, const string& currentString)
+{
+    //do not enter
+    if (positionIdx + numbers[numberIdx] > line.size())
+    { 
+        return false; 
+    }
+
+    //inside, there should be a space
+    for (int i = positionIdx; i < positionIdx + numbers[numberIdx]; ++i)
+    {
+        if (line[i] == '.')
+        {
+            return false;
+        }
+    }
+
+    if (positionIdx + numbers[numberIdx] < line.size())
+    {
+        if (line[positionIdx + numbers[numberIdx]] == '#')
+        {
+            //case like ?#? 1 => ##?
+            return false;
+        }
+    }
+
+
+    if (!day12_stillValid(currentString, numbers, positionIdx, numberIdx))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+long long day12_optimizedSolution(const string& line, const std::vector<int>& numbers, int positionIdx, int numberIdx, map<string, long long>& cache, const string& currentString )
+{
+    string key = std::to_string(positionIdx) + "-" + std::to_string(numberIdx);
+    
+    if (cache.find(key) != cache.end())
+    {
+        return cache[key];
+    }
+
+    if (numbers.size() == numberIdx)
+    {
+        return 1;
+    }
+
+    if (positionIdx >= line.size())
+    {
+        return 0;
+    }
+
+    while (line[positionIdx] == '.')
+    {
+        ++positionIdx;
+    }
+
+    long long solution = 0;
+    if (day12_enterNumber(line, numbers, positionIdx, numberIdx, currentString))
+    {
+        int size = numbers[numberIdx] + 1;
+        string newString = currentString;
+
+        for (int i = positionIdx; i < positionIdx + numbers[numberIdx]; ++i)
+        {
+            newString[i] = '#';
+        }
+
+        solution += day12_optimizedSolution(line, numbers, positionIdx + size, numberIdx +1 , cache, newString);
+    }
+
+    if (line[positionIdx] == '?')
+    {
+        solution += day12_optimizedSolution(line, numbers, positionIdx + 1, numberIdx, cache, currentString);
+    }
+
+    cache.insert({ key, solution });
+    return solution;
+
+}
+
+long long da12_solve(const string& line, std::vector<int> numbers)
+{
+    std::map<string, long long> cache;
+    long long solution = day12_optimizedSolution(line, numbers, 0, 0, cache, line);
+
+    return solution;
+}
+
+long long day12_partA(const string& line)
+{
+    auto division = split(line, " ");
+    string fields = division[0];
+
+    auto numbers_split = split(division[1], ",");
+
+    std::vector<int> numbers;
+    for (auto s : numbers_split)
+    {
+        numbers.push_back(atoi(s.c_str()));
+    }
+
+    return da12_solve(fields, numbers);
+
+}
+
+
+long long day12_partB(const string& line)
+{
+    auto division = split(line, " ");
+    string fields = division[0];
+
+    auto numbers_split = split(division[1], ",");
+
+    std::vector<int> numbers;
+    for (auto s : numbers_split)
+    {
+        numbers.push_back(atoi(s.c_str()));
+    }
+
+    std::vector<int> newNumbers;
+    for (int i = 0; i < 5; ++i)
+    {
+        for (auto x : numbers)
+        {
+            newNumbers.push_back(x);
+        }
+    }
+
+    string newInput = "";
+    for (int i = 0; i < 5; ++i)
+    {
+        newInput += fields + "?";
+    }
+    newInput =  newInput.substr(0, newInput.size() - 1);
+
+    return da12_solve(newInput, newNumbers);
+
+}
+
 void day12()
 {
+    auto fileTxt = ReadFile("./input/day12.txt");
 
+    long long solution = 0;
+    for (auto line : fileTxt)
+    {
+        long long extra  = day12_partA(line);
+        solution += extra;
+    }
+    std::cout << "day 12 => " << solution << "\n";
+
+    long long solution_b = 0;
+    for (auto line : fileTxt)
+    {
+        long long extra = day12_partB(line);
+        solution_b += extra;
+    }
+    std::cout << "day 12_b => " << solution_b << "\n";
 }
 void day13()
 {
@@ -1820,7 +2053,8 @@ int main()
    //day8();
    //day9();
    //day10();
-   day11();
+   //day11();
+    //day12();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
