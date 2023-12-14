@@ -1988,10 +1988,193 @@ void day12()
     }
     std::cout << "day 12_b => " << solution_b << "\n";
 }
+
+int day13_compareColumns(const std::vector<string>& puzzle, int colA, int colB)
+{
+    int count = 0;
+    for (int i = 0; i < puzzle.size(); ++i)
+    {
+        if (puzzle[i][colA] == puzzle[i][colB])
+        {
+            ++count;
+        }
+    }
+    return count;
+}
+
+int day13_compareRows(const std::vector<string>& puzzle, int topRow, int bottomRow)
+{
+    int count = 0;
+    for (int i = 0; i < puzzle[topRow].size(); ++i)
+    {
+        if (puzzle[topRow][i] == puzzle[bottomRow][i])
+        {
+            ++count;
+        }
+    }
+    return count;
+}
+
+bool day13_getSimetricColumns(const std::vector<string>& puzzle, int leftColumn, int rightColumn, bool partB)
+{
+    bool found = true;
+    while (leftColumn >= 0 && rightColumn < puzzle[0].size())
+    {
+        int count = day13_compareColumns(puzzle, leftColumn, rightColumn);
+        if (partB)
+        {
+            if (count == puzzle.size() - 1)
+            {
+                if (!found)
+                {
+                    return false;
+                }
+                found = !found;
+            }
+
+            if (count < puzzle.size() - 1)
+            {
+                return false;
+            }
+
+        }
+        else
+        {
+            if (count != puzzle.size())
+            {
+                return false;
+            }
+        }
+        --leftColumn;
+        ++rightColumn;
+    }
+    return true;
+}
+
+bool day13_getSimetricRows(const std::vector<string>& puzzle, int topRow, int bottomRow, bool partB)
+{
+    bool found = true;
+    while (topRow >= 0 && bottomRow < puzzle.size())
+    {
+        int count = day13_compareRows(puzzle, topRow, bottomRow);
+        if (partB)
+        {
+            if (count == puzzle[0].size() - 1)
+            {
+                if (!found)
+                {
+                    return false;
+                }
+                found = !found;
+            }
+
+            if (count < puzzle[0].size() - 1)
+            {
+                return false;
+            }
+
+        }
+        else
+        {
+            if (count != puzzle[0].size())
+            {
+                return false;
+            }
+        }
+        --topRow;
+        ++bottomRow;
+    }
+    return true;
+}
+
+long long day13_analyzeCols(const std::vector<string>& puzzle, int partB, bool usePartB)
+{
+    for (int i = 1; i < puzzle[0].size(); ++i)
+    {
+        int leftColumn = i - 1;
+        int rightColumn = i;
+
+        if (day13_getSimetricColumns(puzzle, leftColumn, rightColumn, usePartB))
+        {
+            if (partB != (i -1))
+            {
+                return i - 1;
+            }
+        }
+    }
+
+    return -1;
+}
+
+long long day13_analyzeRows(const std::vector<string>& puzzle, int partB, bool usePartB)
+{
+    for (int i = 1; i < puzzle.size(); ++i)
+    {
+        int topRow = i - 1;
+        int bottomRow = i;
+
+        if (day13_getSimetricRows(puzzle, topRow, bottomRow, usePartB))
+        {
+            if (partB != (i - 1))
+            {
+                return i - 1;
+            }
+        }
+    }
+
+    return -1;
+}
+
+long long day13_analyze(const std::vector<string>& puzzle, bool partB)
+{
+    int rows_a = day13_analyzeRows(puzzle, -1, false);
+    int cols_a = day13_analyzeCols(puzzle, -1, false);
+
+    if (partB)
+    {
+        int rows_b = day13_analyzeRows(puzzle, rows_a, true);
+        int cols_b = day13_analyzeCols(puzzle, cols_a, true);
+
+        rows_a = rows_b;
+        cols_a = cols_b;
+    }
+
+    long long sol = 0;
+    sol += (cols_a + 1);
+    sol += (rows_a + 1) * 100;
+
+    return sol;
+}
+
 void day13()
 {
+    auto fileTxt = ReadFile("./input/day13.txt");
+
+    std::vector<std::vector<string>> input;
+    std::vector<string> currentInput;
+    long long sol_a = 0;
+    long long sol_b = 0;
+    for (int i = 0; i < fileTxt.size(); ++i)
+    {
+        if (fileTxt[i].size() == 0)
+        {
+            sol_a += day13_analyze(currentInput, false);
+            sol_b += day13_analyze(currentInput, true);
+            currentInput.clear();
+        }
+        else
+        {
+            currentInput.push_back(fileTxt[i]);
+        }
+    }
+    sol_a += day13_analyze(currentInput, false);
+    sol_b += day13_analyze(currentInput, true);
+
+    std::cout << "day13 => " << sol_a << "\n";
+    std::cout << "day13_b => " << sol_b << "\n";
 
 }
+
 void day14()
 {
 
@@ -2055,6 +2238,7 @@ int main()
    //day10();
    //day11();
     //day12();
+    day13();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
