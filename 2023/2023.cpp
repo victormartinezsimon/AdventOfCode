@@ -13,6 +13,7 @@
 #include <numeric>
 #include <limits.h>
 #include <numeric>
+#include <array>
 
 
 using namespace std;
@@ -1291,7 +1292,7 @@ void day8_b()
 
     for (int i = 1; i < gdcs.size(); ++i)
     {
-        //result = std::lcm(result, gdcs[i]);
+        result = std::lcm(result, gdcs[i]);
     }
 
     std::cout << "day8 b result =>" << result << "\n";
@@ -2175,14 +2176,326 @@ void day13()
 
 }
 
+void day14_moveUp(std::vector<std::string>& board)
+{
+    int width = board[0].size();
+    int height = board.size();
+
+    for (int col = 0; col < width; ++col)
+    {
+        int lastPosition = 0;
+
+        for (int row = 0; row < height; ++row)
+        {
+            if (board[row][col] == '#')
+            {
+                lastPosition = row + 1;
+            }
+
+            if (board[row][col] == 'O')
+            {
+                //move to position
+                board[row][col] = '.';
+                board[lastPosition][col] = 'O';
+                ++lastPosition;
+            }
+        }
+    }
+}
+
+void day14_moveDown(std::vector<std::string>& board)
+{
+    int width = board[0].size();
+    int height = board.size();
+
+    for (int col = 0; col < width; ++col)
+    {
+        int lastPosition = height -1;
+
+        for (int row = height -1; row >= 0; --row)
+        {
+            if (board[row][col] == '#')
+            {
+                lastPosition = row - 1;
+            }
+
+            if (board[row][col] == 'O')
+            {
+                //move to position
+                board[row][col] = '.';
+                board[lastPosition][col] = 'O';
+                --lastPosition;
+            }
+        }
+    }
+}
+
+void day14_moveLeft(std::vector<std::string>& board)
+{
+   int width = board[0].size();
+   int height = board.size();
+
+   for (int row = 0; row < height; ++row)
+   {
+       int lastPosition = 0;
+       for (int col = 0; col < width; ++col)
+       {
+           if (board[row][col] == '#')
+           {
+               lastPosition = col + 1;
+           }
+
+           if (board[row][col] == 'O')
+           {
+               board[row][col] = '.';
+               board[row][lastPosition] = 'O';
+               ++lastPosition;
+           }
+       }
+   }
+}
+
+void day14_moveRight(std::vector<std::string>& board)
+{
+    int width = board[0].size();
+    int height = board.size();
+
+    for (int row = 0; row < height; ++row)
+    {
+        int lastPosition = width -1;
+        for (int col = width-1; col >= 0; --col)
+        {
+            if (board[row][col] == '#')
+            {
+                lastPosition = col - 1;
+            }
+
+            if (board[row][col] == 'O')
+            {
+                board[row][col] = '.';
+                board[row][lastPosition] = 'O';
+                --lastPosition;
+            }
+        }
+    }
+}
+
+std::vector<std::string> day14_rotateHourly(const std::vector<std::string>& board)
+{
+    std::vector<std::string> newBoard;
+    int width = board[0].size();
+    int height = board.size();
+
+    for (int col = 0; col < width; ++col)
+    {
+        std::string tmp(height, '.');
+
+        for (int row = 0; row < height; ++row)
+        {
+            int position = height - 1 - row;
+            tmp[position] = board[row][col];
+        }
+        newBoard.push_back(tmp);
+    }
+
+
+    return newBoard;
+}
+
+
+long long day14_calculateResult(const std::vector<std::string>& board)
+{
+    int height = board.size();
+    long long result = 0;
+    for (int row = 0; row < height; ++row)
+    {
+        for (auto x : board[row])
+        {
+            if (x == 'O')
+            {
+                result += (height - row);
+            }
+        }
+    }
+
+    return result;
+}
+
+void day14_b()
+{
+    auto fileTxt = ReadFile("./input/day14.txt");
+
+    for (long long round = 0; round < 1000000000; ++round)
+    {
+        for (int i = 0; i < 4; ++i)
+        {
+            day14_moveUp(fileTxt);
+            day14_moveLeft(fileTxt);
+            day14_moveDown(fileTxt);
+            day14_moveRight(fileTxt);
+        }
+       
+        if (round % 1000 == 0)
+        {
+            std::cout << "round =>" << round << "\n";
+        }
+    }
+    
+    std::cout << "-----\n";
+    for (auto row : fileTxt)
+    {
+        std::cout << row << "\n";
+    }
+    long long solutionA = day14_calculateResult(fileTxt);
+    std::cout << "day14 b=> " << solutionA << "\n";
+}
+
+
+void day14_a()
+{
+    auto fileTxt = ReadFile("./input/day14.txt");
+    day14_moveUp(fileTxt);
+    long long solutionA = day14_calculateResult(fileTxt);
+    std::cout << "day14 => " << solutionA << "\n";
+}
+
 void day14()
 {
+    day14_a();
+    day14_b();
+}
+
+
+
+void day15_a()
+{
+    auto fileTxt = ReadFile("./input/day15.txt");
+    
+    auto separation = split(fileTxt[0], ",");
+
+    long long result = 0;
+
+    for (auto x : separation)
+    {
+        long long hash = 0;
+        for (auto c : x)
+        {
+            hash += (int)c;
+            hash = hash * 17;
+            hash = hash % 256;
+        }
+        result += hash;
+    }
+    std::cout << "day15 => " << result << "\n";
+}
+
+struct day15_box
+{
+public:
+    string label;
+    char instruction;
+    int number = -1;
+    int hash;
+    day15_box(string s)
+    {
+        if (s.back() == '-')
+        {
+            label = s.substr(0, s.size() - 1);
+            instruction = s.back();
+            
+        }
+        else
+        {
+            instruction = '=';
+            label = s.substr(0, s.size() - 2);
+            number = atoi(s.substr(s.size() - 1).c_str());
+        }
+
+        hash = 0;
+        for (auto c : label)
+        {
+            hash += (int)c;
+            hash = hash * 17;
+            hash = hash % 256;
+        }
+    }
+};
+
+void day15_b()
+{
+    auto fileTxt = ReadFile("./input/day15.txt");
+
+    std::array<std::vector<day15_box>, 256> boxes;
+
+    auto instructions = split(fileTxt[0], ",");
+
+    for (auto instruction : instructions)
+    {
+        day15_box ins(instruction);
+        if (ins.instruction == '-')
+        {
+            boxes[ins.hash].erase(std::remove_if(boxes[ins.hash].begin(), boxes[ins.hash].end(), [ins](day15_box b) {return b.label == ins.label; }) ,
+                        boxes[ins.hash].end());
+
+        }
+        if (ins.instruction == '=')
+        {
+            auto position = std::find_if(boxes[ins.hash].begin(), boxes[ins.hash].end(), [ins](day15_box b) {return b.label == ins.label; });
+            if (position == boxes[ins.hash].end())
+            {
+                //add
+                boxes[ins.hash].push_back(ins);
+            }
+            else
+            {
+                //replace
+                int place = position - boxes[ins.hash].begin();
+                boxes[ins.hash][place].number = ins.number;
+            }
+        }
+
+       //std::cout << instruction << ", " << ins.hash << "\n";
+       //
+       //
+       //for (int box = 0; box < boxes.size(); ++box)
+       //{
+       //    std::cout << "box:" << box << " ";
+       //    for (int ins = 0; ins < boxes[box].size(); ++ins)
+       //    {
+       //        std::cout << boxes[box][ins].label << ":" << boxes[box][ins].number << ",";
+       //    }
+       //    std::cout << "\n";
+       //}
+       //
+       //system("pause");
+    }
+
+    long long count = 0;
+    for (int box = 0; box < boxes.size(); ++box)
+    {
+        std::cout << "box:" << box << " ";
+        for (int ins = 0; ins < boxes[box].size(); ++ins)
+        {
+            int value = (box + 1) * (ins + 1) * boxes[box][ins].number;
+            count += value;
+
+            std::cout << boxes[box][ins].label << ":" << boxes[box][ins].number << ",";
+        }
+        std::cout << "\n";
+    }
+
+    std::cout << "\n";
+
+    std::cout << "day 15_b => " << count << "\n";
 
 }
+
 void day15()
 {
-
+    day15_a();
+    day15_b();
 }
+
 void day16()
 {
 
@@ -2237,8 +2550,10 @@ int main()
    //day9();
    //day10();
    //day11();
-    //day12();
-    day13();
+   //day12();
+   //day13();
+   // day14();
+    day15();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
