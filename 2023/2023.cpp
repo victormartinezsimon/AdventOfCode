@@ -2453,39 +2453,17 @@ void day15_b()
                 boxes[ins.hash][place].number = ins.number;
             }
         }
-
-       //std::cout << instruction << ", " << ins.hash << "\n";
-       //
-       //
-       //for (int box = 0; box < boxes.size(); ++box)
-       //{
-       //    std::cout << "box:" << box << " ";
-       //    for (int ins = 0; ins < boxes[box].size(); ++ins)
-       //    {
-       //        std::cout << boxes[box][ins].label << ":" << boxes[box][ins].number << ",";
-       //    }
-       //    std::cout << "\n";
-       //}
-       //
-       //system("pause");
     }
 
     long long count = 0;
     for (int box = 0; box < boxes.size(); ++box)
     {
-        std::cout << "box:" << box << " ";
         for (int ins = 0; ins < boxes[box].size(); ++ins)
         {
             int value = (box + 1) * (ins + 1) * boxes[box][ins].number;
             count += value;
-
-            std::cout << boxes[box][ins].label << ":" << boxes[box][ins].number << ",";
         }
-        std::cout << "\n";
     }
-
-    std::cout << "\n";
-
     std::cout << "day 15_b => " << count << "\n";
 
 }
@@ -2496,10 +2474,188 @@ void day15()
     day15_b();
 }
 
-void day16()
+struct day16_particle
+{
+public:
+    int row = 0;
+    int col = 0;
+    enum class ORIENTATIONS{NORTH, SOUTH, WEST, EAST};
+    ORIENTATIONS orientation;
+
+    day16_particle(int r, int c, ORIENTATIONS o) :row(r), col(c), orientation(o) {};
+
+    void moveNext()
+    {
+        int increaseRow = 0;
+        int increaseCol = 0;
+
+        switch (orientation)
+        {
+        case ORIENTATIONS::NORTH: increaseRow = -1; break;
+        case ORIENTATIONS::SOUTH: increaseRow = +1; break;
+        case ORIENTATIONS::EAST: increaseCol = -1; break;
+        case ORIENTATIONS::WEST: increaseCol = +1; break;
+        }
+        row += increaseRow;
+        col += increaseCol;
+    }
+
+    void rotate90()
+    {
+        switch (orientation)
+        {
+        case ORIENTATIONS::NORTH: orientation = ORIENTATIONS::EAST; break;
+        case ORIENTATIONS::SOUTH: orientation = ORIENTATIONS::WEST; break;
+        case ORIENTATIONS::EAST: orientation = ORIENTATIONS::NORTH; break;
+        case ORIENTATIONS::WEST: orientation = ORIENTATIONS::SOUTH; break;
+        }
+    }
+
+    void rotateMinus90()
+    {
+        switch (orientation)
+        {
+        case ORIENTATIONS::NORTH: orientation = ORIENTATIONS::WEST; break;
+        case ORIENTATIONS::SOUTH: orientation = ORIENTATIONS::EAST; break;
+        case ORIENTATIONS::EAST: orientation = ORIENTATIONS::SOUTH; break;
+        case ORIENTATIONS::WEST: orientation = ORIENTATIONS::NORTH; break;
+        }
+    }
+
+};
+
+long long day16_solver(const std::vector<string>& fileTxt, int startRow, int startCol, day16_particle::ORIENTATIONS orientation)
 {
 
+    std::vector<day16_particle> particles;
+    day16_particle start(startRow, startCol, orientation);
+    particles.push_back(start);
+
+    std::set<pair<int, int>> occupedPlaces;
+    std::set<pair<int, int>> divisionsTaken;
+
+    while (particles.size() > 0)
+    {
+        day16_particle particle = particles.front();
+        particles.erase(particles.begin());
+
+        while (particle.row >= 0 && particle.col >= 0 && particle.row < fileTxt.size() && particle.col < fileTxt[0].size())
+        {
+            char c = fileTxt[particle.row][particle.col];
+            occupedPlaces.insert({ particle.row, particle.col });
+            if (c == '/')
+            {
+                particle.rotateMinus90();
+            }
+
+            if (c == '\\')
+            {
+                particle.rotate90();
+            }
+
+            if (c == '|')
+            {
+                if (divisionsTaken.find({ particle.row, particle.col }) != divisionsTaken.end())
+                {
+                    //loop detected
+                    break;
+                }
+                else
+                {
+                    if (particle.orientation == day16_particle::ORIENTATIONS::WEST || particle.orientation == day16_particle::ORIENTATIONS::EAST)
+                    {
+                        day16_particle newParticle(particle.row, particle.col, day16_particle::ORIENTATIONS::SOUTH);
+                        newParticle.moveNext();
+                        particles.push_back(newParticle);
+
+                        particle.orientation = day16_particle::ORIENTATIONS::NORTH;
+
+                        divisionsTaken.insert({ particle.row, particle.col });
+                    }
+                }
+            }
+
+            if (c == '-')
+            {
+                if (divisionsTaken.find({ particle.row, particle.col }) != divisionsTaken.end())
+                {
+                    //loop detected
+                    break;
+                }
+                else
+                {
+                    if (particle.orientation == day16_particle::ORIENTATIONS::NORTH || particle.orientation == day16_particle::ORIENTATIONS::SOUTH)
+                    {
+                        day16_particle newParticle(particle.row, particle.col, day16_particle::ORIENTATIONS::WEST);
+                        newParticle.moveNext();
+                        particles.push_back(newParticle);
+
+                        particle.orientation = day16_particle::ORIENTATIONS::EAST;
+
+                        divisionsTaken.insert({ particle.row, particle.col });
+                    }
+                }
+            }
+
+            particle.moveNext();
+        }
+
+    }
+
+    return occupedPlaces.size();
 }
+
+long long day16_partB_bruteForce(const std::vector<string>& fileTxt)
+{
+    long long best = 0;
+
+    for(int col = 0; col < fileTxt[0].size(); ++col)
+    {
+        long long sol1 = day16_solver(fileTxt, 0, col, day16_particle::ORIENTATIONS::SOUTH);
+
+        if (sol1 > best)
+        {
+            best = sol1;
+        }
+
+        long long sol2 = day16_solver(fileTxt, fileTxt.size()-1, 0, day16_particle::ORIENTATIONS::NORTH);
+        if (sol2 > best)
+        {
+            best = sol2;
+        }
+    }
+
+    for (int row = 0; row < fileTxt.size(); ++row)
+    {
+        long long sol1 = day16_solver(fileTxt, row, 0, day16_particle::ORIENTATIONS::WEST);
+        if (sol1 > best)
+        {
+            best = sol1;
+        }
+
+        long long sol2 = day16_solver(fileTxt, row, fileTxt[0].size()-1, day16_particle::ORIENTATIONS::EAST);
+        if (sol2 > best)
+        {
+            best = sol2;
+        }
+    }
+
+    return best;
+}
+
+
+void day16()
+{
+    auto fileTxt = ReadFile("./input/day16.txt");
+    long long partA = day16_solver(fileTxt, 0,0, day16_particle::ORIENTATIONS::WEST);
+    
+    std::cout << "day16_A => " << partA << "\n";
+
+    //long long partB = day16_partB_bruteForce(fileTxt);
+    long long partB = 8225;
+    std::cout << "day16_b => " << partB << "\n";
+}
+
 void day17()
 {
 
@@ -2553,7 +2709,8 @@ int main()
    //day12();
    //day13();
    // day14();
-    day15();
+   // day15();
+    day16();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
