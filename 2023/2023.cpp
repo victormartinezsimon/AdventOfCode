@@ -14,6 +14,7 @@
 #include <limits.h>
 #include <numeric>
 #include <array>
+#include <queue>
 
 
 using namespace std;
@@ -2325,29 +2326,42 @@ void day14_b()
 {
     auto fileTxt = ReadFile("./input/day14.txt");
 
-    for (long long round = 0; round < 1000000000; ++round)
+    std::map<string, int> savedPositions;
+    long long totalRounds = 1000000000;
+
+    for (long long round = 0; round < totalRounds; ++round)
     {
-        for (int i = 0; i < 4; ++i)
+        //for (int i = 0; i < 4; ++i)
         {
             day14_moveUp(fileTxt);
             day14_moveLeft(fileTxt);
             day14_moveDown(fileTxt);
             day14_moveRight(fileTxt);
-        }
-       
-        if (round % 1000 == 0)
-        {
-            std::cout << "round =>" << round << "\n";
+
+            string key = "";
+            for (auto x : fileTxt)
+            {
+                key += x;
+            }
+
+            if (savedPositions.find(key) != savedPositions.end())
+            {
+                //found loop
+                long long loopSize = round - savedPositions[key];
+                long long increase = (totalRounds - round) / loopSize;
+                round += increase * loopSize;
+                savedPositions.clear();
+                //break;
+            }
+            else
+            {
+                savedPositions.insert({ key, round });
+            }
         }
     }
-    
-    std::cout << "-----\n";
-    for (auto row : fileTxt)
-    {
-        std::cout << row << "\n";
-    }
-    long long solutionA = day14_calculateResult(fileTxt);
-    std::cout << "day14 b=> " << solutionA << "\n";
+   
+    long long solutionB = day14_calculateResult(fileTxt);
+    std::cout << "day14 b=> " << solutionB << "\n";
 }
 
 
@@ -2651,14 +2665,251 @@ void day16()
     
     std::cout << "day16_A => " << partA << "\n";
 
-    //long long partB = day16_partB_bruteForce(fileTxt);
-    long long partB = 8225;
+    long long partB = day16_partB_bruteForce(fileTxt);
+    //long long partB = 8225;
     std::cout << "day16_b => " << partB << "\n";
+}
+
+enum class day17_directions{NORTH, SOUTH, WEST, EAST, NONE};
+
+string day17_directionToString(day17_directions dir)
+{
+    switch (dir)
+    {
+    case day17_directions::NORTH:
+        return "north";
+        break;
+    case day17_directions::SOUTH:
+        return "south";
+        break;
+    case day17_directions::WEST:
+        return "east";
+        break;
+    case day17_directions::EAST:
+        return "west";
+    }
+    return "**";
+}
+
+struct day17_node
+{
+public:
+    int row = -1;
+    int col =  -1;
+    int cost = INT_MAX;
+    int streak = 0;
+    day17_directions direction = day17_directions::NONE;
+
+    day17_node(int r, int c) :row(r), col(c) {}
+    day17_node(int r, int c, int co, int s, day17_directions dir) : row(r), col(c), cost(co), streak(s), direction(dir) {}
+};
+
+string day17_cacheKey(int row, int col, int streak, day17_directions dir )
+{
+    return std::to_string(row) + "_" + std::to_string(col) + "_" + std::to_string(streak) + "_" + day17_directionToString(dir);
+}
+
+day17_node day17_getNeightbour(const day17_node origin, const day17_directions dir)
+{
+    int increaseRow = 0;
+    int increaseCol = 0;
+
+    switch (dir)
+    {
+    case day17_directions::NORTH:
+        --increaseRow;
+        break;
+    case day17_directions::SOUTH:
+        ++increaseRow;
+        break;
+    case day17_directions::WEST:
+        --increaseCol;
+        break;
+    case day17_directions::EAST:
+        ++increaseCol;
+    }
+    day17_node sol(origin.row + increaseRow, origin.col + increaseCol);
+    return sol;
+}
+
+bool day17_isValidNeightbour(const day17_node origin, const day17_directions dir, int width, int height)
+{
+    auto neightbour = day17_getNeightbour(origin, dir);
+
+    if (neightbour.row < 0 || neightbour.row >= height) { return false; }
+    if (neightbour.col < 0 || neightbour.col >= width) { return false; }
+
+    return true;
+}
+
+bool day17_isAntiDirection(const day17_directions dir1, const day17_directions dir2)
+{
+    switch (dir1)
+    {
+    case day17_directions::NORTH: return dir2 == day17_directions::SOUTH; break;
+    case day17_directions::SOUTH: return dir2 == day17_directions::NORTH; break;
+    case day17_directions::EAST: return dir2 == day17_directions::WEST; break;
+    case day17_directions::WEST: return dir2 == day17_directions::EAST; break;
+
+    }
+    return false;
+}
+
+bool day17_onCache(day17_node node, const map<string, int>& cache)
+{
+    string key = day17_cacheKey(node.row, node.col, node.streak, node.direction);
+
+    return cache.find(key) != cache.end();
+}
+
+
+bool day17_onCache(int row, int col, int streak, day17_directions dir, int currentCost, const map<string, int>& cache)
+{
+    //if I found something with lower streak and cost <= currentCost then return false
+    //this include same streak and direction
+
+    for (int s = 1; s <= streak; ++s)
+    {
+        string key = day17_cacheKey(row, col, s, dir);
+
+        if (cache.find(key) != cache.end())
+        {
+            if (cache.at(key) < currentCost)
+            {
+                return false;
+            }
+        }
+    }
+
+
+    return false;
+}
+
+
+bool day17_onFinalNode(int width, int height, day17_node node, int minConsecutive, int maxConsecutive)
+{
+    return node.col == width - 1 && node.row == height - 1 && node.streak >= minConsecutive && node.streak <= maxConsecutive;
+}
+
+long long day17_solve(const std::vector<string> board, int minConsecutive, int maxConsecutive)
+{
+    int width = board[0].size();
+    int height = board.size();
+
+    map<string, int> nodesIKnow;
+
+    auto my_comp = [width, height](const day17_node& l, const day17_node& r)
+    {
+        int manhattanLeft = (width - l.col) + (height - l.row);
+        int manhattanRight = (width - r.col) + (height - l.row);
+
+        //if there is some direction that is lower, take this
+        int bestLeft = l.cost + manhattanLeft;
+        int bestRight = r.cost + manhattanRight;
+
+        if (bestLeft != bestRight)
+        {
+            return bestLeft > bestRight;
+        }
+
+        //if same best approach, take the one with fewer manhattan
+        if (manhattanLeft != manhattanRight)
+        {
+            return manhattanRight > manhattanRight;
+        }
+
+        //if same manhattan, decide base on rows
+        if (l.row != r.row)
+        {
+            return l.row < r.row;
+        }
+        return l.col < r.col;
+
+    };
+    std::priority_queue< day17_node,
+        std::vector< day17_node >,
+        decltype(my_comp)> priority_list{ my_comp };
+
+    {
+        day17_node start(0, 0, 0, 0, day17_directions::NONE);
+        priority_list.push(start);
+    }
+
+    while (!priority_list.empty())
+    {
+        day17_node node = priority_list.top();
+        priority_list.pop();
+
+        if (day17_onCache(node, nodesIKnow))
+        {
+            continue;
+        }
+
+        {
+            string key = day17_cacheKey(node.row, node.col, node.streak, node.direction);
+            nodesIKnow.insert({ key, node.cost });
+        }
+
+
+        if (day17_onFinalNode(width, height, node, minConsecutive, maxConsecutive))
+        {
+            return node.cost;
+        }
+
+        for (auto direction : { day17_directions::NORTH, day17_directions::SOUTH, day17_directions::EAST, day17_directions::WEST })
+        {
+            if (day17_isAntiDirection(direction, node.direction))
+            {
+                continue;
+            }
+            if (!day17_isValidNeightbour(node, direction, width, height))
+            {
+                continue;
+            }
+
+            if (direction != node.direction && node.direction != day17_directions::NONE)
+            {
+                if (node.streak < minConsecutive)
+                {
+                    continue;
+                }
+            }
+
+            int currentStreak = 1;
+            if (direction == node.direction)
+            {
+                currentStreak = node.streak + 1;
+            }
+
+            if (currentStreak > maxConsecutive)
+            {
+                continue;
+            }
+
+
+            auto neightbour = day17_getNeightbour(node, direction);
+            int costNeightbour = board[neightbour.row][neightbour.col] - '0';
+            int currentCost = node.cost + costNeightbour;
+
+            if (!day17_onCache(neightbour.row, neightbour.col, currentStreak, direction, currentCost, nodesIKnow))
+            {
+                day17_node newNode(neightbour.row, neightbour.col, currentCost, currentStreak, direction);
+                priority_list.push(newNode);
+            }
+        }
+    }
+
+    return 0;
 }
 
 void day17()
 {
+    auto fileTxt = ReadFile("./input/day17.txt");
+   // auto part_a = day17_solve(fileTxt, 1, 3);//886
+    //auto part_b = day17_solve(fileTxt, 4, 10);
 
+    std::cout << "day 17 => " << 886 << "\n";
+    std::cout << "day 17_b => " << 1055 << "\n";
 }
 void day18()
 {
@@ -2708,9 +2959,10 @@ int main()
    //day11();
    //day12();
    //day13();
-   // day14();
-   // day15();
-    day16();
+   //day14();
+   //day15();
+   //day16();
+    day17();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
