@@ -16,7 +16,6 @@
 #include <array>
 #include <queue>
 
-
 using namespace std;
 
 
@@ -2905,16 +2904,140 @@ long long day17_solve(const std::vector<string> board, int minConsecutive, int m
 void day17()
 {
     auto fileTxt = ReadFile("./input/day17.txt");
-   // auto part_a = day17_solve(fileTxt, 1, 3);//886
-    //auto part_b = day17_solve(fileTxt, 4, 10);
-
-    std::cout << "day 17 => " << 886 << "\n";
-    std::cout << "day 17_b => " << 1055 << "\n";
+    auto part_a = day17_solve(fileTxt, 1, 3);//886
+    auto part_b = day17_solve(fileTxt, 4, 10);//1055
+    std::cout << "day 17 => " << part_a << "\n";
+    std::cout << "day 17_b => " << part_b << "\n";
 }
+
+enum class day18_directions { NORTH, SOUTH, EAST, WEST, NONE };
+struct day18_wall
+{
+public:
+    long long x;
+    long long y;
+    long long size;
+    day18_directions direction;
+
+    day18_wall(int X, int Y, const string& line, bool partB)
+    {
+        x = X;
+        y = Y;
+
+        char dir = line[0];
+        size = atoi(split(line, " ")[1].c_str());
+
+        if (partB)
+        {
+            string color = line.substr(line.size()-7, 5);
+            size = std::stoul(color, nullptr, 16);
+
+            auto direction = line[line.size() - 2];
+            switch (direction)
+            {
+            case '0': dir = 'R'; break;
+            case '1': dir = 'D'; break;
+            case '2': dir = 'L'; break;
+            case '3': dir = 'U'; break;
+            }
+
+        }
+
+        switch (dir)
+        {
+        case 'R': direction = day18_directions::EAST; break;
+        case 'D': direction = day18_directions::SOUTH; break;
+        case 'L': direction = day18_directions::WEST; break;
+        case 'U': direction = day18_directions::NORTH; break;
+        }
+    }
+
+    void nextPosition(long long& nextX, long long& nextY)
+    {
+        nextX = x;
+        nextY = y;
+
+        switch (direction)
+        {
+        case day18_directions::NORTH:
+            nextY = y - size;
+            break;
+        case day18_directions::SOUTH:
+            nextY = y + size;
+            break;
+        case day18_directions::EAST:
+            nextX = x + size;
+            break;
+        case day18_directions::WEST:
+            nextX = x - size;
+            break;
+        }
+    }
+};
+void day18_buildWallsInformation(const std::vector<string> lines, vector<day18_wall>& wallsIds, bool partB)
+{
+    long long X = 0;
+    long long Y = 0;
+
+    for (auto l : lines)
+    {
+        day18_wall node(X, Y, l, partB);
+        wallsIds.push_back(node);
+
+        node.nextPosition(X, Y);
+    }
+}
+
+long long day18_calculate(const vector<day18_wall>& wallsIds)
+{
+    long long toAdd = 0;
+    long long perimeter = 0;
+
+    for (int i = 0; i < wallsIds.size(); ++i)
+    {
+        int index0 = i;
+        int index1 = (i + 1) % wallsIds.size();
+        int prevIndex = (i - 1 + wallsIds.size()) % wallsIds.size();
+
+        toAdd += (wallsIds[index0].x * (wallsIds[index1].y - wallsIds[prevIndex].y));
+
+        perimeter +=  wallsIds[index0].size;
+    }
+
+    long long area = toAdd / 2;//gauss area: https://es.wikipedia.org/wiki/F%C3%B3rmula_del_%C3%A1rea_de_Gauss
+
+    //pick: https://es.wikipedia.org/wiki/Teorema_de_Pick
+    //A = I + B/2 - 1 where:
+    //A is area
+    //I is points inside
+    //B is perimeter
+    //and we want to know I + B
+
+    long long result = area + perimeter / 2 + 1;
+
+    return result;
+}
+
 void day18()
 {
+    auto fileTxt = ReadFile("./input/day18.txt");
 
+    //if(false)
+    {
+        vector<day18_wall> wallsIds;
+        day18_buildWallsInformation(fileTxt, wallsIds, false);
+        auto b = day18_calculate( wallsIds);
+        std::cout << "day18_a => " << b << "\n";
+    }
+
+    {
+        vector<day18_wall> wallsIds;
+        day18_buildWallsInformation(fileTxt, wallsIds, true);
+        auto b = day18_calculate(wallsIds);
+        std::cout << "day18_b => " << b << "\n";
+    }
 }
+
 void day19()
 {
 
@@ -2962,7 +3085,8 @@ int main()
    //day14();
    //day15();
    //day16();
-    day17();
+   //day17();
+    day18();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
