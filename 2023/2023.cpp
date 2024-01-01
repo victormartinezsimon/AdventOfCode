@@ -15,6 +15,7 @@
 #include <numeric>
 #include <array>
 #include <queue>
+#include <iomanip>
 
 using namespace std;
 
@@ -3038,9 +3039,536 @@ void day18()
     }
 }
 
+/*
+struct day19_part
+{
+    int x = 0;
+    int m = 0;
+    int a = 0;
+    int s = 0;
+
+    day19_part(const string& input)
+    {
+        string removeSymbols = input.substr(1, input.size() - 2);
+
+        auto allSymbols = split(removeSymbols, ",");
+
+        for (auto symbol : allSymbols)
+        {
+            char key = symbol[0];
+            int value = atoi(symbol.substr(2).c_str());
+
+            switch (key)
+            {
+            case 'x': x = value; break;
+            case 'm': m = value; break;
+            case 'a': a = value; break;
+            case 's': s = value; break;
+            }
+        }
+    }
+
+    int getValue(char c)
+    {
+        switch (c)
+        {
+        case 'x': return x; break;
+        case 'm': return m; break;
+        case 'a': return a; break;
+        case 's': return s; break;
+        }
+    }
+};
+
+struct day19_condition
+{
+public:
+    char letter = 0;
+    char action = 0;
+    long long number = 0;
+    string result = "";
+    bool onlyResult = false;
+
+    day19_condition(const string& s)//s>2770:qs
+    {
+        auto posSymbol = s.find(':');
+        if (posSymbol != string::npos)
+        {
+            //condition with condition
+            letter = s[0];
+            action = s[1];
+            
+            string number_s = split(s.substr(2), ":")[0];
+            number = atoll(number_s.c_str());
+            result = s.substr(posSymbol + 1);
+            onlyResult = false;
+        }
+        else
+        {
+            result = s;
+            onlyResult = true;
+        }
+    }
+
+};
+
+struct day19_instruction
+{
+public:
+    string key;
+    vector<day19_condition> conditions;
+
+    day19_instruction(const string& s) // qqz{s>2770:qs,m<1801:hdj,R}
+    {
+        auto positionSymbol = s.find('{');
+        key = s.substr(0, positionSymbol);
+
+        auto allConditions_str = s.substr(positionSymbol + 1, s.size() - positionSymbol - 2);
+
+        auto conditions_str = split(allConditions_str, ",");
+
+        for (auto c : conditions_str)
+        {
+            day19_condition cond(c);
+            conditions.push_back(cond);
+        }
+    }
+
+
+    string evaluate(day19_part part)
+    {
+        for (int condIdx = 0; condIdx< conditions.size(); ++condIdx)
+        {
+            day19_condition cond = conditions[condIdx];
+            if (cond.onlyResult)
+            {
+                return cond.result;
+            }
+
+            auto value = part.getValue(cond.letter);
+            auto comparation = cond.number;
+
+            if (cond.action == '<')
+            {
+                if (value < comparation)
+                {
+                    return cond.result;
+                }
+            }
+
+            if (cond.action == '>')
+            {
+                if (value > comparation)
+                {
+                    return cond.result;
+                }
+            }
+        }
+        return "";
+    }
+
+
+};
+
+void day19_buildData(const std::vector<string>& lines, map<string, day19_instruction>& instructions, vector<day19_part>& parts)
+{
+    int index = 0;
+    while (lines[index].size() > 0)
+    {
+        day19_instruction ins(lines[index]);
+        instructions.insert({ ins.key, ins });
+        ++index;
+    }
+    ++index;
+
+    while (index < lines.size())
+    {
+        day19_part p(lines[index]);
+        parts.push_back(p);
+        ++index;
+    }
+
+}
+
+string day19_analyzePart(const map<string, day19_instruction>& instructions, const day19_part& part)
+{
+    string currentInstruction = "in";
+
+    while (instructions.find(currentInstruction) != instructions.end())
+    {
+        auto instruction = instructions.at(currentInstruction);
+
+        currentInstruction = instruction.evaluate(part);
+    }
+
+    return currentInstruction;
+}
+
+void day19_analyze(const map<string, day19_instruction>& instructions, const vector<day19_part>& parts, vector<day19_part>& accepted, vector<day19_part>& rejected)
+{
+    for (auto part : parts)
+    {
+        string result = day19_analyzePart(instructions, part);
+
+        if (result == "A")
+        {
+            accepted.push_back(part);
+        }
+
+        if (result == "R")
+        {
+            rejected.push_back(part);
+        }
+    }
+}
+
+
+void day19_partA(const vector<day19_part>& accepted)
+{
+    long long result = 0;
+
+    for (auto a : accepted)
+    {
+        result += (a.a + a.m + a.s + a.x);
+    }
+    std::cout << "day 19_a => " << result << "\n";
+}
+
+*/
+
+struct day19_part
+{
+    pair<int, int> a;
+    pair<int, int> m;
+    pair<int, int> s;
+    pair<int, int> x;
+
+    day19_part( int max)
+    {
+        x = { 1, max };
+        m = { 1, max };
+        a = { 1, max };
+        s = { 1, max };
+    }
+
+    day19_part(const string& input)
+    {
+        string removeSymbols = input.substr(1, input.size() - 2);
+
+        auto allSymbols = split(removeSymbols, ",");
+
+        for (auto symbol : allSymbols)
+        {
+            char key = symbol[0];
+            int value = atoi(symbol.substr(2).c_str());
+
+            switch (key)
+            {
+            case 'x': x = { value,value }; break;
+            case 'm': m = { value,value }; break;
+            case 'a': a = { value,value }; break;
+            case 's': s = { value,value }; break;
+            }
+        }
+    }
+
+    day19_part(const day19_part& other)
+    {
+        x = other.x;
+        m = other.m;
+        a = other.a;
+        s = other.s;
+    }
+
+    day19_part(int _a, int _m, int _s, int _x)
+    {
+        x = { _x,_x };
+        m = { _m,_m };
+        a = { _a,_a };
+        s = { _s,_s };
+    }
+
+    pair<int, int> getValues(char c)
+    {
+        switch (c)
+        {
+        case 'x': return x; break;
+        case 'm': return m; break;
+        case 'a': return a; break;
+        case 's': return s; break;
+        }
+    }
+
+    void setValue(char c, pair<int, int> value)
+    {
+        switch (c)
+        {
+        case 'x': x = value; break;
+        case 'm': m = value; break;
+        case 'a': a = value; break;
+        case 's': s = value; break;
+        }
+    }
+};
+
+struct day19_condition
+{
+public:
+    char letter = 0;
+    char action = 0;
+    long long number = 0;
+    string result = "";
+    bool onlyResult = false;
+
+    day19_condition(const string& s)//s>2770:qs
+    {
+        auto posSymbol = s.find(':');
+        if (posSymbol != string::npos)
+        {
+            //condition with condition
+            letter = s[0];
+            action = s[1];
+
+            string number_s = split(s.substr(2), ":")[0];
+            number = atoll(number_s.c_str());
+            result = s.substr(posSymbol + 1);
+            onlyResult = false;
+        }
+        else
+        {
+            result = s;
+            onlyResult = true;
+        }
+    }
+
+};
+
+using day19_nodeElement = pair<string, day19_part>;
+
+struct day19_instruction
+{
+public:
+    string key;
+    vector<day19_condition> conditions;
+    string param_str;
+
+    day19_instruction(const string& s) // qqz{s>2770:qs,m<1801:hdj,R}
+    {
+        param_str = s;
+        auto positionSymbol = s.find('{');
+        key = s.substr(0, positionSymbol);
+
+        auto allConditions_str = s.substr(positionSymbol + 1, s.size() - positionSymbol - 2);
+
+        auto conditions_str = split(allConditions_str, ",");
+
+        for (auto c : conditions_str)
+        {
+            day19_condition cond(c);
+            conditions.push_back(cond);
+        }
+    }
+
+    vector<day19_nodeElement> evaluate(const day19_part& node)
+    {
+        vector<day19_nodeElement> toReturn;
+
+        day19_part currentNode = node;
+
+        for (int i = 0; i < conditions.size(); ++i)
+        {
+            auto condition = conditions[i];
+
+            if (condition.onlyResult)
+            {
+                toReturn.push_back({ condition.result, currentNode });
+            }
+            else
+            {
+                char letter = condition.letter;
+                char action = condition.action;
+                int number = condition.number;
+
+                auto values = currentNode.getValues(letter);
+
+                if (action == '<')
+                {
+                   //CurrentNode: [3000, 4000]; < 3500 => add[3000, 3500], currentNode: [3500, 4000] 
+                   //CurrentNode: [2000, 3000]; < 1000 => currentNode[2000, 3000]
+                   //CurrentNode: [2000, 3000]; < 3500 => add[2000, 3000], currentNode: => stop execution
+
+                    if (values.first < number && number < values.second)
+                    {
+                        day19_part n = currentNode;
+                        n.setValue(letter, {values.first, number - 1});
+                        toReturn.push_back({ condition.result, n });
+                        currentNode.setValue(letter, { number, values.second });
+                        continue;
+                    }
+
+                    if (number < values.first)
+                    {
+                        //do nothig
+                        continue;
+                    }
+
+                    if (values.second < number)
+                    {
+                        toReturn.push_back({ condition.result, currentNode });
+                        break;
+                    }
+
+                }
+                if (action == '>')
+                {
+                    //CurrentNode: [3000, 4000]; > 3500 => add[3500, 4000], currentNode: [3000, 3500] 
+                    //CurrentNode: [2000, 3000]; > 3500 => currentNode[2000, 3000]
+                    //CurrentNode: [3800, 4000]; > 3500 => add[3800, 4000], currentNode: => stop execution
+
+                    if (values.first < number && number < values.second)
+                    {
+                        day19_part n = currentNode;
+                        n.setValue(letter, { number +1, values.second });
+                        toReturn.push_back({ condition.result, n });
+                        currentNode.setValue(letter, { values.first, number });
+                        continue;
+                    }
+
+                    if (number > values.second)
+                    {
+                        //do nothing;
+                        continue;
+                    }
+
+                    if (values.first > number)
+                    {
+                        toReturn.push_back({ condition.result, currentNode });
+                        break;
+                    }
+                }
+            }
+        }
+        return toReturn;
+    }
+};
+
+void day19_buildData(const std::vector<string>& lines, map<string, day19_instruction>& instructions, vector<day19_part>& parts)
+{
+    int index = 0;
+    while (lines[index].size() > 0)
+    {
+        day19_instruction ins(lines[index]);
+        instructions.insert({ ins.key, ins });
+        ++index;
+    }
+    ++index;
+
+    while (index < lines.size())
+    {
+        day19_part p(lines[index]);
+        parts.push_back(p);
+        ++index;
+    }
+}
+
+void day19_analyzePart(const map<string, day19_instruction>& instructions, const day19_part& part, vector<day19_part>& accepted, vector<day19_part>& rejected)
+{
+    vector<day19_nodeElement> listToAnalyze;
+    listToAnalyze.push_back({ "in", part });
+
+    while (listToAnalyze.size() != 0)
+    {
+        auto node = listToAnalyze[0];
+        listToAnalyze.erase(listToAnalyze.begin());
+
+        auto instructionId = node.first;
+        auto p = node.second;
+
+        if (instructionId == "R")
+        {
+            rejected.push_back(p);
+            continue;
+        }
+
+        if (instructionId == "A")
+        {
+            accepted.push_back(p);
+            continue;
+        }
+
+        auto instruction = instructions.at(instructionId);
+
+        auto newNodes = instruction.evaluate(p);
+
+        listToAnalyze.insert(listToAnalyze.end(), newNodes.begin(), newNodes.end());
+    }
+}
+
+
+void day19_analyze(const map<string, day19_instruction>& instructions, const vector<day19_part>& parts, vector<day19_part>& accepted, vector<day19_part>& rejected)
+{
+    for (int i = 0; i < parts.size(); ++i)
+    {
+        day19_analyzePart(instructions, parts[i], accepted, rejected);
+    }
+}
+
+void day19_partA(vector<day19_part>& accepted)
+{
+    long long result = 0;
+
+    for (auto ac : accepted)
+    {
+        long long value = (ac.a.first + ac.m.first + ac.s.first + ac.x.first);
+        result += value;
+    }
+
+    std::cout << "day 19_a => " << result << "\n";
+}
+
+void day19_partB(vector<day19_part>& accepted)
+{
+    double result = 0;
+
+    for (auto ac : accepted)
+    {
+        double a = (ac.a.second - ac.a.first + 1);
+        double m = (ac.m.second - ac.m.first + 1);
+        double s = (ac.s.second - ac.s.first + 1);
+        double x = (ac.x.second - ac.x.first + 1);
+
+        double value = a * m * s * x;
+        result += value;
+    }
+    std::cout << "day 19_b => " << std::setprecision(16) << result << "\n";
+}
+
+
+
 void day19()
 {
+    auto fileTxt = ReadFile("./input/day19.txt");
+    map<string, day19_instruction> instructions;
+    vector<day19_part> parts_a;
 
+    day19_buildData(fileTxt, instructions, parts_a);
+
+    
+    vector<day19_part> accepted_a;
+    vector<day19_part> rejected_a;
+
+    day19_analyze(instructions, parts_a, accepted_a, rejected_a);
+    day19_partA(accepted_a);
+
+    vector<day19_part> accepted_b;
+    vector<day19_part> rejected_b;
+    vector<day19_part> parts_b;
+
+    day19_part b(4000);
+    parts_b.push_back(b);
+
+    day19_analyze(instructions, parts_b, accepted_b, rejected_b);
+    day19_partB(accepted_b);
 }
 void day20()
 {
@@ -3086,7 +3614,8 @@ int main()
    //day15();
    //day16();
    //day17();
-    day18();
+   //day18();
+    day19();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
