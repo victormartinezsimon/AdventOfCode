@@ -20,76 +20,6 @@
 using namespace std;
 
 
-
-template <class T>
-class MyTree
-{
-public:
-    T _value;
-    MyTree<T>* _left = nullptr;
-    MyTree<T>* _right = nullptr;
-
-    MyTree<T>(T value) { _value = value; }
-    void AddLeft(MyTree<T>* l) { _left = l; }
-    void AddRight(MyTree<T>* r) { _right = r; }
-};
-
-template <class T>
-class NodeGraph
-{
-public:
-    int _id;
-    T _value;
-    std::vector<NodeGraph*> _neightbours;
-    std::vector<float> _cost;
-
-    NodeGraph<T>(T value, int id) { _value = value; _id = id; }
-
-    void AddNeightbour(NodeGraph<T>* n, float cost)
-    {
-        _neightbours.push_back(n);
-        _cost.push_back(n);
-    }
-
-    float GetCost(NodeGraph<T>* n)
-    {
-        for (int i = 0; i < _neightbours.size(); ++i)
-        {
-            if (n->_id == _neightbours[i]->_id)
-            {
-                return _cost[i];
-            }
-        }
-        return -1;
-    }
-};
-
-template <class T>
-class MyGraph
-{
-public:
-    vector< NodeGraph<T>> _allNodes;
-
-    NodeGraph<T>* AddNode(T value)
-    { 
-        NodeGraph<T>* node = new NodeGraph<T>(value, _allNodes.size());
-        _allNodes.push_back(node);
-        return node;
-    }
-
-    void AddDirectionalRoute(NodeGraph<T>* n1, NodeGraph<T>* n2, float cost)
-    {
-        n1->AddNeightbour(n2, cost);
-    }
-
-    void AddRoute(NodeGraph<T>* n1, NodeGraph<T>* n2, float cost)
-    {
-        n1->AddNeightbour(n2, cost);
-        n2->AddNeightbour(n1, cost);
-    }
-};
-
-
 std::vector<string> ReadFile(string path)
 {
     std::vector<string> result;
@@ -120,6 +50,44 @@ vector<string> split(string s, const string& delimiter)
     toReturn.push_back(s);
 
     return toReturn;
+}
+
+// trim from start (in place)
+static inline void ltrim(std::string& s) {
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
+        return !std::isspace(ch);
+        }));
+}
+
+// trim from end (in place)
+static inline void rtrim(std::string& s) {
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
+        return !std::isspace(ch);
+        }).base(), s.end());
+}
+
+// trim from both ends (in place)
+static inline void trim(std::string& s) {
+    rtrim(s);
+    ltrim(s);
+}
+
+// trim from start (copying)
+static inline std::string ltrim_copy(std::string s) {
+    ltrim(s);
+    return s;
+}
+
+// trim from end (copying)
+static inline std::string rtrim_copy(std::string s) {
+    rtrim(s);
+    return s;
+}
+
+// trim from both ends (copying)
+static inline std::string trim_copy(std::string s) {
+    trim(s);
+    return s;
 }
 
 
@@ -3543,8 +3511,6 @@ void day19_partB(vector<day19_part>& accepted)
     std::cout << "day 19_b => " << std::setprecision(16) << result << "\n";
 }
 
-
-
 void day19()
 {
     auto fileTxt = ReadFile("./input/day19.txt");
@@ -3570,9 +3536,323 @@ void day19()
     day19_analyze(instructions, parts_b, accepted_b, rejected_b);
     day19_partB(accepted_b);
 }
+
+enum class day20_type {FLIP, CONJUNCTION, NONE, BROADCASTER};
+enum class day20_pulse {HIGH, LOW};
+
+struct day20_signal
+{
+public:
+    string origin;
+    string destiny;
+    day20_pulse pulse;
+
+    day20_signal(string o, string d, day20_pulse p) : origin(o), destiny(d), pulse(p) {}
+};
+
+struct day20_node
+{
+public:
+    string label;
+    vector<string> sons;
+    vector<string> parents;
+
+    day20_pulse currentPulse = day20_pulse::LOW;
+    map<string, day20_pulse> lastParentReceivedPulses;
+    day20_type type;
+
+    void addSon(string s)
+    {
+        sons.push_back(s);
+    }
+
+    void addParent(string s)
+    {
+        parents.push_back(s);
+        lastParentReceivedPulses.insert({ s, day20_pulse::LOW });
+    }
+
+    bool execute(day20_signal currentInput, day20_pulse& output)
+    {
+        if (type == day20_type::FLIP)
+        {
+            if (currentInput.pulse == day20_pulse::LOW)
+            {
+                flipPulse();
+                output = currentPulse;
+                return true;
+            }
+        }
+
+        if (type == day20_type::CONJUNCTION)
+        {
+            lastParentReceivedPulses[currentInput.origin] = currentInput.pulse;
+            bool allHigh = true;
+            for (auto p : lastParentReceivedPulses)
+            {
+                if (p.second == day20_pulse::LOW)
+                {
+                    allHigh = false;
+                    break;
+                }
+            }
+            if (allHigh)
+            {
+                output = day20_pulse::LOW;
+            }
+            else
+            {
+                output = day20_pulse::HIGH;
+            }
+
+            return true;
+        }
+
+        if (type == day20_type::BROADCASTER)
+        {
+            output = day20_pulse::LOW;
+            return true;
+        }
+
+        return false;
+    }
+
+    day20_pulse GetActualValue()
+    {
+        if (type == day20_type::FLIP)
+        {
+            return currentPulse;
+        }
+        if (type == day20_type::CONJUNCTION)
+        {
+            bool allHigh = true;
+            for (auto p : lastParentReceivedPulses)
+            {
+                if (p.second == day20_pulse::LOW)
+                {
+                    allHigh = false;
+                    break;
+                }
+            }
+            if (allHigh)
+            {
+                return day20_pulse::LOW;
+            }
+            else
+            {
+                return day20_pulse::HIGH;
+            }
+        }
+        return day20_pulse::LOW;
+    }
+
+    void setType(char c)
+    {
+        switch (c)
+        {
+        case 'b': type = day20_type::BROADCASTER; break;
+        case '%': type = day20_type::FLIP; break;
+        case '&': type = day20_type::CONJUNCTION; break;
+        }
+    }
+
+
+private:
+    void flipPulse()
+    {
+        if (currentPulse == day20_pulse::HIGH)
+        {
+            currentPulse = day20_pulse::LOW;
+        }
+        else
+        {
+            if (currentPulse == day20_pulse::LOW)
+            {
+                currentPulse = day20_pulse::HIGH;
+            }
+        }
+    }
+};
+
+day20_node* day20_getOrBuildNode(map<string, day20_node*>& nodes, string key)
+{
+    if (nodes.find(key) == nodes.end())
+    {
+        day20_node* n = new day20_node();
+        nodes.insert({ key, n });
+    }
+    return nodes[key];
+}
+
+void day20_parseInput(const std::vector<string> file, map<string, day20_node*>& nodes)
+{
+    for (auto l : file)
+    {
+        auto split_str = split(l, "->");
+
+        string key = split_str[0];
+        
+        trim(key);
+
+        char type = key[0];
+        if (key != "broadcaster")
+        {
+            key = key.substr(1);
+        }
+        
+        auto node = day20_getOrBuildNode(nodes, key);
+
+        node->setType(type);//this builds the node if not exists
+        node->label = key;
+
+        auto sons_str = split(split_str[1], ",");
+
+        for (auto son_str : sons_str)
+        {
+            trim(son_str);
+            day20_getOrBuildNode(nodes, son_str)->addParent(key);
+            node->addSon(son_str);
+        }
+    }
+}
+
+void day20_analyzePress(map<string, day20_node*>& nodes, long long& lowPulses, long long& highPulses )
+{
+    vector<day20_signal> signalsToAnalyze;
+
+    day20_signal initialSignal("Button", "broadcaster", day20_pulse::LOW);
+    signalsToAnalyze.push_back(initialSignal);
+
+    while (signalsToAnalyze.size() != 0)
+    {
+        day20_signal signal = signalsToAnalyze[0];
+        signalsToAnalyze.erase(signalsToAnalyze.begin());
+
+        if (signal.pulse == day20_pulse::LOW )
+        {
+            ++lowPulses;
+        }
+        if (signal.pulse == day20_pulse::HIGH)
+        {
+            ++highPulses;
+        }
+
+        day20_pulse output;
+        auto node = nodes[signal.destiny];
+        if (node->execute(signal, output))
+        {
+            //add the new value to all sons
+            for (auto son_str : node->sons)
+            {
+                day20_signal newSignal(signal.destiny, son_str, output);
+                signalsToAnalyze.push_back(newSignal);
+            }
+        }
+    }
+}
+
+void day20_analyzePress_b(map<string, day20_node*>& nodes, map<string, long long>& result, const vector<string>& nodesToAnalyze, long long pulsation)
+{
+    vector<day20_signal> signalsToAnalyze;
+
+    day20_signal initialSignal("Button", "broadcaster", day20_pulse::LOW);
+    signalsToAnalyze.push_back(initialSignal);
+
+    while (signalsToAnalyze.size() != 0)
+    {
+        day20_signal signal = signalsToAnalyze[0];
+        signalsToAnalyze.erase(signalsToAnalyze.begin());
+
+        day20_pulse output;
+        auto node = nodes[signal.destiny];
+        if (node->execute(signal, output))
+        {
+            //add the new value to all sons
+            for (auto son_str : node->sons)
+            {
+                day20_signal newSignal(signal.destiny, son_str, output);
+                signalsToAnalyze.push_back(newSignal);
+
+
+                if (std::find(nodesToAnalyze.begin(), nodesToAnalyze.end(), son_str) != nodesToAnalyze.end())
+                {
+                    if (output == day20_pulse::LOW)
+                    {
+                        if (result.find(son_str) == result.end())
+                        {
+                            result.insert({son_str, pulsation });
+                        }
+                    }
+                }
+
+            }
+        }
+    }
+}
+
+long long day20_analyzePulses(map<string, day20_node*>& nodes, int totalPulsations)
+{
+    long long lowPulses = 0;
+    long long highPulses = 0;
+    for (int i = 0; i < totalPulsations; ++i)
+    {
+        day20_analyzePress(nodes, lowPulses, highPulses);
+    }
+
+    return lowPulses * highPulses;
+}
+
+void day20_partB()
+{
+    auto fileTxt = ReadFile("./input/day20.txt");
+
+    map<string, day20_node*> nodes;
+    day20_parseInput(fileTxt, nodes);
+
+    string finalNode = "rx";
+
+    auto caller = nodes[finalNode]->parents[0];
+
+    auto caller_parents = nodes[caller]->parents;
+
+    long long maxTries = 10000;
+
+    map<string, long long> results;
+
+    for (auto t = 0; t < maxTries; ++t)
+    {
+        day20_analyzePress_b(nodes, results, caller_parents, t + 1);
+
+        if (results.size() == caller_parents.size())
+        {
+            break;
+        }
+    }
+
+    long long result = 1;
+    for (auto x : results)
+    {
+        result *= x.second;
+    }
+
+    std::cout << "day20_b => " << result;
+}
+
+void day20_partA()
+{
+    auto fileTxt = ReadFile("./input/day20.txt");
+
+    map<string, day20_node*> nodes;
+    day20_parseInput(fileTxt, nodes);
+    auto resultA = day20_analyzePulses(nodes, 1000);
+
+    std::cout << "day20_a => " << resultA;
+}
+
 void day20()
 {
-
+    //day20_partA();
+    day20_partB();
 }
 void day21()
 {
@@ -3615,7 +3895,8 @@ int main()
    //day16();
    //day17();
    //day18();
-    day19();
+   //day19();
+    day20();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
