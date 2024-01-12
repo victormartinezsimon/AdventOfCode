@@ -3851,13 +3851,256 @@ void day20_partA()
 
 void day20()
 {
-    //day20_partA();
+    day20_partA();
     day20_partB();
 }
-void day21()
+
+pair<int, int> day21_getStart(const std::vector<std::string> &input)
 {
+    for (int i = 0; i < input.size(); ++i)
+    {
+        auto position = input[i].find('S');
+        if (position != string::npos)
+        {
+            return { i, position };
+        }
+    }
+    return { -1,-1 };
+}
+
+bool day21_validPosition(const std::vector<std::string>& input, const vector<vector<int>>& distances, int Y, int X)
+{
+    int width = input[0].size();
+    int height = input.size();
+
+    if (Y < 0 || X < 0 || Y >= height || X >= width)
+    {
+        return false;
+    }
+
+    if (distances[Y][X] != -1)
+    {
+        return false;
+    }
+
+    return input[Y][X] == '.';
+}
+
+void day21_partA(const std::vector<std::string>& input, pair<int, int> startPosition, int maxDistance)
+{
+    int width = input[0].size();
+    int height = input.size();
+
+    vector<vector<int>> distances(height, vector<int>(width, -1));//not setted
+
+    vector <pair<int,pair<int, int>>> nodesToAnalyze;//{distance, {Y, X}};
+
+    nodesToAnalyze.push_back({ 0,startPosition });
+
+    long long count = 0;
+
+    while (nodesToAnalyze.size() != 0)
+    {
+        auto node = nodesToAnalyze.front();
+        nodesToAnalyze.erase(nodesToAnalyze.begin());
+
+        int distance = node.first;
+        auto position = node.second;
+
+        if (distance > maxDistance)
+        {
+            nodesToAnalyze.clear();
+            continue;
+        }
+
+        if (distances[position.first][position.second] != -1)
+        {
+            continue;//we reach the same spot throug 2 ways, but by definition, the other was better
+        }
+
+        if (distance % 2 == 0)
+        {
+            ++count;
+        }
+
+        distances[position.first][position.second] = distance;
+        //create 4 sons
+
+        //top
+        {
+            int nextY = position.first - 1;
+            int nextX = position.second;
+            if (day21_validPosition(input, distances, nextY, nextX))
+            {
+                nodesToAnalyze.push_back({ distance + 1, {nextY, nextX} });
+            }
+           
+        }
+
+        //bottom
+        {
+            int nextY = position.first + 1;
+            int nextX = position.second;
+            if (day21_validPosition(input, distances, nextY, nextX))
+            {
+                nodesToAnalyze.push_back({ distance + 1, {nextY, nextX} });
+            }
+
+        }
+
+        //left
+        {
+            int nextY = position.first;
+            int nextX = position.second -1;
+            if (day21_validPosition(input, distances, nextY, nextX))
+            {
+                nodesToAnalyze.push_back({ distance + 1, {nextY, nextX} });
+            }
+
+        }
+
+        //right
+        {
+            int nextY = position.first;
+            int nextX = position.second + 1;
+            if (day21_validPosition(input, distances, nextY, nextX))
+            {
+                nodesToAnalyze.push_back({ distance + 1, {nextY, nextX} });
+            }
+
+        }
+
+    }
+
+    std::cout << "day 21_a =>" << count << "\n";
+}
+
+void day21_partB(const std::vector<std::string>& input, pair<int, int> startPosition, int maxDistance)
+{
+    int width = input[0].size();
+    int height = input.size();
+
+    vector<vector<int>> distances(height, vector<int>(width, -1));//not setted
+
+    vector <pair<int, pair<int, int>>> nodesToAnalyze;//{distance, {Y, X}};
+
+    nodesToAnalyze.push_back({ 0,startPosition });
+
+    long long countImpar = 0;
+    long long countPar = 0;
+    long long countOutside = 0;
+
+    while (nodesToAnalyze.size() != 0)
+    {
+        auto node = nodesToAnalyze.front();
+        nodesToAnalyze.erase(nodesToAnalyze.begin());
+
+        int distance = node.first;
+        auto position = node.second;
+
+        if (distances[position.first][position.second] != -1)
+        {
+            continue;//we reach the same spot throug 2 ways, but by definition, the other was better
+        }
+
+        if (distance <= width / 2)
+        {
+            if ((distance % 2) == 1)
+            {
+                ++countImpar;
+            }
+            else
+            {
+                ++countPar;
+            }
+        }
+        else
+        {
+            ++countOutside;
+        }
+
+        distances[position.first][position.second] = distance;
+        //create 4 sons
+
+        //top
+        {
+            int nextY = position.first - 1;
+            int nextX = position.second;
+            if (day21_validPosition(input, distances, nextY, nextX))
+            {
+                nodesToAnalyze.push_back({ distance + 1, {nextY, nextX} });
+            }
+
+        }
+
+        //bottom
+        {
+            int nextY = position.first + 1;
+            int nextX = position.second;
+            if (day21_validPosition(input, distances, nextY, nextX))
+            {
+                nodesToAnalyze.push_back({ distance + 1, {nextY, nextX} });
+            }
+
+        }
+
+        //left
+        {
+            int nextY = position.first;
+            int nextX = position.second - 1;
+            if (day21_validPosition(input, distances, nextY, nextX))
+            {
+                nodesToAnalyze.push_back({ distance + 1, {nextY, nextX} });
+            }
+
+        }
+
+        //right
+        {
+            int nextY = position.first;
+            int nextX = position.second + 1;
+            if (day21_validPosition(input, distances, nextY, nextX))
+            {
+                nodesToAnalyze.push_back({ distance + 1, {nextY, nextX} });
+            }
+        }
+    }
+
+    //complete rombos with par elements are: 1 1 9 9 25 25 49 49
+    //complete rombos with impar elements are: 0 4 4 16 16 36 36 64 64
+
+    long long n = maxDistance / width;
+    
+    long long totalPares = 0;
+    long long totalImpares = 0;
+    
+    if (n % 2 == 0)
+    {
+        totalPares = pow(n, 2);
+        totalImpares = pow(n + 1, 2);
+    }
+    else
+    {
+        totalImpares = pow(n, 2);
+        totalPares = pow(n + 1, 2);
+    }
+    
+    long long totalOutside = (totalPares + totalImpares) / 2;
+    
+    long long solution = countImpar * totalImpares + countPar * totalPares + countOutside * totalOutside;
+
+    std::cout << "Day 21_b => "<< solution << "\n";
 
 }
+
+void day21()
+{
+    auto fileTxt = ReadFile("./input/day21.txt");
+    auto start = day21_getStart(fileTxt);
+    day21_partA(fileTxt, start, 64);
+    day21_partB(fileTxt, start, 26501365);
+}
+
 void day22()
 {
 
@@ -3896,7 +4139,8 @@ int main()
    //day17();
    //day18();
    //day19();
-    day20();
+   //day20();
+    day21();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
