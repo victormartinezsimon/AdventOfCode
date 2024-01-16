@@ -4098,12 +4098,306 @@ void day21()
     auto fileTxt = ReadFile("./input/day21.txt");
     auto start = day21_getStart(fileTxt);
     day21_partA(fileTxt, start, 64);
+    //explain: https://github.com/DeadlyRedCube/AdventOfCode/blob/main/2023/AOC2023/D21.h
     day21_partB(fileTxt, start, 26501365);
+}
+
+struct day22_block
+{
+public:
+
+    array<int, 3> start;
+    array<int, 3> end;
+    int id;
+
+    set<int> overBlock;
+    set<int> underBlock;
+
+    int minZ;
+    int maxZ;
+
+    day22_block(string s, int _id)
+    {
+        id = _id;
+
+        auto coords = split(s, "~");
+
+        {
+            auto start_coords = split(coords[0], ",");
+            for (int i = 0; i < start_coords.size(); ++i)
+            {
+                start[i] = atoi(start_coords[i].c_str());
+            }
+        }
+
+        {
+            auto end_coords = split(coords[1], ",");
+            for (int i = 0; i < end_coords.size(); ++i)
+            {
+                end[i] = atoi(end_coords[i].c_str());
+            }
+        }
+
+        minZ = min(start[2], end[2]);
+        maxZ = max(start[2], end[2]);
+    }
+
+
+    day22_block(const day22_block& other)
+    {
+        this->id = other.id;
+        for (int i = 0; i < start.size(); ++i)
+        {
+            this->start[i] = other.start[i];
+            this->end[i] = other.end[i];
+        }
+        minZ = min(start[2], end[2]);
+        maxZ = max(start[2], end[2]);
+
+        this->overBlock = other.overBlock;
+        this->underBlock = other.underBlock;
+
+        // this->overBlock.insert(this->overBlock.begin(), other.overBlock.begin(), other.overBlock.end());
+        //this->underBlock.insert(this->underBlock.begin(), other.underBlock.begin(), other.underBlock.end());
+    }
+
+    void setMinZ(int value)
+    {
+        int diff = end[2] - start[2];
+        start[2] = value;
+        end[2] = start[2] + diff;
+
+        minZ = min(start[2], end[2]);
+        maxZ = max(start[2], end[2]);
+    }
+
+    bool collides(const day22_block& other)
+    {
+        //returns collision on XY
+
+        int myMinX = min(start[0], end[0]);
+        int myMaxX = max(start[0], end[0]);
+
+        int myMinY = min(start[1], end[1]);
+        int myMaxY = max(start[1], end[1]);
+
+        int otherMinX = min(other.start[0], other.end[0]);
+        int otherMaxX = max(other.start[0], other.end[0]);
+
+        int otherMinY = min(other.start[1], other.end[1]);
+        int otherMaxY = max(other.start[1], other.end[1]);
+
+
+        if (myMaxX < otherMinX) { return false; }
+        if (myMinX > otherMaxX) { return false; }
+        if (myMaxY < otherMinY) { return false; }
+        if (myMinY > otherMaxY) { return false; }
+
+        return true;
+    }
+
+    string getString()
+    {
+        string toReturn = std::to_string(id) + ",";
+        toReturn += std::to_string(start[0]) + ",";
+        toReturn += std::to_string(start[1]) + ",";
+        toReturn += std::to_string(start[2]) + ",";
+        toReturn += std::to_string(end[0]) + ",";
+        toReturn += std::to_string(end[1]) + ",";
+        toReturn += std::to_string(end[2]);
+
+        return toReturn;
+    }
+
+};
+
+void day22_calculateUnderBlock(vector<day22_block>& allBlocks, int index)
+{
+    auto last = allBlocks.back();
+    int elementMinZ = allBlocks[index].minZ;
+    for (int i = index - 1; i >= 0; --i)
+    {
+        int searchZ = allBlocks[i].maxZ;
+        if (searchZ + 1 == elementMinZ)
+        {
+            if (allBlocks[index].collides(allBlocks[i]))
+            {
+                allBlocks[index].underBlock.insert(i);
+                allBlocks[i].overBlock.insert(index);
+            }
+        }
+    }
+}
+
+void day22_calculateUnder(vector<day22_block>& allBlocks)
+{
+    for (int i = 0; i < allBlocks.size(); ++i)
+    {
+        auto id = allBlocks[i].id;
+
+        day22_calculateUnderBlock(allBlocks, i);
+    }
+}
+
+void day22_sortBlocks(vector<day22_block>& blocks)
+{
+    std::sort(blocks.begin(), blocks.end(), [](const day22_block& a, const day22_block& b) {
+
+        if (a.minZ != b.minZ) 
+        { 
+            return a.minZ < b.minZ; 
+        }
+
+        if (a.start[0] != b.start[0]) { return a.start[0] < b.start[0]; }
+
+        return a.start[1] < b.start[1];
+        });
+}
+
+vector<day22_block> day22_moveDown(const vector<day22_block>& originalBlocks)
+{
+    vector<day22_block> movedBlocks;
+
+    for (int i = 0; i < originalBlocks.size(); ++i)
+    {
+        if (originalBlocks[i].minZ == 1)
+        {
+            movedBlocks.push_back(originalBlocks[i]);//ground blocks
+            continue;
+        }
+
+        int id = originalBlocks[i].id;
+
+        int maxZ = -1;
+        int maxIndex = -1;
+
+        for (int j = movedBlocks.size()-1; j >= 0; --j)
+        {
+            if (movedBlocks[j].collides(originalBlocks[i]))
+            {
+                if (maxZ < movedBlocks[j].maxZ + 1)
+                {
+                    maxZ = movedBlocks[j].maxZ + 1;
+                    maxIndex = j;
+                }
+            }
+        }
+
+        if (maxIndex ==-1)
+        {
+            day22_block newBlock = originalBlocks[i];
+            newBlock.setMinZ(1);
+            movedBlocks.push_back(newBlock);
+        }
+        else
+        {
+            day22_block newBlock = originalBlocks[i];
+            newBlock.setMinZ(movedBlocks[maxIndex].maxZ + 1);
+            movedBlocks.push_back(newBlock);
+        }
+
+        day22_sortBlocks(movedBlocks);
+
+    }
+    return movedBlocks;
+}
+
+int day22_partB(const vector<day22_block>& blocks, int start)
+{
+    std::vector<int> supports(blocks.size(), 0);
+
+    for (int i = 0; i < blocks.size(); ++i)
+    {
+        supports[i] = blocks[i].underBlock.size();
+    }
+
+    vector<int> toVisit;
+    toVisit.push_back(start);
+
+    int count = 0;
+
+    while (toVisit.size() != 0)
+    {
+        int current = toVisit.front();
+        toVisit.erase(toVisit.begin());
+
+        if (supports[current] == 0 && current != start)
+        {
+            ++count;
+        }
+
+        auto&& b = blocks[current];
+
+        for (auto over : b.overBlock)
+        {
+            supports[over]--;
+
+            if (supports[over] == 0)
+            {
+                toVisit.push_back(over);
+            }
+        }
+    }
+
+    return count;
 }
 
 void day22()
 {
+    auto fileTxt = ReadFile("./input/day22.txt");
 
+    vector<day22_block> allBlocks;
+
+    for (int i = 0; i < fileTxt.size(); ++i)
+    {
+        day22_block b(fileTxt[i], i);
+        allBlocks.push_back(b);
+    }
+
+    day22_sortBlocks(allBlocks);
+
+    auto moved = day22_moveDown(allBlocks);
+
+    day22_calculateUnder(moved);
+
+
+    vector<int> validIndexOnMoved;
+    vector<int> NotvalidIndexOnMoved;
+
+    for (int index = 0; index < moved.size(); ++index)
+    {
+        day22_block block = moved[index];
+
+        auto overBlock = block.overBlock;
+
+        bool allOk = true;
+        for (auto oB : overBlock)
+        {
+            if (moved[oB].underBlock.size() <= 1)
+            {
+                allOk = false;
+                break;
+            }
+        }
+        if (allOk)
+        {
+            validIndexOnMoved.push_back(index);
+        }
+        else
+        {
+            NotvalidIndexOnMoved.push_back(index);
+        }
+    }
+    std::cout << "day22_a =>" << validIndexOnMoved.size() << "\n";
+
+    long long partB = 0;
+
+    for (auto&& notValidIndex : NotvalidIndexOnMoved)
+    {
+        partB += day22_partB(moved, notValidIndex);
+    }
+
+    std::cout << "day 22_b =>" << partB << "\n";
 }
 void day23()
 {
@@ -4140,7 +4434,8 @@ int main()
    //day18();
    //day19();
    //day20();
-    day21();
+   //day21();
+    day22();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
