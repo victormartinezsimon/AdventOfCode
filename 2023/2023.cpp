@@ -16,6 +16,7 @@
 #include <array>
 #include <queue>
 #include <iomanip>
+#include <stack>
 
 using namespace std;
 
@@ -4399,13 +4400,510 @@ void day22()
 
     std::cout << "day 22_b =>" << partB << "\n";
 }
+
+
+struct day23_node
+{
+public:
+    int x = -1;
+    int y = -1;
+
+    int prevX = -1;
+    int prevY = -1;
+
+    int cost = 0;
+
+    day23_node(int _x, int _y) :x(_x), y(_y) {}
+    day23_node(int _x, int _y, int _prevX, int _prevY, int _cost) :x(_x), y(_y), prevX(_prevX), prevY(_prevY), cost(_cost) {}
+};
+
+bool day23_validNode(pair<int, int> position, int width, int height)
+{
+    if (position.second < 0) { return false; }
+    if (position.second >= width) { return false; }
+    if (position.first < 0) { return false; }
+    if (position.first >= height) { return false; }
+    return true;
+}
+
+bool day23_validNode(const day23_node& originalNode, const day23_node& newNode, int width, int height, const std::vector<std::string>& fileTxt)
+{
+    if (!day23_validNode({newNode.y, newNode.x}, width, height)) { return false; }
+
+    if (originalNode.prevX == newNode.x && originalNode.prevY == newNode.y) { return false; }//turn back
+
+    if (fileTxt[newNode.y][newNode.x] == '#') { return false; }
+    return true;
+}
+
+const std::vector<pair<int, int>> day23_getMovements(char position)
+{
+    if (position == '.') { return { {1,0}, {-1,0}, {0,1}, {0,-1} }; }
+    if (position == '>') { return { {1,0} }; }
+    if (position == '<') { return { {-1,0} }; }
+    if (position == 'v') { return { {0,1} }; }
+    if (position == '^') { return { {0,-1} }; }
+}
+
+void day23_a()
+{
+    auto fileTxt = ReadFile("./input/day23.txt");
+
+    int width = fileTxt[0].size();
+    int height = fileTxt.size();
+
+    int finalPositionX = width - 2;
+    int finalPositionY = height - 1;
+
+    long long worst = -1;
+
+    std::vector<day23_node> nodesToInvestigate;
+
+    day23_node start(1, 0);
+    nodesToInvestigate.push_back(start);
+
+    while (nodesToInvestigate.size() != 0)
+    {
+        auto node = nodesToInvestigate.front();
+        nodesToInvestigate.erase(nodesToInvestigate.begin());
+
+        //check if we reached end position
+        if (node.x == finalPositionX && node.y == finalPositionY)
+        {
+            if (worst < node.cost)
+            {
+                worst = node.cost;
+            }
+
+            continue;
+        }
+
+        //get neightbours
+        auto&& movements = day23_getMovements(fileTxt[node.y][node.x]);
+
+        for (auto&& m : movements)
+        {
+            day23_node newNode(node.x + m.first, node.y + m.second, node.x, node.y, node.cost + 1);
+
+            if (day23_validNode(node, newNode, width, height, fileTxt))
+            {
+                nodesToInvestigate.push_back(newNode);
+            }
+        }
+    }
+
+    std::cout << "day23_a => " << worst << "\n";
+}
+
+bool day23_validPosition(const pair<int, int> newPosition, const vector<string>& fileTxt)
+{
+    int width = fileTxt[0].size();
+    int height = fileTxt.size();
+
+    if (newPosition.first < 0) { return false; }
+    if (newPosition.first >= height) { return false; }
+    if (newPosition.second < 0) { return false; }
+    if (newPosition.second >= width) { return false; }
+
+
+    if (fileTxt[newPosition.first][newPosition.second] == '#') { return false; }
+    return true;
+}
+
+struct day23_node_graph
+{
+public:
+    int id;
+    pair<int, int> intersection;
+    vector<pair<int, day23_node_graph*>> adjacents;
+
+    day23_node_graph(int _id) :id(_id) {  };
+
+    void addAdjacent(int cost, day23_node_graph* n)
+    {
+        for (int i = 0; i < adjacents.size(); ++i)
+        {
+            if (adjacents[i].second == n)
+            {
+                return;
+            }
+        }
+
+        adjacents.push_back({ cost, n });
+    }
+};
+
+struct day23_graph
+{
+public:
+
+    vector<day23_node_graph*> nodes;
+
+    day23_node_graph* nodeByIndex(int index)
+    {
+        for (int i = 0; i < nodes.size(); ++i)
+        {
+            if (nodes[i]->id == index)
+            {
+                return nodes[i];
+            }
+        }
+        return nullptr;
+    }
+
+    day23_node_graph* getNode(pair<int, int> instersection)
+    {
+        for (int i = 0; i < nodes.size(); ++i)
+        {
+            if (nodes[i]->intersection == instersection)
+            {
+                return nodes[i];
+            }
+        }
+        auto node = addNode();
+        node->intersection = instersection;
+        return node;
+    }
+
+    bool hasNode(pair<int, int> instersection)
+    {
+        for (int i = 0; i < nodes.size(); ++i)
+        {
+            if (nodes[i]->intersection == instersection)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+private:
+    day23_node_graph* addNode()
+    {
+        day23_node_graph* n = new day23_node_graph(nodes.size());
+        nodes.push_back(n);
+        return n;
+    }
+};
+
+void day23_b_getNodeFromPosition(const pair<int, int>& start, pair<int,int> lastPosition, const std::vector<string>& fileTxt, day23_graph& currentGraph, int width, int height, day23_node_graph* currentNode)
+{
+    int count = 1;
+    pair<int, int> currentPosition = start;
+
+    while (true)
+    {
+        auto&& movements = day23_getMovements('.');
+
+        std::vector<pair<int, int>> nextValues;
+
+        for (auto m : movements)
+        {
+            pair<int, int> newNode = { currentPosition.first + m.first, currentPosition.second + m.second };
+            if (day23_validNode(newNode, width, height))
+            {
+                if (fileTxt[newNode.first][newNode.second] == '#')
+                {
+                    continue;
+                }
+
+                if (newNode == lastPosition)
+                {
+                    continue;
+                }
+
+                nextValues.push_back(newNode);
+            }
+        }
+
+        if (nextValues.size() == 0)
+        {
+            auto intersectionNode = currentGraph.getNode(currentPosition);
+            currentNode->addAdjacent(count, intersectionNode);
+            intersectionNode->addAdjacent(count, currentNode);
+            return;
+        }
+
+        if (nextValues.size() == 1)
+        {
+            ++count;
+            lastPosition = currentPosition;
+            currentPosition = nextValues[0];
+            continue;
+        }
+        if (nextValues.size() > 1)
+        {
+            bool hasNode = currentGraph.hasNode(currentPosition);
+
+            auto intersectionNode = currentGraph.getNode(currentPosition);
+
+            currentNode->addAdjacent(count, intersectionNode);
+            intersectionNode->addAdjacent(count, currentNode);
+
+            if (hasNode)
+            {
+                return;
+            }
+
+            for (int i = 0; i < nextValues.size(); ++i)
+            {
+                day23_b_getNodeFromPosition(nextValues[i], currentPosition, fileTxt, currentGraph, width, height, intersectionNode);
+                
+            }
+        }
+    }
+}
+
+void day23_getWorstRoute(day23_graph& graph, day23_node_graph* currentPosition, const day23_node_graph* endPosition, std::vector<bool> visited, int currentCost, int& worstCost)
+{
+    if (currentPosition == endPosition)
+    {
+        if (currentCost > worstCost)
+        {
+            worstCost = currentCost;
+        }
+        return;
+    }
+
+    visited[currentPosition->id] = true;
+
+    for (int i = 0; i < currentPosition->adjacents.size(); ++i)
+    {
+        int newCost = currentPosition->adjacents[i].first;
+        auto neightbour = currentPosition->adjacents[i].second;
+
+        if (visited[neightbour->id])
+        {
+            continue;
+        }
+        day23_getWorstRoute(graph, neightbour, endPosition, visited, currentCost + newCost, worstCost);
+    }
+}
+
+void day23_b()
+{
+    auto fileTxt = ReadFile("./input/day23.txt");
+    int width = fileTxt[0].size();
+    int height = fileTxt.size();
+
+    day23_graph graph;
+
+    auto startNode = graph.getNode({ 0,1 });
+
+    day23_b_getNodeFromPosition({ 0, 1 }, { -1,-1 }, fileTxt, graph, width, height, startNode);
+
+    
+    auto endNode = graph.getNode({ height - 1, width - 2 });
+
+    std::vector<bool> visited(graph.nodes.size(), false);
+    int worst = -1;
+
+    day23_getWorstRoute(graph, startNode, endNode, visited, 0, worst);
+
+    std::cout << "day23_b => " << worst-1 << "\n";
+}
+
 void day23()
 {
+    day23_a();
+    day23_b();
+}
+
+struct day24_point
+{
+    array<double, 3> start;
+    array<double, 3> direction;
+
+    day24_point(const std::string& s)
+    {
+        auto division = split(s, "@");
+
+        auto start_str = split(division[0], ",");
+
+        for (int i = 0; i < 3; ++i)
+        {
+            start[i] = stod(start_str[i].c_str());
+        }
+
+        auto direction_str = split(division[1], ",");
+        for (int i = 0; i < 3; ++i)
+        {
+            direction[i] = stod(direction_str[i].c_str());
+        }
+    }
+
+    bool validPoint(pair<double, double> point) const
+    {
+        if (direction[0] > 0 && point.first < start[0]) { return false; }
+        if (direction[0] < 0 && point.first > start[0]) { return false; }
+
+        if (direction[1] > 0 && point.second < start[1]) { return false; }
+        if (direction[1] < 0 && point.second > start[1]) { return false; }
+
+        return true;
+    }
+
+    array<double, 3> moveParticle(double x, double y, double Z)
+    {
+        array<double, 3> toReturn;
+        toReturn[0] = start[0] + direction[0] + x;
+        toReturn[1] = start[1] + direction[1] + x;
+        toReturn[2] = start[2] + direction[2] + x;
+
+        return toReturn;
+    }
+};
+
+bool day24_getCollision(day24_point& P1, day24_point& P2, pair<double, double>& solution)
+{
+    double C = P1.direction[1] / P1.direction[0];
+    double D = P2.direction[1] / P2.direction[0];
+
+    double minus = C - D;
+    if (minus == 0) { return false; }//paralel
+
+    double SolX = (P2.start[1] - D*P2.start[0] - P1.start[1] + C * P1.start[0]) / minus;
+    double SolY = P1.start[1] + C * (SolX - P1.start[0]);
+
+    solution = { SolX, SolY };
+    return true;
+}
+
+bool day24_inArea(const std::pair<double, double>& solution, const std::pair<double, double>& maxArea)
+{
+    if (solution.first < maxArea.first) { return false; }
+    if (solution.first > maxArea.second) { return false; } 
+    if (solution.second < maxArea.first) { return false; }
+    if (solution.second > maxArea.second) { return false; }
+    return true;
+}
+
+void day24_a(vector<day24_point>& points, pair<double, double> maxArea)
+{
+    long long count = 0;
+
+    for (int i = 0; i < points.size(); ++i)
+    {
+        for (int j = i + 1; j < points.size(); ++j)
+        {
+            pair<double, double> solution;
+            if (day24_getCollision(points[i], points[j], solution))
+            {
+                if (points[i].validPoint(solution) && points[j].validPoint(solution))
+                {
+                    if (!day24_inArea(solution, maxArea))
+                    { 
+                        continue; 
+                    }
+
+                    ++count;
+                }
+            }
+        }
+    }
+
+    std::cout << "day24_a =>" << count << "\n";
 
 }
+
+#define ALL(x) (x).begin(),(x).end()
+#define ALLc(x) (x).cbegin(),(x).cend()
+
+using i64 = long long;
+template<typename T>
+struct Coord3D
+{
+    constexpr Coord3D(T X = 0, T Y = 0, T Z = 0) : x(X), y(Y), z(Z) {}
+    constexpr Coord3D operator + (const Coord3D& p) const { return Coord3D(x + p.x, y + p.y, z + p.z); }
+    constexpr Coord3D operator - (const Coord3D& p) { return Coord3D(x - p.x, y - p.y, z - p.z); };
+    constexpr Coord3D operator * (T scalar) const { return Coord3D(x * scalar, y * scalar, z * scalar); }
+    T x, y, z;
+};
+
+using Point3D = Coord3D<i64>;
+using PosVel = std::array<i64, 6>;
+
+struct VelSort {
+    bool operator()(const PosVel& a, const PosVel& b) const {
+        if (a[SortIndex] < b[SortIndex]) return true;
+        if (b[SortIndex] < a[SortIndex]) return false;
+        return a < b;
+    }
+    static int SortIndex;
+};
+int VelSort::SortIndex = 0;
+
+//https://github.com/FCayouette/Advent-of-Code-2023/blob/main/AoC23Day24.cpp
+void day24_online(std::vector <string> lines)
+{
+    i64 part1 = 0;
+    std::string line;
+    std::vector<Point3D> positions, velocities;
+    std::vector<PosVel> dataPoints;
+   for (auto line : lines)
+    {
+        Point3D p, v;
+        sscanf_s(line.c_str(), "%lld, %lld, %lld @ %lld, %lld, %lld", &p.x, &p.y, &p.z, &v.x, &v.y, &v.z);
+
+        positions.push_back(p);
+        velocities.push_back(v);
+        dataPoints.push_back({ p.x, p.y, p.z, v.x, v.y, v.z });
+    }
+
+    std::array<i64, 3> hailStoneSpeed = { -3,1,2 };
+    if (positions.size() > 10)
+    {
+        for (int axis = 0; axis < 3; ++axis)
+        {
+            VelSort::SortIndex = 3 + axis;
+            std::sort(ALL(dataPoints), VelSort());
+
+            std::vector<std::pair<i64, i64>> constraints;
+            for (int i = 1; i < dataPoints.size(); ++i)
+                if (dataPoints[i - 1][VelSort::SortIndex] == dataPoints[i][VelSort::SortIndex])
+                    constraints.push_back({ dataPoints[i][VelSort::SortIndex], dataPoints[i][VelSort::SortIndex - 3] - dataPoints[i - 1][VelSort::SortIndex - 3] });
+
+            int i = 0;
+            while (true)
+            {
+                int x = (i + 1) / 2 * (i % 2 == 0 ? 1 : -1);
+
+                if(std::all_of(ALLc(constraints), [x](const std::pair<i64, i64>& p) { return (x - p.first) != 0 && p.second % (x - p.first) == 0; }))
+                {
+                    hailStoneSpeed[axis] = x;
+                    break;
+                }
+                ++i;
+            }
+        }
+    }
+
+    // intersect first 2 in hailstone frame of reference
+    i64 a = hailStoneSpeed[0] - velocities[0].x;
+    i64    b = hailStoneSpeed[0] - velocities[1].x;
+    i64 c = hailStoneSpeed[1] - velocities[0].y;
+    i64   d = hailStoneSpeed[1] - velocities[1].y;
+    i64 x = (b * (positions[1].y - positions[0].y) - (positions[1].x - positions[0].x) * d) / (a * d - b * c);
+
+    Point3D origin = positions[0] + (velocities[0] - Point3D(hailStoneSpeed[0], hailStoneSpeed[1], hailStoneSpeed[2])) * x;
+
+    std::cout << "day24_2 =>" << origin.x + origin.y + origin.z << "\n";
+}
+
 void day24()
 {
+    auto fileTxt = ReadFile("./input/day24.txt");
 
+    vector<day24_point> points;
+
+    for (auto s : fileTxt)
+    {
+        day24_point p(s);
+        points.push_back(p);
+    }
+
+    day24_a(points, { 200000000000000, 400000000000000 });
+    day24_online(fileTxt);
 }
 void day25()
 {
@@ -4435,7 +4933,9 @@ int main()
    //day19();
    //day20();
    //day21();
-    day22();
+   //day22();
+   //day23();
+    day24();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
