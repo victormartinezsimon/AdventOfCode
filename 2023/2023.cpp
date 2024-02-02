@@ -92,7 +92,7 @@ static inline std::string trim_copy(std::string s) {
 }
 
 
-int GetFirstNumber_day1(const string& line, int start, int end, int increment, int& position)
+int day1_GetFirstNumber(const string& line, int start, int end, int increment, int& position)
 {
     int index = start;
 
@@ -110,7 +110,7 @@ int GetFirstNumber_day1(const string& line, int start, int end, int increment, i
     return -1;
 }
 
-void GetStringPositions(string& line, int& leftValue, int& leftPosition, int& rightValue, int& rightPosition)
+void day1_GetStringPositions(string& line, int& leftValue, int& leftPosition, int& rightValue, int& rightPosition)
 {
     std::vector<string> numbers = {"zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"};
 
@@ -158,8 +158,8 @@ void day1()
         for (auto l : fileTxt)
         {
             int dummy;
-            int firstValue = GetFirstNumber_day1(l, 0, l.size(), +1, dummy);
-            int secondValue = GetFirstNumber_day1(l,l.size()-1, -1, -1, dummy);
+            int firstValue = day1_GetFirstNumber(l, 0, l.size(), +1, dummy);
+            int secondValue = day1_GetFirstNumber(l,l.size()-1, -1, -1, dummy);
 
             acum += firstValue * 10 + secondValue;
         }
@@ -176,12 +176,12 @@ void day1()
             int leftPosition;
             int rightValue;
             int rightPosition;
-            GetStringPositions(l, leftValue, leftPosition, rightValue, rightPosition);
+            day1_GetStringPositions(l, leftValue, leftPosition, rightValue, rightPosition);
 
             int positionFirst;
-            int firstValue = GetFirstNumber_day1(l, 0, l.size(), +1, positionFirst);
+            int firstValue = day1_GetFirstNumber(l, 0, l.size(), +1, positionFirst);
             int positionSecond;
-            int secondValue = GetFirstNumber_day1(l, l.size() - 1, -1, -1,positionSecond);
+            int secondValue = day1_GetFirstNumber(l, l.size() - 1, -1, -1,positionSecond);
 
             if (positionFirst > leftPosition)
             {
@@ -272,7 +272,7 @@ void day2()
     std::cout << "Day 2_2 => " << count_b << "\n";
 }
 
-vector<vector<char>> ParseFile_day3(const std::vector<string>& file)
+vector<vector<char>> day3_ParseFile(const std::vector<string>& file)
 {
     vector<vector<char>> result;
 
@@ -288,7 +288,7 @@ vector<vector<char>> ParseFile_day3(const std::vector<string>& file)
     return result;
 }
 
-vector<pair<int, int>> ExtractNumbers_day3(const vector<char>& board)
+vector<pair<int, int>> day3_ExtractNumbers(const vector<char>& board)
 {
     vector<pair<int, int>> result;
 
@@ -318,17 +318,17 @@ vector<pair<int, int>> ExtractNumbers_day3(const vector<char>& board)
     return result;
 }
 
-bool anySymbol_day3(char c)
+bool day3_anySymbol(char c)
 {
     return c != '.' && (c < '0' || c > '9');
 }
 
-bool anyNumber_day3(char c)
+bool day3_anyNumber(char c)
 {
     return  (c >= '0' && c <= '9');
 }
 
-bool validPosition_day3(const vector<vector<char>>& board, int row, int col )
+bool day3_validPosition(const vector<vector<char>>& board, int row, int col )
 {
     //a b c
     //d X e
@@ -337,60 +337,60 @@ bool validPosition_day3(const vector<vector<char>>& board, int row, int col )
     if (row > 0 && col > 0)
     {
         char a = board[row - 1][col - 1];
-        if (anySymbol_day3(a)) { return true; }
+        if (day3_anySymbol(a)) { return true; }
     }
 
     if (row > 0)
     {
         char b = board[row - 1][col];
-        if (anySymbol_day3(b)) { return true; }
+        if (day3_anySymbol(b)) { return true; }
     }
 
     if (row > 0 && col < board[row].size() - 1)
     {
         char c = board[row - 1][col + 1];
-        if (anySymbol_day3(c)) { return true; }
+        if (day3_anySymbol(c)) { return true; }
     }
 
     if (col > 0)
     {
         char d = board[row][col - 1];
-        if (anySymbol_day3(d)) { return true; }
+        if (day3_anySymbol(d)) { return true; }
     }
 
     if (col < board[row].size() - 1)
     {
         char e = board[row][col + 1];
-        if (anySymbol_day3(e)) { return true; }
+        if (day3_anySymbol(e)) { return true; }
     }
 
     if (row < board.size() - 1 && col > 0)
     {
         char f = board[row + 1][col - 1];
-        if (anySymbol_day3(f)) { return true; }
+        if (day3_anySymbol(f)) { return true; }
     }
 
     if (row < board.size() - 1)
     {
         char g = board[row + 1][col];
-        if (anySymbol_day3(g)) { return true; }
+        if (day3_anySymbol(g)) { return true; }
     }
 
     if (row < board.size()-1 && col < board[row].size() - 1)
     {
         char h = board[row + 1][col + 1];
-        if (anySymbol_day3(h)) { return true; }
+        if (day3_anySymbol(h)) { return true; }
     }
     
     return false;
 }
 
-bool validNumber_day3(const vector<vector<char>>& board, int row, const pair<int, int> position)
+bool day3_validNumber(const vector<vector<char>>& board, int row, const pair<int, int> position)
 {
 
     for (int i = position.first; i <= position.second; ++i)
     {
-        if (validPosition_day3(board, row, i) >= 1)
+        if (day3_validPosition(board, row, i) >= 1)
         {
             return true;
         }
@@ -399,7 +399,7 @@ bool validNumber_day3(const vector<vector<char>>& board, int row, const pair<int
     return false;
 }
 
-int buildNumber_day3(const vector<vector<char>>& board, int row, const pair<int, int> position)
+int day3_buildNumber(const vector<vector<char>>& board, int row, const pair<int, int> position)
 {
     int solution = 0;
 
@@ -412,7 +412,7 @@ int buildNumber_day3(const vector<vector<char>>& board, int row, const pair<int,
     return atoi(number.c_str());
 }
 
-int getGearNumberRow_day3(const vector<vector<char>>& board, const std::vector < std::vector<pair<int, int>>>& numbers, int rowInvestigate, int colGear, int& numbersUsed)
+int day3_getGearNumberRow(const vector<vector<char>>& board, const std::vector < std::vector<pair<int, int>>>& numbers, int rowInvestigate, int colGear, int& numbersUsed)
 {
     int sol = 1;
     for (auto number : numbers[rowInvestigate])
@@ -421,21 +421,21 @@ int getGearNumberRow_day3(const vector<vector<char>>& board, const std::vector <
         if (colGear >= number.first && colGear <= number.second)
         {
             //premio
-            sol *= buildNumber_day3(board, rowInvestigate, number);
+            sol *= day3_buildNumber(board, rowInvestigate, number);
             numbersUsed += 1;
         }
         
         //left
         if ( number.second == colGear - 1)
         {
-            sol *= buildNumber_day3(board, rowInvestigate, number);
+            sol *= day3_buildNumber(board, rowInvestigate, number);
             numbersUsed += 1;
         }
 
         //right
         if (number.first == colGear + 1)
         {
-            sol *= buildNumber_day3(board, rowInvestigate, number);
+            sol *= day3_buildNumber(board, rowInvestigate, number);
             numbersUsed += 1;
         }
     }
@@ -443,7 +443,7 @@ int getGearNumberRow_day3(const vector<vector<char>>& board, const std::vector <
     return sol;
 }
 
-int getGearNumbers_day3(const vector<vector<char>>& board, const std::vector < std::vector<pair<int, int>>>& numbers, int row, int col)
+int day3_getGearNumbers(const vector<vector<char>>& board, const std::vector < std::vector<pair<int, int>>>& numbers, int row, int col)
 {
    // int validNumbers = validGearPosition_day3(board, row, col);
     //if (validNumbers < 2) { return 0; }
@@ -453,16 +453,16 @@ int getGearNumbers_day3(const vector<vector<char>>& board, const std::vector < s
     int numbersUsed = 0;
     if (row > 0)
     {
-        result *= getGearNumberRow_day3(board, numbers, row - 1,  col, numbersUsed);
+        result *= day3_getGearNumberRow(board, numbers, row - 1,  col, numbersUsed);
     }
 
     {
-        result *= getGearNumberRow_day3(board, numbers, row,  col, numbersUsed);
+        result *= day3_getGearNumberRow(board, numbers, row,  col, numbersUsed);
     }
 
     if (row < board.size())
     {
-        result *= getGearNumberRow_day3(board, numbers, row + 1,  col, numbersUsed);
+        result *= day3_getGearNumberRow(board, numbers, row + 1,  col, numbersUsed);
     }
     if (numbersUsed < 2) { return 0; }
     return result;
@@ -472,18 +472,18 @@ void day3_a()
 {
     std::vector<string> fileTxt = ReadFile("./input/day3.txt");
 
-    auto board = ParseFile_day3(fileTxt);
+    auto board = day3_ParseFile(fileTxt);
 
     long long solution_a = 0;
 
     for (int row = 0; row < board.size(); ++row)
     {
-        auto numbers = ExtractNumbers_day3(board[row]);
+        auto numbers = day3_ExtractNumbers(board[row]);
 
         for (auto number : numbers)
         {
-            int n = buildNumber_day3(board, row, number);
-            if (validNumber_day3(board, row, number))
+            int n = day3_buildNumber(board, row, number);
+            if (day3_validNumber(board, row, number))
             {
                 solution_a += n;
             }
@@ -497,12 +497,12 @@ void day3_b()
 {
     std::vector<string> fileTxt = ReadFile("./input/day3.txt");
 
-    auto board = ParseFile_day3(fileTxt);
+    auto board = day3_ParseFile(fileTxt);
 
     std::vector < std::vector<pair<int, int>>> numbersPerRow;
     for (int row = 0; row < board.size(); ++row)
     {
-        auto numbers = ExtractNumbers_day3(board[row]);
+        auto numbers = day3_ExtractNumbers(board[row]);
 
         numbersPerRow.push_back(numbers);
     }
@@ -515,7 +515,7 @@ void day3_b()
         {
             if (board[row][col] == '*')
             {
-                int number = getGearNumbers_day3(board, numbersPerRow, row, col);
+                int number = day3_getGearNumbers(board, numbersPerRow, row, col);
                 solution_b += number;
             }
         }
@@ -530,7 +530,7 @@ void day3()
     day3_b();
 }
 
-int getTotalWinningNumbers_day4(const string& s)
+int day4_getTotalWinningNumbers(const string& s)
 {
     std::vector<string> initialSeparation = split(s, "|");
     std::vector<string> prizeNumbers = split(split(initialSeparation[0], ":")[1], " ");
@@ -566,7 +566,7 @@ void day4_a()
     long long result = 0;
     for (int i = 0; i < fileTxt.size(); ++i)
     {
-        int count = getTotalWinningNumbers_day4(fileTxt[i]);
+        int count = day4_getTotalWinningNumbers(fileTxt[i]);
         
         if (count > 0)
         {
@@ -587,7 +587,7 @@ void day4_b()
 
     for (int i = 0; i < fileTxt.size(); ++i)
     {
-        winsPerCard.push_back( getTotalWinningNumbers_day4(fileTxt[i]));
+        winsPerCard.push_back(day4_getTotalWinningNumbers(fileTxt[i]));
         extraWins.push_back(0);
         totalCardboards.push_back(1);
     }
@@ -649,12 +649,12 @@ public:
     }
 };
 
-bool lineWithInfo_day5(const string& str)
+bool day5_lineWithInfo(const string& str)
 {
     return '0' <= str[0] && str[0] <= '9';
 }
 
-std::vector<std::vector<day5_struct>> parseDay5(const std::vector<string>& input)
+std::vector<std::vector<day5_struct>> day5_parseDay(const std::vector<string>& input)
 {
     int line = 1;//skip the seeds
 
@@ -662,7 +662,7 @@ std::vector<std::vector<day5_struct>> parseDay5(const std::vector<string>& input
 
     while (line < input.size())
     {
-        if (lineWithInfo_day5(input[line]))
+        if (day5_lineWithInfo(input[line]))
         {
             auto numbers = split(input[line], " ");
             day5_struct s5(atoll(numbers[0].c_str()), atoll(numbers[1].c_str()), atoll(numbers[2].c_str()));
@@ -708,7 +708,7 @@ void day5_a()
 {
     std::vector<string> fileTxt = ReadFile("./input/day5.txt");
 
-    auto parsedData = parseDay5(fileTxt);
+    auto parsedData = day5_parseDay(fileTxt);
 
     auto seeds = split(split(fileTxt[0], ":")[1], " ");
 
@@ -817,7 +817,7 @@ std::vector<std::pair<unsigned long long, unsigned long long>> day5_evaluateDept
 void day5_b()
 {
     std::vector<string> fileTxt = ReadFile("./input/day5.txt");
-    auto mutations = parseDay5(fileTxt);
+    auto mutations = day5_parseDay(fileTxt);
     auto seeds = split(split(fileTxt[0], ":")[1], " ");
     std::vector<std::pair<unsigned long long, unsigned long long>> seedsPairs;
 
@@ -1243,8 +1243,6 @@ void day8_b()
         }
     }
 
-    std::cout << "day8 b info =>" << fileTxt[0].size() << "\n";
-
     vector<long long> gdcs;
 
     for (auto n : allStart)
@@ -1253,7 +1251,7 @@ void day8_b()
         long long times = day8_countToLoopAnyEnd(n, endNode, fileTxt[0]);
         if (endNode != nullptr)
         {
-            std::cout << "[" << n->name << "," << endNode->name << "]: " << times << "\n";
+            //std::cout << "[" << n->name << "," << endNode->name << "]: " << times << "\n";
             gdcs.push_back(times);
         }
     }
@@ -1265,7 +1263,7 @@ void day8_b()
         result = std::lcm(result, gdcs[i]);
     }
 
-    std::cout << "day8 b result =>" << result << "\n";
+    std::cout << "day8 b =>" << result << "\n";
 }
 
 void day8()
@@ -2632,7 +2630,7 @@ void day16()
     auto fileTxt = ReadFile("./input/day16.txt");
     long long partA = day16_solver(fileTxt, 0,0, day16_particle::ORIENTATIONS::WEST);
     
-    std::cout << "day16_A => " << partA << "\n";
+    std::cout << "day16_a => " << partA << "\n";
 
     long long partB = day16_partB_bruteForce(fileTxt);
     //long long partB = 8225;
@@ -3836,7 +3834,7 @@ void day20_partB()
         result *= x.second;
     }
 
-    std::cout << "day20_b => " << result;
+    std::cout << "day20_b => " << result << "\n";
 }
 
 void day20_partA()
@@ -3847,7 +3845,7 @@ void day20_partA()
     day20_parseInput(fileTxt, nodes);
     auto resultA = day20_analyzePulses(nodes, 1000);
 
-    std::cout << "day20_a => " << resultA;
+    std::cout << "day20_a => " << resultA <<"\n";
 }
 
 void day20()
@@ -4905,37 +4903,140 @@ void day24()
     day24_a(points, { 200000000000000, 400000000000000 });
     day24_online(fileTxt);
 }
+
+void day25_buildGraph(const std::vector<string>& fileInput, vector<vector<int>>& adjacent)
+{
+    map<string, int> keys_ids;
+
+    for (auto x : fileInput)
+    {
+        auto split_key = split(x, ":");
+
+        string key_str = trim_copy(split_key[0]);
+
+        if (keys_ids.find(key_str) == keys_ids.end())
+        {
+            if (key_str.size() != 0)
+            {
+                keys_ids.insert({ key_str, keys_ids.size() });
+            }
+        }
+
+        string all_values_str = trim_copy(split_key[1]);
+
+        auto all_values = split(all_values_str, " ");
+        for (auto x : all_values)
+        {
+            string x_str = trim_copy(x);
+            if (keys_ids.find(x_str) == keys_ids.end())
+            {
+                if (x_str.size() != 0)
+                {
+                    keys_ids.insert({ x_str, keys_ids.size() });
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < keys_ids.size(); ++i)
+    {
+        vector<int> newValue(keys_ids.size(), 0);
+        adjacent.push_back(newValue);
+    }
+
+    for (auto x : fileInput)
+    {
+        auto split_key = split(x, ":");
+
+        string all_values_str = trim_copy(split_key[1]);
+        auto all_values = split(all_values_str, " ");
+
+        string key_str = trim_copy(split_key[0]);
+        int key_id = keys_ids[key_str];
+
+        for (auto x : all_values)
+        {
+            string x_str = trim_copy(x);
+            if (x_str.size() != 0)
+            {
+                int x_id = keys_ids.at(x_str);
+
+                adjacent[key_id][x_id] = 1;
+                adjacent[x_id][key_id] = 1;
+            }
+        }
+    }
+}
+
+// From https://en.wikipedia.org/wiki/Stoer-Wagner_algorithm
+pair<int, vector<int>> day25_globalMinCut(vector<vector<int>> mat) {
+    pair<int, vector<int>> best = { INT_MAX, {} };
+    int n = mat.size();
+    vector<vector<int>> co(n);
+
+    for (int i = 0; i < n; i++)
+        co[i] = { i };
+
+    for (int ph = 1; ph < n; ph++) {
+        vector<int> w = mat[0];
+        size_t s = 0, t = 0;
+        for (int it = 0; it < n - ph; it++) { // O(V^2) -> O(E log V) with prio. queue
+            w[t] = INT_MIN;
+            s = t, t = max_element(w.begin(), w.end()) - w.begin();
+            for (int i = 0; i < n; i++) w[i] += mat[t][i];
+        }
+        best = min(best, { w[t] - mat[t][t], co[t] });
+        co[s].insert(co[s].end(), co[t].begin(), co[t].end());
+        for (int i = 0; i < n; i++) mat[s][i] += mat[t][i];
+        for (int i = 0; i < n; i++) mat[i][s] = mat[s][i];
+        mat[0][t] = INT_MIN;
+    }
+
+    return best;
+}
+
+
+
 void day25()
 {
+    auto fileTxt = ReadFile("./input/day25.txt");
+
+    std::vector<std::vector<int>> adjacent;
+
+    day25_buildGraph(fileTxt, adjacent);
+
+    auto sol = day25_globalMinCut(adjacent);
+    std::cout << "day25_a =>"  << (sol.second.size()* (adjacent.size()- sol.second.size()));
 
 }
 
 int main()
 {
-   //day1();
-   //day2();
-   //day3();
-   //day4();
-   //day5();
-   //day6();
-   //day7();
-   //day8();
-   //day9();
-   //day10();
-   //day11();
-   //day12();
-   //day13();
-   //day14();
-   //day15();
-   //day16();
-   //day17();
-   //day18();
-   //day19();
-   //day20();
-   //day21();
-   //day22();
-   //day23();
-    day24();
+   day1();
+   day2();
+   day3();
+   day4();
+   day5();
+   day6();
+   day7();
+   day8();
+   day9();
+   day10();
+   day11();
+   day12();
+   day13();
+   day14();
+   day15();
+   day16();
+   day17();
+   day18();
+   day19();
+   day20();
+   day21();
+   day22();
+   day23();
+   day24();
+   day25();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
