@@ -17,9 +17,9 @@
 #include <queue>
 #include <iomanip>
 #include <stack>
+#include "md5.h"
 
 using namespace std;
-
 
 std::vector<string> ReadFile(string path)
 {
@@ -272,14 +272,297 @@ void day3()
     day3_b();
 }
 
+void day4_a()
+{
+    string key = "bgvyzdsv";
+
+    long long index = 0;
+    while (true)
+    {
+        string k = key + std::to_string(index);
+
+        auto hash_str = md5(k);
+        
+        if (hash_str[0] == '0' && hash_str[1] == '0' && hash_str[2] == '0' && hash_str[3] == '0' && hash_str[4] == '0')
+        {
+            std::cout << "day4_a => " << index << "\n";
+            break;
+        }
+        
+        ++index;
+    }
+}
+
+void day4_b()
+{
+    string key = "bgvyzdsv";
+
+    long long index = 0;
+    while (true)
+    {
+        string k = key + std::to_string(index);
+
+        auto hash_str = md5(k);
+
+        if (hash_str[0] == '0' && hash_str[1] == '0' && hash_str[2] == '0' && hash_str[3] == '0' && hash_str[4] == '0' && hash_str[5] == '0')
+        {
+            std::cout << "day4_b => " << index << "\n";
+            break;
+        }
+
+        ++index;
+    }
+}
+
+void day4()
+{
+    //day4_a();
+    //day4_b();
+    std::cout << "day4_a => " << 254575 << "\n";
+    std::cout << "day4_b => " << 1038736 << "\n";
+}
+
+bool day5_valid_a(const string& l)
+{
+    bool hasVowels = false;
+    bool consecutiveLetters = false;
+    bool invalidSequence = false;
+
+    char lastLetter = 0;
+    int vowelsCount = 0;
+    vector<string> forbbiden = {"ab", "cd", "pq", "xy"};
+
+
+    for (char c : l)
+    {
+        if (c == lastLetter)
+        {
+            consecutiveLetters = true;
+        }
+
+        if (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u')
+        {
+            ++vowelsCount;
+        }
+
+        for (auto f : forbbiden)
+        {
+            if (lastLetter == f[0] && c == f[1])
+            {
+                invalidSequence = true;
+                break;
+            }
+        }
+
+        lastLetter = c;
+        if (invalidSequence)
+        {
+            break;
+        }
+    }
+
+    hasVowels = (vowelsCount >= 3);
+
+    return hasVowels && consecutiveLetters && !invalidSequence;
+
+}
+
+bool day5_valid_b(const string& l)
+{
+    std::map<string, int> two_lettersPositions;
+
+    bool two_letters_check = false;
+    bool three_letters_check = false;
+
+    for (int i = 0; i < l.size(); ++i)
+    {
+        string sub_str = l.substr(i, 2);
+
+        if (two_lettersPositions.find(sub_str) == two_lettersPositions.end())
+        {
+            two_lettersPositions.insert({ sub_str, i });
+        }
+        else
+        {
+            int index = two_lettersPositions[sub_str];
+            int diff = i - index;
+            if (diff > 1)
+            {
+                two_letters_check = true;
+            }
+        }
+
+        string threeLetters = l.substr(i, 3);
+        if (threeLetters.size() == 3)
+        {
+            if (threeLetters[0] == threeLetters[2])
+            {
+                three_letters_check = true;
+            }
+        }
+    }
+
+    return two_letters_check && three_letters_check;
+}
+
+void day5()
+{
+    auto fileTxt = ReadFile("./input/day5.txt");
+
+    long long count_a = 0;
+    long long count_b = 0;
+
+    for (auto l : fileTxt)
+    {
+        if (day5_valid_a(l))
+        {
+            ++count_a;
+        }
+
+        if (day5_valid_b(l))
+        {
+            ++count_b;
+        }
+    }
+
+    std::cout << "day5_a => " << count_a << "\n";
+    std::cout << "day5_b => " << count_b << "\n";
+}
+
+void day6_toggle(const string& line, std::array<std::array<bool, 1000>, 1000>& board)
+{
+    //toggle, <x,y>, through, <x, y>
+    auto sp = split(line, " ");
+
+    auto start_str = split( sp[1],",");
+    auto end_str = split(sp[3], ",");
+
+    int startX = atoi(start_str[0].c_str());
+    int endX = atoi(end_str[0].c_str());
+
+    int startY = atoi(start_str[1].c_str());
+    int endY = atoi(end_str[1].c_str());
+
+    for (int x = startX; x < endX; ++x)
+    {
+        for (int y = startY; y < endY; ++y)
+        {
+            board[y][x] = !board[y][x];
+        }
+    }
+}
+
+void day6_off(const string& line, std::array<std::array<bool, 1000>, 1000>& board)
+{
+    //turn,off, <x,y>, through, <x, y>
+    auto sp = split(line, " ");
+
+    auto start_str = split(sp[2], ",");
+    auto end_str = split(sp[4], ",");
+
+    int startX = atoi(start_str[0].c_str());
+    int endX = atoi(end_str[0].c_str());
+
+    int startY = atoi(start_str[1].c_str());
+    int endY = atoi(end_str[1].c_str());
+
+    for (int x = startX; x < endX; ++x)
+    {
+        for (int y = startY; y < endY; ++y)
+        {
+            board[y][x] = false;
+        }
+    }
+}
+
+void day6_on(const string& line, std::array<std::array<bool, 1000>, 1000>& board)
+{
+    //turn,off, <x,y>, through, <x, y>
+    auto sp = split(line, " ");
+
+    auto start_str = split(sp[2], ",");
+    auto end_str = split(sp[4], ",");
+
+    int startX = atoi(start_str[0].c_str());
+    int endX = atoi(end_str[0].c_str());
+
+    int startY = atoi(start_str[1].c_str());
+    int endY = atoi(end_str[1].c_str());
+
+    for (int x = startX; x < endX; ++x)
+    {
+        for (int y = startY; y < endY; ++y)
+        {
+            board[y][x] = true;
+        }
+    }
+}
+
+
+void day6()
+{
+    auto fileTxt = ReadFile("./input/day6.txt");
+
+    std::array<std::array<bool, 1000>, 1000> board;
+
+    for (auto l : fileTxt)
+    {
+        if (l.find("toggle") != string::npos)
+        {
+            day6_toggle(l, board);
+        }
+
+        if (l.find("turn off") != string::npos)
+        {
+            day6_off(l, board);
+        }
+
+        if (l.find("turn on") != string::npos)
+        {
+            day6_on(l, board);
+        }
+    }
+
+    FILE* f = fopen("./day6.txt", "w");
+
+    long long count = 0;
+    for (int y = 0; y < board.size(); ++y)
+    {
+        string s;
+        for (int x = 0; x < board.size(); ++x)
+        {
+            if (board[y][x])
+            {
+                ++count;
+               // std::cout << "*";
+                s += "*";
+                
+            }
+            else
+            {
+               // std::cout << " ";
+                s += " ";
+            }
+        }
+
+        fputs(s.c_str(), f);
+        fputs("\n", f);
+       // std::cout << "\n";
+    }
+
+    fclose(f);
+
+    std::cout << "day6_a=> " << count << "\n";
+
+}
 int main()
 {
    day1();
    day2();
    day3();
-   //day4();
-   //day5();
-   //day6();
+   day4();
+   day5();
+   day6();
    //day7();
    //day8();
    //day9();
