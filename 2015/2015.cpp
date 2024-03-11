@@ -429,7 +429,7 @@ void day5()
     std::cout << "day5_b => " << count_b << "\n";
 }
 
-void day6_toggle(const string& line, std::array<std::array<bool, 1000>, 1000>& board)
+void day6_toggle(const string& line, std::vector<std::vector<int>>& board, bool partA)
 {
     //toggle, <x,y>, through, <x, y>
     auto sp = split(line, " ");
@@ -443,16 +443,30 @@ void day6_toggle(const string& line, std::array<std::array<bool, 1000>, 1000>& b
     int startY = atoi(start_str[1].c_str());
     int endY = atoi(end_str[1].c_str());
 
-    for (int x = startX; x < endX; ++x)
+    for (int x = startX; x <= endX; ++x)
     {
-        for (int y = startY; y < endY; ++y)
+        for (int y = startY; y <= endY; ++y)
         {
-            board[y][x] = !board[y][x];
+            if (partA)
+            {
+                if (board[y][x] == 1)
+                {
+                    board[y][x] = 0;
+                }
+                else
+                {
+                    board[y][x] = 1;
+                }
+            }
+            else
+            {
+                board[y][x] += 2;
+            }
         }
     }
 }
 
-void day6_off(const string& line, std::array<std::array<bool, 1000>, 1000>& board)
+void day6_off(const string& line, std::vector<std::vector<int>>& board, bool partA)
 {
     //turn,off, <x,y>, through, <x, y>
     auto sp = split(line, " ");
@@ -466,16 +480,27 @@ void day6_off(const string& line, std::array<std::array<bool, 1000>, 1000>& boar
     int startY = atoi(start_str[1].c_str());
     int endY = atoi(end_str[1].c_str());
 
-    for (int x = startX; x < endX; ++x)
+    for (int x = startX; x <= endX; ++x)
     {
-        for (int y = startY; y < endY; ++y)
+        for (int y = startY; y <= endY; ++y)
         {
-            board[y][x] = false;
+            if (partA)
+            {
+                board[y][x] = 0;
+            }
+            else
+            {
+                board[y][x]--;
+                if (board[y][x] < 0)
+                {
+                    board[y][x] = 0;
+                }
+            }
         }
     }
 }
 
-void day6_on(const string& line, std::array<std::array<bool, 1000>, 1000>& board)
+void day6_on(const string& line, std::vector<std::vector<int>>& board, bool partA)
 {
     //turn,off, <x,y>, through, <x, y>
     auto sp = split(line, " ");
@@ -489,41 +514,46 @@ void day6_on(const string& line, std::array<std::array<bool, 1000>, 1000>& board
     int startY = atoi(start_str[1].c_str());
     int endY = atoi(end_str[1].c_str());
 
-    for (int x = startX; x < endX; ++x)
+    for (int x = startX; x <= endX; ++x)
     {
-        for (int y = startY; y < endY; ++y)
+        for (int y = startY; y <= endY; ++y)
         {
-            board[y][x] = true;
+            if (partA)
+            {
+                board[y][x] = 1;
+            }
+            else
+            {
+                board[y][x]++;
+            }
         }
     }
 }
 
 
-void day6()
+void day6_a()
 {
     auto fileTxt = ReadFile("./input/day6.txt");
 
-    std::array<std::array<bool, 1000>, 1000> board;
+    std::vector<std::vector<int>> board(1000, vector<int>(1000, 0));
 
     for (auto l : fileTxt)
     {
         if (l.find("toggle") != string::npos)
         {
-            day6_toggle(l, board);
+            day6_toggle(l, board, true);
         }
 
         if (l.find("turn off") != string::npos)
         {
-            day6_off(l, board);
+            day6_off(l, board, true);
         }
 
         if (l.find("turn on") != string::npos)
         {
-            day6_on(l, board);
+            day6_on(l, board, true);
         }
     }
-
-    FILE* f = fopen("./day6.txt", "w");
 
     long long count = 0;
     for (int y = 0; y < board.size(); ++y)
@@ -531,39 +561,370 @@ void day6()
         string s;
         for (int x = 0; x < board.size(); ++x)
         {
-            if (board[y][x])
+            if (board[y][x] == 1)
             {
                 ++count;
-               // std::cout << "*";
-                s += "*";
-                
-            }
-            else
-            {
-               // std::cout << " ";
-                s += " ";
             }
         }
-
-        fputs(s.c_str(), f);
-        fputs("\n", f);
-       // std::cout << "\n";
     }
-
-    fclose(f);
 
     std::cout << "day6_a=> " << count << "\n";
 
 }
+void day6_b()
+{
+    auto fileTxt = ReadFile("./input/day6.txt");
+
+    std::vector<std::vector<int>> board(1000, vector<int>(1000, 0));
+
+    for (auto l : fileTxt)
+    {
+        if (l.find("toggle") != string::npos)
+        {
+            day6_toggle(l, board, false);
+        }
+
+        if (l.find("turn off") != string::npos)
+        {
+            day6_off(l, board, false);
+        }
+
+        if (l.find("turn on") != string::npos)
+        {
+            day6_on(l, board, false);
+        }
+    }
+
+    long long count = 0;
+    for (int y = 0; y < board.size(); ++y)
+    {
+        string s;
+        for (int x = 0; x < board.size(); ++x)
+        {
+            count += board[y][x];
+        }
+    }
+
+    std::cout << "day6_b=> " << count << "\n";
+
+}
+
+void day6()
+{
+    day6_a();
+    day6_b();
+}
+
+struct day7_node
+{
+public:
+    string id;
+    std::array<string, 2> ancestors;
+    unsigned short value;
+    bool hasValue = false;
+    string typeFunction;
+
+private:
+ 
+    bool getAncestorValue(string key, const map<string, day7_node>& nodes, unsigned short& value)
+    {
+        if (nodes.find(key) == nodes.end())
+        {
+            value = atoi(key.c_str());
+            return true;
+        }
+
+        if (nodes.at(key).hasValue)
+        {
+            value = nodes.at(key).value;
+            return true;
+        }
+        return false;
+    }
+
+    void TryCalculateAnd(const map<string, day7_node>& nodes)
+    {
+        unsigned short v1;
+        unsigned short v2;
+
+        if(getAncestorValue(ancestors[0],nodes, v1) && getAncestorValue(ancestors[1],nodes,  v2))
+        {
+            value = v1 & v2;
+            hasValue = true;
+        }
+    }
+
+    void TryCalculateOR(const map<string, day7_node>& nodes)
+    {
+        unsigned short v1;
+        unsigned short v2;
+
+        if (getAncestorValue(ancestors[0], nodes, v1) && getAncestorValue(ancestors[1], nodes, v2))
+        {
+            value = v1 | v2;
+            hasValue = true;
+        }
+    }
+
+    void TryCalculateXOR(const map<string, day7_node>& nodes)
+    {
+        unsigned short v1;
+        unsigned short v2;
+
+        if (getAncestorValue(ancestors[0], nodes, v1) && getAncestorValue(ancestors[1], nodes, v2))
+        {
+            value = v1 ^ v2;
+            hasValue = true;
+        }
+    }
+
+    void TryCalculateNOT(const map<string, day7_node>& nodes)
+    {
+        unsigned short v1;
+
+        if (getAncestorValue(ancestors[0], nodes, v1))
+        {
+            value = ~v1;
+            hasValue = true;
+        }
+    }
+
+    void TryCalculateLShift(const map<string, day7_node>& nodes)
+    {
+        unsigned short v1;
+        unsigned short v2;
+
+        if (getAncestorValue(ancestors[0], nodes, v1) && getAncestorValue(ancestors[1], nodes, v2))
+        {
+            value = v1 << v2;
+            hasValue = true;
+        }
+    }
+
+    void TryCalculateRShift(const map<string, day7_node>& nodes)
+    {
+        unsigned short v1;
+        unsigned short v2;
+
+        if (getAncestorValue(ancestors[0], nodes, v1) && getAncestorValue(ancestors[1], nodes, v2))
+        {
+            value = v1 >> v2;
+            hasValue = true;
+        }
+    }
+
+    void TryAssign(const map<string, day7_node>& nodes)
+    {
+        unsigned short v1;
+
+        if (getAncestorValue(ancestors[0], nodes, v1))
+        {
+            value = v1;
+            hasValue = true;
+        }
+    }
+
+public:
+    void TryCalculateValue(const map<string, day7_node>& nodes)
+    {
+        if (typeFunction == "AND")
+        {
+            TryCalculateAnd(nodes);
+            return;
+        }
+
+        if (typeFunction == "OR")
+        {
+            TryCalculateOR(nodes);
+            return;
+        }
+
+        if (typeFunction == "XOR")
+        {
+            TryCalculateXOR(nodes);
+            return;
+        }
+
+        if (typeFunction == "NOT")
+        {
+            TryCalculateNOT(nodes);
+            return;
+        }
+
+        if (typeFunction == "LSHIFT")
+        {
+            TryCalculateLShift(nodes);
+            return;
+        }
+
+        if (typeFunction == "RSHIFT")
+        {
+            TryCalculateRShift(nodes);
+            return;
+        }
+
+        if (typeFunction == "ASSIGN")
+        {
+            TryAssign(nodes);
+            return;
+        }
+    }
+
+    vector<string> getUnknownParent(const map<string, day7_node>& nodes)
+    {
+        unsigned short v1;
+
+        vector<string> result;
+
+        if (!getAncestorValue(ancestors[0], nodes, v1))
+        {
+            result.push_back(ancestors[0]);
+        }
+
+        if (typeFunction != "NOT" && typeFunction != "ASSIGN")
+        {
+            if (!getAncestorValue(ancestors[1], nodes, v1))
+            {
+                result.push_back(ancestors[1]);
+            }
+        }
+
+        return result;
+    }
+};
+
+
+void day7_getValue(const string& nodeID, map<string, day7_node>& nodes)
+{
+    std::stack<string> nodesToAnalyze;
+
+    nodesToAnalyze.push(nodeID);
+
+    while (nodesToAnalyze.size() != 0)
+    {
+        auto nodeId = nodesToAnalyze.top();
+        nodesToAnalyze.pop();
+
+        if (nodes[nodeId].hasValue)
+        {
+            continue;
+        }
+
+        nodes[nodeId].TryCalculateValue(nodes);
+
+        if (!nodes[nodeId].hasValue)
+        {
+
+            nodesToAnalyze.push(nodeId);
+            auto unknown = nodes[nodeId].getUnknownParent(nodes);
+
+            for (auto&& node : unknown)
+            {
+                nodesToAnalyze.push(node);
+            }
+        }
+    }
+}
+
+void day7_parseLine(const string& line, map<string, day7_node>& nodes)
+{
+    auto line_split = split(line, " -> ");
+
+    string destNode = trim_copy(line_split.back());
+
+    string precedent = trim_copy(line_split[0]);
+
+    day7_node node;
+    node.id = destNode;
+
+
+    bool findSomeFunction = false;
+
+    for (std::string funsWithTwoElements : {"AND", "XOR", "OR", "LSHIFT", "RSHIFT"})
+    {
+        if (findSomeFunction) { continue; }
+
+        if (precedent.find(funsWithTwoElements) != string::npos)
+        {
+            node.typeFunction = funsWithTwoElements;
+
+            auto ancestors = split(precedent, funsWithTwoElements);
+
+            node.ancestors[0] = trim_copy(ancestors[0]);
+            node.ancestors[1] = trim_copy(ancestors[1]);
+            node.hasValue = false;
+            findSomeFunction = true;
+        }
+    }
+
+    if (!findSomeFunction)
+    {
+        if (precedent.find("NOT") != string::npos)
+        {
+            node.typeFunction = "NOT";
+
+            auto ancestors = split(precedent, "NOT ");
+
+            node.ancestors[0] = trim_copy(ancestors[1]);
+            node.hasValue = false;
+            findSomeFunction = true;
+        }
+    }
+
+    if (!findSomeFunction)
+    {
+        //assing value
+        node.typeFunction = "ASSIGN";
+        node.ancestors[0] = trim_copy(line_split[0]);
+    }
+       
+    nodes.insert({ destNode, node });
+}
+
+void day7_resetWires(map<string, day7_node>& nodes)
+{
+    for (auto p : nodes)
+    {
+        nodes[p.first].hasValue = false;
+    }
+}
+
+void day7()
+{
+    auto fileTxt = ReadFile("./input/day7.txt");
+
+    map<string, day7_node> nodes;
+
+    for (auto&& l : fileTxt)
+    {
+        day7_parseLine(l, nodes);
+    }
+
+    day7_getValue("a", nodes);
+
+    auto value_a = nodes["a"].value;
+
+    std::cout << "day7_a => " << nodes["a"].value << "\n";
+
+    day7_resetWires(nodes);
+
+    nodes["b"].ancestors[0] = std::to_string(value_a);
+
+    day7_getValue("a", nodes);
+    std::cout << "day7_b => " << nodes["a"].value << "\n";
+
+    //std::cout << "day7_a => " << wires["a"] << "\n";
+}
+
 int main()
 {
-   day1();
-   day2();
-   day3();
-   day4();
-   day5();
-   day6();
-   //day7();
+   //day1();
+   //day2();
+   //day3();
+   //day4();
+   //day5();
+   //day6();
+   day7();
    //day8();
    //day9();
    //day10();
