@@ -913,7 +913,227 @@ void day7()
     day7_getValue("a", nodes);
     std::cout << "day7_b => " << nodes["a"].value << "\n";
 
-    //std::cout << "day7_a => " << wires["a"] << "\n";
+}
+
+int day8_countValidChars(const string& str)
+{
+    int index = 0;
+
+    int count = 0;
+
+    while (index < str.size())
+    {
+        if (str[index] != '\\')
+        {
+            ++count;
+            ++index;
+            continue;
+        }
+       
+        ++index;
+
+        if (str[index] == '\"' || str[index] == '\\')
+        {
+            ++count;
+            ++index;
+            continue;
+        }
+
+        if (str[index] == 'x')
+        {
+            index = index + 2 + 1;//not check about not hexadecimal values
+            ++count;
+            continue;
+        }
+
+
+        //here we found a \ but nothing special after, so its a valid characer
+        ++count;
+        ++index;
+        continue;
+    }
+
+    return count;
+}
+
+int day8_encodeChars(const string& str)
+{
+    int count = 0;
+
+    for (char c : str)
+    {
+        if (c == '\"' || c == '\\')
+        {
+            count += 2;
+        }
+        else
+        {
+            ++count;
+        }
+    }
+
+    return count;
+
+}
+
+void day8()
+{
+    auto fileTxt = ReadFile("./input/day8.txt");
+
+    int total_a = 0;
+    int total_b = 0;
+
+    for (auto l : fileTxt)
+    {
+        int count_a = day8_countValidChars(l) - 2;
+        total_a += (l.size() - count_a);
+
+        int count_b = day8_encodeChars(l) + 2;
+        total_b += (count_b - l.size());
+    }
+
+    std::cout << "day8_a => " << total_a << "\n";
+    std::cout << "day8_b => " << total_b << "\n";
+}
+
+struct day9_node
+{
+public:
+    int cost = std::numeric_limits<int>::max();
+    bool visited = false;
+    day9_node* parent = nullptr;
+    vector<pair<int, day9_node*>> neightbours;
+
+    void reset()
+    {
+        cost = std::numeric_limits<int>::max();
+        visited = false;
+        parent = nullptr;
+    }
+};
+
+void day9_buildGraph(const std::vector<string>& lines, map<string, day9_node*>& graph )
+{
+    for (auto l : lines)
+    {
+        auto split_cost = split(l, "=");
+        int cost = atoi(split_cost[1].c_str());
+
+        auto split_keys = split(split_cost[0], "to");
+        string k1 = trim_copy(split_keys[0]);
+        string k2 = trim_copy(split_keys[1]);
+
+        if (graph.find(k1) == graph.end())
+        {
+            day9_node* n = new day9_node();
+            graph.insert({ k1, n });
+        }
+
+        if (graph.find(k2) == graph.end())
+        {
+            day9_node* n = new day9_node();
+            graph.insert({ k2, n });
+        }
+
+        //add as neightbours
+        graph[k1]->neightbours.push_back({ cost, graph[k2] });
+        graph[k2]->neightbours.push_back({ cost, graph[k1] });
+
+    }
+
+}
+
+int day9_findPath(map<string, day9_node*>& graph, day9_node* currentNode, bool partB)
+{
+    for (auto kvp : graph)
+    {
+        graph[kvp.first]->reset();
+    }
+
+    int current_cost = 0;
+
+    while (currentNode != nullptr)
+    {
+        currentNode->cost = current_cost;
+        currentNode->visited = true;
+
+        day9_node* nextNode = nullptr;
+        int index_selected = -1;
+
+        int bestCost = 0;
+        if (partB)
+        {
+            bestCost = std::numeric_limits<int>::min();
+        }
+        else
+        {
+            bestCost = std::numeric_limits<int>::max();
+        }
+        
+        for (int i = 0; i < currentNode->neightbours.size(); ++i)
+        {
+            int cost = currentNode->neightbours[i].first;
+
+            bool valid = false;
+
+            if (partB)
+            {
+                valid = cost > bestCost;
+            }
+            else
+            {
+                valid = cost < bestCost;
+            }
+
+            if (valid && !currentNode->neightbours[i].second->visited)
+            {
+                nextNode = currentNode->neightbours[i].second;
+                bestCost = cost;
+                index_selected = i;
+            }
+        }
+
+        if (nextNode != nullptr)
+        {
+            current_cost += currentNode->neightbours[index_selected].first;
+        }
+
+        currentNode = nextNode;
+    }
+
+
+    return current_cost;
+}
+
+void day9()
+{
+    auto fileTxt = ReadFile("./input/day9.txt");
+
+    map<string, day9_node*> graph;
+
+    day9_buildGraph(fileTxt, graph);
+
+    int min_bestValue = std::numeric_limits<int>::max();
+    int max_bestValue = std::numeric_limits<int>::min();
+
+    for (auto kvp : graph)
+    {
+        int value_min = day9_findPath(graph, kvp.second, false);
+        int value_max = day9_findPath(graph, kvp.second, true);
+
+        if (value_min < min_bestValue)
+        {
+            min_bestValue = value_min;
+        }
+
+        if (value_max > max_bestValue)
+        {
+            max_bestValue = value_max;
+        }
+    }
+    std::cout << "day9_a =>" << min_bestValue << "\n";
+    std::cout << "day9_b =>" << max_bestValue << "\n";
+
 }
 
 int main()
@@ -924,9 +1144,9 @@ int main()
    //day4();
    //day5();
    //day6();
-   day7();
+   //day7();
    //day8();
-   //day9();
+   day9();
    //day10();
    //day11();
    //day12();
