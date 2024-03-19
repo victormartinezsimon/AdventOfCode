@@ -1136,6 +1136,356 @@ void day9()
 
 }
 
+std::string day10_parse(const string& str)
+{
+    std::string result = "";
+
+    char lastChar = 0;
+    int count = 0;
+
+    for (char c : str)
+    {
+        if (c == lastChar)
+        {
+            ++count;
+        }
+        else
+        {
+            if (lastChar != 0)
+            {
+                result += std::to_string(count) + lastChar;
+            }
+            lastChar = c;
+            count = 1;  
+        }
+    }
+    result += std::to_string(count) + lastChar;
+    return result;
+}
+
+void day10()
+{
+    auto original_str = ReadFile("./input/day10.txt")[0];
+
+    string str_a = original_str;
+    for (int i = 0; i < 40; ++i)
+    {
+        str_a = day10_parse(str_a);
+    }
+
+    std::cout << "day10_a => " << str_a.size() << "\n";
+
+    string str_b = str_a;
+    for (int i = 40; i < 50; ++i)
+    {
+        str_b = day10_parse(str_b);
+    }
+    std::cout << "day10_b => " << str_b.size() << "\n";
+}
+
+string day11_getNextPassword(const string& str)
+{
+    int index = str.size() - 1;
+
+    string sufix = "";
+
+    while (index >= 0 && str[index] == 'z')
+    {
+        sufix = sufix + 'a';
+        --index;
+    }
+
+    string solution = "";
+    if (index >= 0)
+    {
+        string prefix = str.substr(0, index);
+        solution = prefix + static_cast<char>(str[index]+1) + sufix;
+    }
+    else
+    {
+        solution = 'a' + sufix;
+    }
+
+    return solution;
+}
+
+bool day11_firstCheck(const string& str)
+{
+    for (int i = 0; i < str.size() - 2; ++i)
+    {
+        char c1 = str[i];
+        char c2 = str[i + 1];
+        char c3 = str[i + 2];
+
+        if (c1 + 1 == c2 && c2 + 1 == c3)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool day11_secondCheck(const string& str)
+{
+    for (int i = 0; i < str.size(); ++i)
+    {
+        if (str[i] == 'i' || str[i] == 'o' || str[i] == 'l')
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool day11_thirdCheck(const string& str)
+{
+    int index = 0;
+    char lastChar = 0;
+    int countValid = 0;
+
+    while (index < str.size())
+    {
+        if (str[index] == lastChar)
+        {
+            countValid++;
+            lastChar = 0;
+            ++index;//skip so aaa is not counted
+        }
+        else
+        {
+            lastChar = str[index];
+        }
+        ++index;
+    }
+
+    return countValid >= 2;
+}
+
+void day11()
+{
+    auto original_str = ReadFile("./input/day11.txt")[0];
+
+    bool continueSearching = true;
+
+    string newPass = original_str;
+
+    while (continueSearching)
+    {
+        newPass = day11_getNextPassword(newPass);
+
+        continueSearching = !(day11_firstCheck(newPass) && day11_secondCheck(newPass) && day11_thirdCheck(newPass));
+    }
+
+    std::cout << "day 11_a " << newPass << "\n";
+
+    continueSearching = true;
+    while (continueSearching)
+    {
+        newPass = day11_getNextPassword(newPass);
+
+        continueSearching = !(day11_firstCheck(newPass) && day11_secondCheck(newPass) && day11_thirdCheck(newPass));
+    }
+    std::cout << "day 11_b " << newPass << "\n";
+}
+
+int day12_findNumbers(const string& str)
+{
+    bool isDigitExtract = false;
+    string digitExtracted = "";
+    int sum = 0;
+
+    for (char c : str)
+    {
+        if (('0' <= c && c <= '9') || c == '-')
+        {
+            digitExtracted += c;
+            isDigitExtract = true;
+        }
+        else
+        {
+            if (isDigitExtract)
+            {
+                int value = atoi(digitExtracted.c_str());
+                sum += value;
+                digitExtracted = "";
+            }
+            isDigitExtract = false;
+        }
+    }
+    return sum;
+}
+
+int day12_findCloseSymbol(char c, int index, const string& str)
+{
+    int myIndex = index;
+
+    stack<char> symbols;
+    symbols.push(c);
+
+    while (myIndex < str.size())
+    {
+        char c = str[myIndex];
+
+        if (c == '{' || c == '[')
+        {
+            symbols.push(c);
+            ++myIndex;
+            continue;
+        }
+        
+        if (c == '}' || c == ']')
+        {
+            char topChar = symbols.top();
+
+            if (topChar == '{' && c == '}')
+            {
+                symbols.pop();
+            }
+
+            if (topChar == '[' && c == ']')
+            {
+                symbols.pop();
+            }
+
+            ++myIndex;
+
+            if (symbols.size() == 0)
+            {
+               
+                return myIndex;
+            }
+
+            continue;
+        }
+        ++myIndex;
+    }
+
+
+    return str.size();
+}
+
+void day12_addToStack(stack<int>& stack, int value)
+{
+    int v = stack.top();
+    v += value;
+
+    stack.pop();
+    stack.push(v);
+}
+
+void day12_addNumber(stack<int>& values, const string& str)
+{
+    int v = atoi(str.c_str());
+    day12_addToStack(values, v);
+}
+
+int day12_partB(const string& str)
+{
+    stack<int> values;
+    values.push(0);
+
+    stack <char> lastGroup;
+
+    int index = 0;
+
+
+    while (index < str.size())
+    {
+        char c = str[index];
+
+        if (c == '{' || c == '[')
+        {
+            values.push(0);
+            lastGroup.push(c);
+            ++index;
+            continue;
+        }
+
+        if (c == '}' || c == ']')
+        {
+            int v = values.top();
+            values.pop();
+
+            day12_addToStack(values, v);
+
+            lastGroup.pop();
+
+            ++index;
+            continue;
+        }
+
+        if (c == 'r')
+        {
+            char c2 = str[index + 1];
+            char c3 = str[index + 2];
+            if (c2 == 'e' && c3 == 'd')
+            {
+                char lastTop = lastGroup.top();
+
+                if (lastTop == '{')
+                {
+                    //discard
+                    values.pop();
+                    index = day12_findCloseSymbol(lastGroup.top(), index, str);
+                    lastGroup.pop();
+                }
+                else
+                {
+                    index += 2;
+                }
+                continue;
+            }
+            else
+            {
+                ++index;
+            }
+        }
+
+        if ((c == '-') || ('0' <= c && c <= '9'))
+        {
+            string numberStr = "";
+            bool findNumber = true;
+
+            while (findNumber)
+            {
+                char cNumber = str[index];
+
+                if ((cNumber == '-') || ('0' <= cNumber && cNumber <= '9'))
+                {
+                    numberStr += cNumber;
+                    ++index;
+                }
+                else
+                {
+                    findNumber = false;
+                }
+            }
+           
+            day12_addNumber(values, numberStr);
+
+            continue;
+        }
+        //another not important symbol
+        ++index;
+       
+    }
+
+    return values.top();
+}
+
+void day12()
+{
+    auto original_str = ReadFile("./input/day12.txt")[0];
+
+    int part_a = day12_findNumbers(original_str);
+
+    std::cout << "day 12_a " << part_a << "\n";
+
+    int part_b = day12_partB(original_str);
+    std::cout << "day 12_b " << part_b << "\n";
+}
+
 int main()
 {
    //day1();
@@ -1146,10 +1496,10 @@ int main()
    //day6();
    //day7();
    //day8();
-   day9();
+   //day9();
    //day10();
    //day11();
-   //day12();
+   day12();
    //day13();
    //day14();
    //day15();
