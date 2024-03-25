@@ -1486,6 +1486,180 @@ void day12()
     std::cout << "day 12_b " << part_b << "\n";
 }
 
+struct day13_node
+{
+public:
+    int cost = std::numeric_limits<int>::max();
+    bool visited = false;
+    string id;
+    //vector<pair<int, day9_node*>> neightbours;
+    map<string, int> neightbourCost;
+
+    void reset()
+    {
+        cost = std::numeric_limits<int>::max();
+        visited = false;
+    }
+
+    void addNeigtbourCost(string key, int cost)
+    {
+        if (neightbourCost.find(key) == neightbourCost.end())
+        {
+            neightbourCost.insert({ key, 0 });
+        }
+        
+        neightbourCost[key] += cost;
+    }
+};
+
+void day13_buildGraph(const std::vector<string>& lines, map<string, day13_node*>& nodes)
+{
+    nodes.clear();
+
+    for (auto l : lines)
+    {
+        //Alice would gain 2 happiness units by sitting next to Bob.
+        auto keys = split(l, " ");
+        string k1 = trim_copy(keys[0]);
+        string k2 = trim_copy(keys.back());
+        k2 = k2.substr(0, k2.size() - 1);
+
+        auto endNumber = l.find("happiness");
+        auto gain = l.find("gain");
+
+        int number = 0;
+
+        if (gain != std::string::npos)
+        {
+            auto number_str = l.substr(gain + 4, endNumber - (gain + 4));
+            number = atoi(number_str.c_str());
+        }
+        else
+        {
+            auto lose = l.find("lose");
+            auto number_str = l.substr(lose + 4, endNumber - (lose + 4));
+            number = -atoi(number_str.c_str());
+        }
+        
+        if (nodes.find(k1) == nodes.end())
+        {
+            day13_node* n = new day13_node();
+            n->id = k1;
+            nodes.insert({ k1, n });
+        }
+
+        if (nodes.find(k2) == nodes.end())
+        {
+            day13_node* n = new day13_node();
+            n->id = k2;
+            nodes.insert({ k2, n });
+        }
+
+        nodes.at(k1)->addNeigtbourCost(k2, number);
+        nodes.at(k2)->addNeigtbourCost(k1, number);
+    }
+}
+
+int day13_findBest(map<string, day13_node*>& nodes, day13_node* start)
+{
+    for (auto kvp : nodes)
+    {
+        nodes[kvp.first]->reset();
+    }
+
+    int cost = 0;
+    day13_node* next = start;
+
+    while (next != nullptr)
+    {
+        next->visited = true;
+
+        int bestScore = std::numeric_limits<int>::min();
+        string bestNode_str = "";
+
+        for (auto neigtbourData : next->neightbourCost)
+        {
+            auto node_str = neigtbourData.first;
+            auto cost = neigtbourData.second;
+
+            if (cost > bestScore && !nodes[node_str]->visited)
+            {
+                bestScore = cost;
+                bestNode_str = node_str;
+            }
+        }
+
+        if (bestNode_str.size() != 0)
+        {
+            next = nodes[bestNode_str];
+            cost += bestScore;
+        }
+        else
+        {
+            cost += next->neightbourCost[start->id];
+            next = nullptr;//Just in case
+        }
+    }
+
+
+    return cost;
+}
+
+
+int day13_b(map<string, day13_node*> nodes)
+{
+    day13_node* n = new day13_node();
+    n->id = "me";
+    nodes.insert({ "me", n });
+
+    for (auto kvp : nodes)
+    {
+        if (kvp.first != "me")
+        {
+            nodes[kvp.first]->addNeigtbourCost("me", 0);
+            nodes["me"]->addNeigtbourCost(kvp.first, 0);
+        }
+    }
+
+    int bestCost_b = std::numeric_limits<int>::min();
+
+    for (auto kvp : nodes)
+    {
+        int cost = day13_findBest(nodes, kvp.second);
+
+        if (cost > bestCost_b)
+        {
+            bestCost_b = cost;
+        }
+    }
+
+    return bestCost_b;
+}
+
+void day13()
+{
+    auto lines = ReadFile("./input/day13.txt");
+
+    map<string, day13_node*> nodes;
+    day13_buildGraph(lines, nodes);
+
+    int bestCost_a = std::numeric_limits<int>::min();
+
+    for (auto kvp : nodes)
+    {
+        int cost = day13_findBest(nodes, kvp.second);
+
+        if (cost > bestCost_a)
+        {
+            bestCost_a = cost;
+        }
+    }
+
+    std::cout << "day13_a => " << bestCost_a << "\n";
+    std::cout << "day13_b => " << day13_b(nodes) << "\n";
+
+}
+
 int main()
 {
    //day1();
@@ -1499,7 +1673,7 @@ int main()
    //day9();
    //day10();
    //day11();
-   day12();
+   //day12();
    //day13();
    //day14();
    //day15();
