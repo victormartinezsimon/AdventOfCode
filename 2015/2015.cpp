@@ -1660,6 +1660,186 @@ void day13()
 
 }
 
+struct day14_reinder
+{
+public:
+    day14_reinder(int v, int tMovement, int tRest) :velocity(v), timeMovement(tMovement), restTime(tRest) {}
+
+public:
+    const int velocity;
+    const int timeMovement;
+    const int restTime;
+
+public:
+    int b_currentDistance = 0;
+    int b_ciclesResting = 0;
+    int b_ciclesMovement = 0;
+
+    bool b_resting = false;
+    int b_score = 0;
+
+
+    void doMovement()
+    {
+        if (!b_resting)
+        {
+            b_currentDistance += velocity;
+            --b_ciclesMovement;
+
+            if (b_ciclesMovement == 0)
+            {
+                b_resting = true;
+                b_ciclesResting = restTime;
+            }
+        }
+        else
+        {
+            --b_ciclesResting;
+            if (b_ciclesResting == 0)
+            {
+                b_resting = false;
+                b_ciclesMovement = timeMovement;
+            }
+        }
+       
+    }
+
+    void resetMovement()
+    {
+        b_resting = false;
+        b_ciclesMovement = timeMovement;
+        b_score = 0;
+        b_currentDistance = 0;
+    }
+};
+
+day14_reinder day14_parseString(const string& line)
+{
+    auto restTime_split = split(line, " ");
+
+    auto velocity = atoi(restTime_split[3].c_str());
+    auto timeMovement = atoi(restTime_split[6].c_str());
+    auto restTime = atoi(restTime_split[restTime_split.size() - 2].c_str());
+
+    day14_reinder toReturn(velocity, timeMovement, restTime);
+
+    return toReturn;
+}
+
+int day14_partA(const day14_reinder& reinder, int totalSeconds)
+{
+    
+    auto velocity = reinder.velocity;
+    auto timeMovement = reinder.timeMovement;
+    auto restTime = reinder.restTime;
+
+    int cicleTime = timeMovement + restTime;
+    int distanceCycle = velocity * timeMovement;
+
+    int totalCircles = totalSeconds / cicleTime;
+
+    int solution = totalCircles * distanceCycle;
+
+    //maybe there are some extra time
+    int timeLeft = totalSeconds % cicleTime;
+
+    if (timeLeft > timeMovement)
+    {
+        //we are resting
+        solution += distanceCycle;
+    }
+    else
+    {
+        solution += (velocity * timeLeft);
+    }
+    
+
+    return solution;
+}
+
+int day14_partB(vector<day14_reinder>& reinders, int totalSeconds)
+{
+    //all start rested
+    for (int i = 0; i < reinders.size(); ++i)
+    {
+        reinders[i].resetMovement();
+    }
+
+    for (int i = 0; i < totalSeconds; ++i)
+    {
+        for (int reinderIdx = 0; reinderIdx < reinders.size(); ++reinderIdx)
+        {
+            reinders[reinderIdx].doMovement();
+        }
+
+        vector<int> bestReinders;
+        int bestDistance = -1;
+
+        for (int reinderIdx = 0; reinderIdx < reinders.size(); ++reinderIdx)
+        {
+            if (reinders[reinderIdx].b_currentDistance > bestDistance)
+            {
+                bestDistance = reinders[reinderIdx].b_currentDistance;
+                bestReinders.clear();
+                bestReinders.push_back(reinderIdx);
+            }
+            else
+            {
+                if (reinders[reinderIdx].b_currentDistance == bestDistance)
+                {
+                    bestReinders.push_back(reinderIdx);
+                }
+            }
+
+        }
+        for (auto idx : bestReinders)
+        {
+            reinders[idx].b_score++;
+        }
+    }
+
+    int best = 0;
+
+    for (int reinderIdx = 0; reinderIdx < reinders.size(); ++reinderIdx)
+    {
+        if (reinders[reinderIdx].b_score > best)
+        {
+            best = reinders[reinderIdx].b_score;
+        }
+    }
+
+    return best;
+}
+
+
+void day14()
+{
+    auto lines = ReadFile("./input/day14.txt");
+    int totalSeconds = 2503;
+
+    int best_a = 0;
+
+    vector<day14_reinder> reinders;
+
+    for (auto l : lines)
+    {
+        reinders.push_back(day14_parseString(l));
+
+        int score = day14_partA(reinders.back(), totalSeconds);
+
+        if (score > best_a)
+        {
+            best_a = score;
+        }
+    }
+
+    std::cout << "day14_a => " << best_a << "\n";
+
+    int best_b = day14_partB(reinders, totalSeconds);
+    std::cout << "day14_b => " << best_b << "\n";
+
+}
+
 int main()
 {
    //day1();
@@ -1675,7 +1855,7 @@ int main()
    //day11();
    //day12();
    //day13();
-   //day14();
+   day14();
    //day15();
    //day16();
    //day17();
