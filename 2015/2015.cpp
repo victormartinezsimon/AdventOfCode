@@ -1840,6 +1840,192 @@ void day14()
 
 }
 
+struct day15_ingredient
+{
+public:
+    string name;
+    int capacity;
+    int durability;
+    int flavor;
+    int texture;
+    int calories;
+
+public:
+    day15_ingredient() {}
+
+    day15_ingredient(const string& line)
+    {
+        auto double_points = line.find(":");
+
+        name = line.substr(0, double_points);
+
+        string other = line.substr(double_points +1);
+
+        auto ingredients = split(other, ",");
+
+        capacity = parse_ingredient(ingredients[0], "capacity");
+        durability = parse_ingredient(ingredients[1], "durability");
+        flavor = parse_ingredient(ingredients[2], "flavor");
+        texture = parse_ingredient(ingredients[3], "texture");
+        calories = parse_ingredient(ingredients[4], "calories");
+    }
+
+    int getValue(int index)const 
+    {
+        switch (index)
+        {
+        case 0:return capacity;
+        case 1:return durability;
+        case 2: return flavor;
+        case 3: return texture;
+        case 4: return calories;
+        }
+        return 0;
+    }
+
+private:
+    int parse_ingredient(const string& str, const string& key)
+    {
+        auto capacity_str = split(str, key).back();
+        return atoi(capacity_str.c_str());
+    }
+};
+
+int day15_getScoreIngredient(const std::vector<day15_ingredient>& ingredients, const std::vector<int>& values, const int ingredientType)
+{
+    int value = 0;
+    for (int ingredentIndex = 0; ingredentIndex < ingredients.size(); ++ingredentIndex)
+    {
+        value += ingredients[ingredentIndex].getValue(ingredientType) * values[ingredentIndex];
+    }
+    return value;
+}
+
+int day15_getScore_a(const int maxValue, const std::vector<day15_ingredient>& ingredients, const std::vector<int>& values)
+{
+    int valueAcum = std::accumulate(values.begin(), values.end(), 0);
+    if (valueAcum != maxValue)
+    {
+        return -1;
+    }
+
+    if (ingredients.size() != values.size())
+    {
+        return -1;
+    }
+
+    int valueToReturn = 1;
+
+    for (int ingredientType = 0; ingredientType < 4; ++ingredientType)
+    {
+        int value = day15_getScoreIngredient(ingredients, values, ingredientType);
+
+        if (value <= 0)
+        {
+            return 0;
+        }
+        valueToReturn *= value;
+    }
+    
+    return valueToReturn;
+}
+
+std::vector<std::vector<int>> day15_getAllPosiblities(const int valueLeft, int totalNumbers, map<string, std::vector<std::vector<int>>>& cache)
+{
+    string key = std::to_string(valueLeft) + "-" + std::to_string(totalNumbers);
+
+    if (cache.find(key) != cache.end())
+    {
+        return cache[key];
+    }
+
+    if (valueLeft <= 0)
+    {
+        std::vector<std::vector<int>> result;
+        return result;
+    }
+
+    if (totalNumbers == 1)
+    {
+        std::vector<std::vector<int>> result;
+        result.push_back({ valueLeft });
+        return result;
+    }
+
+    std::vector<std::vector<int>> result;
+    for (int i = 1; i <= valueLeft; ++i)
+    {
+        auto res = day15_getAllPosiblities(valueLeft - i, totalNumbers - 1, cache);
+
+        for (auto r : res)
+        {
+            r.insert(r.begin(), i);
+            result.push_back(r);
+        }
+    }
+
+    cache.insert({ key, result });
+
+    return result;
+}
+
+int day15_a(const int maxValue, const std::vector<day15_ingredient>& ingredients, const std::vector<std::vector<int>>& allPosibilities)
+{
+    int best = -1;
+    for (auto&& posibility : allPosibilities)
+    {
+        int score = day15_getScore_a(maxValue, ingredients, posibility);
+
+        if (score > best)
+        {
+            best = score;
+        }
+    }
+
+    return best;
+}
+
+int day15_b(const int maxValue, const std::vector<day15_ingredient>& ingredients, const std::vector<std::vector<int>>& allPosibilities, int exactCalories)
+{
+    int best = -1;
+
+    for (auto&& posibility : allPosibilities)
+    {
+        int score = day15_getScore_a(maxValue, ingredients, posibility);
+        int calories = day15_getScoreIngredient(ingredients, posibility, 4);
+
+        if (score > best && calories == exactCalories)
+        {
+            best = score;
+        }
+    }
+
+
+    return best;
+}
+
+void day15()
+{
+    auto lines = ReadFile("./input/day15.txt");
+
+    vector<day15_ingredient> ingredients;
+
+    for (auto line : lines)
+    {
+        day15_ingredient ing(line);
+        ingredients.push_back(ing);
+    }
+
+    int maxSpoons = 100;
+
+    map<string, std::vector<std::vector<int>>> cache;
+    auto allPosibilities = day15_getAllPosiblities(maxSpoons, ingredients.size(), cache);
+    int score_a = day15_a(maxSpoons, ingredients, allPosibilities);
+    int score_b = day15_b(maxSpoons, ingredients, allPosibilities, 500);
+    std::cout << "day15_a => " << score_a << "\n";
+    std::cout << "day15_b => " << score_b << "\n";
+}
+
 int main()
 {
    //day1();
@@ -1855,8 +2041,8 @@ int main()
    //day11();
    //day12();
    //day13();
-   day14();
-   //day15();
+   //day14();
+   day15();
    //day16();
    //day17();
    //day18();
