@@ -2026,6 +2026,156 @@ void day15()
     std::cout << "day15_b => " << score_b << "\n";
 }
 
+struct day16_aunt
+{
+private:
+    std::map<string, int> valuesAunt;
+
+public:
+    day16_aunt(const std::string & str)
+    {
+        auto first_doublePoints = str.find(":");
+
+        auto values = str.substr(first_doublePoints + 1);
+
+        for (string key : {"children", "cats", "samoyed", "pomeranians", "akitas", "vizslas", "goldfish", "trees", "cars", "perfumes"})
+        {
+            auto position = values.find(key);
+            if (position == std::string::npos)
+            {
+                valuesAunt.insert({ key, -1 });
+            }
+            else
+            {
+                int startNumber = values.find(":", position) + 1;
+                auto commaPosition = values.find(",", position);
+                if (commaPosition == std::string::npos)
+                {
+                    commaPosition = values.size();
+                }
+                auto value_str = values.substr(startNumber, (commaPosition - startNumber));
+                int value = atoi(value_str.c_str());
+
+                valuesAunt.insert({ key, value });
+            }
+        }
+
+    }
+    day16_aunt(const std::map<string, int>& newValues) 
+    {
+        valuesAunt = newValues;
+    }
+
+    bool compareAunts(const day16_aunt& master)
+    {
+        for (auto kvp : master.valuesAunt)
+        {
+            auto key = kvp.first;
+            auto value = kvp.second;
+
+            auto myValue = valuesAunt[key];
+
+            if (myValue != -1)
+            {
+                if (myValue != value)
+                {
+                    return false;
+                }
+            }
+
+        }
+
+        return true;
+    }
+
+
+    bool compareAunts_b(const day16_aunt& master)
+    {
+        for (auto kvp : master.valuesAunt)
+        {
+            auto key = kvp.first;
+            auto value = kvp.second;
+
+            auto myValue = valuesAunt[key];
+
+            if (myValue != -1)
+            {
+                if (key == "cats" || key == "trees")
+                {
+                    if (myValue <= value)
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    if (key == "pomeranians" || key == "goldfish")
+                    {
+                        if (myValue >= value)
+                        {
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        if (myValue != value)
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+        }
+
+        return true;
+    }
+
+};
+
+void day16()
+{
+    auto lines = ReadFile("./input/day16.txt");
+
+    std::vector< day16_aunt> aunts;
+
+    for (auto l : lines)
+    {
+        day16_aunt aunt(l);
+        aunts.push_back(aunt);
+    }
+
+    std::map<string, int> masterValues = {
+        { "children",3 },
+        { "cats",7 },
+        { "samoyed",2 },
+        { "pomeranians",3 },
+        { "akitas",0,},
+        { "vizslas",0 },
+        { "goldfish",5 },
+        { "trees",3 },
+        { "cars",2 },
+        { "perfumes",1 } 
+    };
+
+    day16_aunt masterAunt(masterValues);
+
+
+    for (int index = 0; index < aunts.size(); ++index)
+    {
+        if (aunts[index].compareAunts(masterAunt))
+        {
+            std::cout << "day16_a => " << index + 1 << "\n";
+        }
+
+        if (aunts[index].compareAunts_b(masterAunt))
+        {
+            std::cout << "day16_b => " << index + 1 << "\n";
+        }
+    }
+
+}
+
 int main()
 {
    //day1();
@@ -2042,8 +2192,8 @@ int main()
    //day12();
    //day13();
    //day14();
-   day15();
-   //day16();
+   //day15();
+   day16();
    //day17();
    //day18();
    //day19();
