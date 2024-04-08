@@ -2176,6 +2176,121 @@ void day16()
 
 }
 
+int day17_getCombinations_A(int value, std::vector<int> containers, map<string, int>& cache)
+{
+    if (value == 0)
+    {
+        return 1;
+    }
+
+    if (value < 0)
+    {
+        return 0;
+    }
+
+    if (containers.size() == 0)
+    {
+        return 0;
+    }
+
+    string key = std::to_string(value) + "-";
+
+    for (auto x : containers)
+    {
+        key += std::to_string(x) + "-";
+    }
+
+    if (cache.find(key) != cache.end())
+    {
+        return cache[key];
+    }
+
+
+    int toReturn = 0;
+
+    std::vector<int> newContainers = containers;
+    newContainers.erase(newContainers.begin());
+
+    toReturn += day17_getCombinations_A(value - containers[0], newContainers, cache);//use it
+    toReturn += day17_getCombinations_A(value, newContainers, cache);//do not use
+
+    cache.insert({ key, toReturn });
+
+    return toReturn;
+}
+
+void day17_getCombinations_B(int value, std::vector<int> containers, std::vector<int> currentBuild, std::vector<std::vector<int>>& builds)
+{
+    if (value == 0)
+    {
+        builds.push_back(currentBuild);
+        return;
+        //return 1;
+    }
+
+    if (value < 0)
+    {
+        return;
+    }
+
+    if (containers.size() == 0)
+    {
+        return;
+    }
+
+
+    std::vector<int> newContainers = containers;
+    newContainers.erase(newContainers.begin());
+
+    std::vector<int> newBuild = currentBuild;
+    newBuild.push_back(containers[0]);
+
+    day17_getCombinations_B(value - containers[0], newContainers, newBuild, builds);//use it
+    day17_getCombinations_B(value, newContainers, currentBuild, builds );//do not use
+}
+
+
+void day17()
+{
+    auto lines = ReadFile("./input/day17.txt");
+
+    std::vector<int> containers;
+
+    for (auto l : lines)
+    {
+        containers.push_back(atoi(l.c_str()));
+    }
+
+    map<string, int> cache_A;
+    int partA = day17_getCombinations_A(150, containers, cache_A);
+    std::cout << "day17_a => " << partA << "\n";
+
+    std::vector<std::vector<int>> partB_result;
+    day17_getCombinations_B(150, containers, {}, partB_result);
+
+    int minValue = lines.size();
+
+    for (auto res : partB_result)
+    {
+        if (res.size() < minValue)
+        {
+            minValue = res.size();
+        }
+    }
+
+    int countB = 0;
+    for (auto res : partB_result)
+    {
+        if (res.size() == minValue)
+        {
+            ++countB;
+        }
+    }
+
+
+    std::cout << "day17_b => " << countB << "\n";
+}
+
 int main()
 {
    //day1();
@@ -2193,8 +2308,8 @@ int main()
    //day13();
    //day14();
    //day15();
-   day16();
-   //day17();
+   //day16();
+   day17();
    //day18();
    //day19();
    //day20();
