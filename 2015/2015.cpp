@@ -2313,6 +2313,176 @@ void day17()
     std::cout << "day17_b => " << countB << "\n";
 }
 
+bool day18_getValue(const std::vector<std::vector<bool>>& board, int row, int col)
+{
+    int count = 0;
+    for (int r = row - 1; r <= row + 1; ++r)
+    {
+        for (int c = col - 1; c <= col + 1; ++c)
+        {
+            if (r < 0 || r >= board.size() || c < 0 || c >= board[0].size() || (r == row && c == col))
+            {
+                continue;
+            }
+            count += board[r][c] ? 1 : 0;
+        }
+    }
+
+    if (board[row][col])
+    {
+        if (count == 2 || count == 3)
+        {
+            return true;
+        }
+        return false;
+    }
+    else
+    {
+        if (count == 3)
+        {
+            return true;
+        }
+        return false;
+    }
+
+    return false;
+}
+
+
+std::vector<std::vector<bool>> day18_updateBoard(const std::vector<std::vector<bool>>& board)
+{
+    std::vector<std::vector<bool>> toReturn;
+
+    for (int r = 0; r < board.size(); ++r)
+    {
+        std::vector<bool> newBoard;
+        for (int c = 0; c < board[0].size(); ++c)
+        {
+            bool value = day18_getValue(board, r, c);
+            newBoard.push_back(value);
+        }
+        toReturn.push_back(newBoard);
+    }
+
+    return toReturn;
+}
+
+std::vector<std::vector<bool>> day18_updateBoard_B(const std::vector<std::vector<bool>>& board)
+{
+    std::vector<std::vector<bool>> toReturn;
+
+    for (int r = 0; r < board.size(); ++r)
+    {
+        std::vector<bool> newBoard;
+        for (int c = 0; c < board[0].size(); ++c)
+        {
+            bool value = day18_getValue(board, r, c);
+            newBoard.push_back(value);
+        }
+        toReturn.push_back(newBoard);
+    }
+
+    return toReturn;
+}
+
+void day18_printBoard(const std::vector<std::vector<bool>>& board)
+{
+    for (int r = 0; r < board.size(); ++r)
+    {
+        for (int c = 0; c < board[0].size(); ++c)
+        {
+            if (board[r][c])
+            {
+                std::cout << "#";
+            }
+            else
+            {
+                std::cout << ".";
+            }
+        }
+        std::cout << "\n";
+    }
+    std::cout << "\n";
+}
+
+void day18_execute( bool partB)
+{
+    auto lines = ReadFile("./input/day18.txt");
+
+    std::vector<std::vector<bool>> board;
+
+    for (auto&& l : lines)
+    {
+        std::vector<bool> b;
+
+        for (auto c : l)
+        {
+            if (c == '#')
+            {
+                b.push_back(true);
+            }
+            else
+            {
+                b.push_back(false);
+            }
+        }
+        board.push_back(b);
+    }
+
+    if (partB)
+    {
+        board[0][0] = true;
+        board[0][board[0].size() - 1] = true;
+        board[board.size() - 1][0] = true;
+        board[board.size() - 1][board[0].size() - 1] = true;
+    }
+
+
+    int totalIterations = 100;
+
+    for (int i = 0; i < totalIterations; ++i)
+    {
+        board = day18_updateBoard(board);
+
+        if (partB)
+        {
+            board[0][0] = true;
+            board[0][board[0].size()-1] = true;
+            board[board.size()-1][0] = true;
+            board[board.size()-1][board[0].size()-1] = true;
+        }
+    }
+
+    int countOn = 0;
+
+    for (int r = 0; r < board.size(); ++r)
+    {
+        for (int c = 0; c < board[0].size(); ++c)
+        {
+            if (board[r][c])
+            {
+                ++countOn;
+            }
+        }
+    }
+
+    if (partB)
+    {
+        std::cout << "day18_b => " << countOn << "\n";
+    }
+    else
+    {
+        std::cout << "day18_a => " << countOn << "\n";
+    }
+}
+
+
+void day18()
+{
+    day18_execute(false);
+    day18_execute(true);
+}
+
 int main()
 {
    //day1();
@@ -2331,8 +2501,8 @@ int main()
    //day14();
    //day15();
    //day16();
-   day17();
-   //day18();
+   //day17();
+   day18();
    //day19();
    //day20();
    //day21();
