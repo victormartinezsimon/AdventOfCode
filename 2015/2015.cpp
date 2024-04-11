@@ -2219,34 +2219,56 @@ int day17_getCombinations_A(int value, std::vector<int> containers, map<string, 
     return toReturn;
 }
 
-void day17_getCombinations_B(int value, std::vector<int> containers, std::vector<int> currentBuild, std::vector<std::vector<int>>& builds)
+std::vector<std::vector<int>> day17_getCombinations_B(int value, std::vector<int> containers, map<string, std::vector<std::vector<int>>>& cache)
 {
+    std::vector<std::vector<int>> earlyReturn;
     if (value == 0)
     {
-        builds.push_back(currentBuild);
-        return;
-        //return 1;
+        earlyReturn.push_back({});
+        return earlyReturn;
     }
 
     if (value < 0)
     {
-        return;
+        return earlyReturn;
     }
 
     if (containers.size() == 0)
     {
-        return;
+        return earlyReturn;
     }
 
+    string key = std::to_string(value) + "-";
 
+    for (auto x : containers)
+    {
+        key += std::to_string(x) + "-";
+    }
+
+    if (cache.find(key) != cache.end())
+    {
+        return cache[key];
+    }
+
+    std::vector<std::vector<int>> toReturn;
     std::vector<int> newContainers = containers;
     newContainers.erase(newContainers.begin());
 
-    std::vector<int> newBuild = currentBuild;
-    newBuild.push_back(containers[0]);
+    auto notUsed = day17_getCombinations_B(value, newContainers, cache);
+    auto used = day17_getCombinations_B(value - containers[0], newContainers, cache);
 
-    day17_getCombinations_B(value - containers[0], newContainers, newBuild, builds);//use it
-    day17_getCombinations_B(value, newContainers, currentBuild, builds );//do not use
+    toReturn.insert(toReturn.end(), notUsed.begin(), notUsed.end());
+
+
+    for (auto x : used)
+    {
+        x.insert(x.begin(), containers[0]);
+        toReturn.push_back(x);
+    }
+
+    cache.insert({ key, toReturn });
+
+    return toReturn;
 }
 
 
@@ -2265,8 +2287,8 @@ void day17()
     int partA = day17_getCombinations_A(150, containers, cache_A);
     std::cout << "day17_a => " << partA << "\n";
 
-    std::vector<std::vector<int>> partB_result;
-    day17_getCombinations_B(150, containers, {}, partB_result);
+    map<string, std::vector<std::vector<int>>> cacheBB;
+    std::vector<std::vector<int>> partB_result = day17_getCombinations_B(150, containers, cacheBB);
 
     int minValue = lines.size();
 
@@ -2286,7 +2308,7 @@ void day17()
             ++countB;
         }
     }
-
+   
 
     std::cout << "day17_b => " << countB << "\n";
 }
