@@ -2483,6 +2483,385 @@ void day18()
     day18_execute(true);
 }
 
+
+void day19_parseFile(const vector<std::string>& lines, std::map<string, vector<string>>& conversions, std::map<string, vector<string>>& conversionsReversed)
+{
+    conversions.clear();
+    conversionsReversed.clear();
+
+    int index = 0;
+    while (lines[index].size() != 0)
+    {
+        std::string line = lines[index];
+
+        auto separation = split(line, " => ");
+
+        string key = trim_copy(separation[0]);
+        string value = trim_copy(separation[1]);
+        conversions[key].push_back(value);
+        conversionsReversed[value].push_back(key);
+
+        ++index;
+    }
+}
+
+void getMaxKeyLength(const std::map<string, vector<string>>& conversions, int& minKeySize, int& maxKeySize)
+{
+    maxKeySize = 0;
+    minKeySize = 100;
+
+    for (auto kvp : conversions)
+    {
+        string key = kvp.first;
+        if (key.size() > maxKeySize)
+        {
+            maxKeySize = kvp.first.size();
+        }
+
+        if (key.size() < minKeySize)
+        {
+            minKeySize = kvp.first.size();
+        }
+    }
+}
+
+void day19_convertString(const int start, const int minKeySize, const int maxKeySize, const string& toConvert, const std::map<string, vector<string>>& conversions, set<string>& allCombinations)
+{
+    for (int length = minKeySize; length < maxKeySize + 1; ++length)
+    {
+        string key = toConvert.substr(start, length);
+
+        if (conversions.find(key) != conversions.end())
+        {
+            vector<string> allConversions = conversions.at(key);
+
+            for (auto&& conversion : allConversions)
+            {
+                string converted = toConvert;
+                converted.erase(start, length);
+                converted.insert(converted.begin() + start, conversion.begin(), conversion.end());
+
+                allCombinations.insert(converted);
+            }
+            
+        }
+    }
+}
+
+set<string> day19_getAllCombinations(const int minKeySize, const int maxKeySize, const string& toConvert, const std::map<string, vector<string>>& conversions)
+{
+    set<string> allCombinations;
+    for (int i = 0; i < toConvert.size(); ++i)
+    {
+        day19_convertString(i, minKeySize, maxKeySize, toConvert, conversions, allCombinations);
+    }
+
+    return allCombinations;
+}
+
+int day19_countSubstring(const std::string str, const string value)
+{
+    vector<size_t> positions; // holds all the positions that sub occurs within str
+
+    size_t pos = str.find(value, 0);
+    while (pos != string::npos)
+    {
+        positions.push_back(pos);
+        pos = str.find(value, pos + 1);
+    }
+
+    return positions.size();
+}
+
+int day19_totalElements(const std::string str)
+{
+    std::vector<string> keys;
+    string tmp = "";
+
+    for (char c : str)
+    {
+        if ('A' <= c && c <= 'Z')
+        {
+            if (tmp != "")
+            {
+                keys.push_back(tmp);
+                tmp = "";
+            }
+        }
+        tmp += c;
+    }
+
+    keys.push_back(tmp);
+
+    return keys.size();
+}
+
+
+void day19()
+{
+    auto lines = ReadFile("./input/day19.txt");
+
+    std::map<string, vector<string>> conversions;
+    std::map<string, vector<string>> conversionsReversed;
+
+    day19_parseFile(lines, conversions, conversionsReversed);
+    string toConvert = lines.back();
+
+    int maxKeySizeNormal = 0;
+    int minKeySizeNormal = 0;
+    getMaxKeyLength(conversions, minKeySizeNormal, maxKeySizeNormal);
+   
+    int partA = day19_getAllCombinations(minKeySizeNormal, maxKeySizeNormal, toConvert, conversions).size();
+
+    std::cout << "day19_a => " << partA << "\n";
+
+    //copied from reddit: 
+
+    //all the rules follow this pattern:
+    //e => XX; X => XX, where X is not Rn, Y, Ar)
+    //X => X Rn X Ar; X => X Rn X Y X Ar; X Rn X Y X Y X Ar
+
+    //if we thing in this way: X= ( Ar = ) and Y = ,
+    //X => X(X); X => X(X,X) ; X => (X,X,X)
+
+    //so reduce in this way:
+    //ABCD => XBCD => XCD => XD => X; so take 3 steps, and this is Size(ABCD)-1 = 4-1 = 3
+    //A(B(C(D(E)))) => A(B(C(X))) => A(B(X)) => A(X) => X  takes 4 steps: Size('A(B(C(D(E))))') - size('(((())))') - 1 = 13 -8 -1 = 4;
+    //if we generalize the formula we get: totalSize -  #Rn -#Ar - 2*#Y -1 
+
+    int totalRn = day19_countSubstring(toConvert, "Rn");
+    int totalAr = day19_countSubstring(toConvert, "Ar");
+    int totalY = day19_countSubstring(toConvert, "Y");
+    int totalElements = day19_totalElements(toConvert);
+
+
+    int countB = totalElements - (totalRn + totalAr) - 2 * totalY - 1;
+    std::cout << "day19_b => " << totalY << "\n";
+}
+
+std::vector<int> day20_factorizeNumber(int number, int limitB)
+{
+    std::vector<int> toReturn;
+
+    int maxValueCheck = sqrt(number);
+
+    for (int i = 1; i <= maxValueCheck; ++i)
+    {
+        if (number % i == 0)
+        {
+            int maxHouseB = i * limitB;
+            if (maxHouseB >= number || limitB < 0)
+            {
+                toReturn.push_back(i);
+            }
+
+            int other = number / i;
+
+            if (other != i)
+            {
+                int maxHouseBOhter = other * limitB;
+                if (maxHouseBOhter >= number || limitB < 0)
+                {
+                    toReturn.push_back(other);
+                }
+            }
+        }
+    }
+
+    return toReturn;
+}
+
+
+int day20_calculateScore(const std::vector<int>& factors, int multiplier)
+{
+    int toReturn = 0;
+
+    for (auto f : factors)
+    {
+        toReturn += f * multiplier;
+    }
+
+    return toReturn;
+}
+
+int day20_calculateScore(int value, int multiplier, int limitB)
+{
+    return day20_calculateScore(day20_factorizeNumber(value, limitB), multiplier);
+}
+
+void day20()
+{
+    int input = 29000000;
+
+    int multiplier = 10;
+
+    int maxValue = input / multiplier;
+
+   
+    for (int i = 1; i < maxValue; ++i)
+    {
+        int value = day20_calculateScore(i, multiplier, -1);
+        if (value > input)
+        {
+            std::cout << "day20_a => " << i << "\n";
+            break;
+        }
+    }
+
+    auto tmp = day20_factorizeNumber(50, 50);
+
+    int mulitplier_b = 11;
+    for (int i = 1; i < maxValue; ++i)
+    {
+        int value = day20_calculateScore(i, mulitplier_b, 50);
+        if (value > input)
+        {
+            std::cout << "day20_b => " << i << "\n";
+            break;
+        }
+    }
+    
+}
+
+struct day21_data
+{
+public:
+    int cost;
+    int damage;
+    int armor;
+    string id;
+
+public:
+    day21_data(string i, int c, int d, int a) :cost(c), damage(d), armor(a), id(i) {}
+};
+
+bool day21_sortFunction(const day21_data& a, const day21_data& b)
+{
+    float valueA = static_cast<float>(a.damage + a.armor) / static_cast<float>(a.cost);
+    float valueB = static_cast<float>(b.damage + a.armor) / static_cast<float>(b.cost);
+
+    if (valueA < valueB)
+    {
+        return true;
+    }
+    else
+    {
+        if (valueB < valueA)
+        {
+            return false;
+        }
+        else
+        {
+            return a.cost < b.cost;
+        }
+    }
+
+}
+
+
+bool day21_checkWin(std::vector<day21_data> composition, int otherDamage, int otherArmor)
+{
+    int acumAttack = 0;
+    int acumDefense = 0;
+    int cost = 0;
+
+    for(auto c: composition)
+    {
+        acumAttack += c.damage;
+        acumDefense += c.armor;
+        cost += c.cost;
+    }
+    
+
+    int damageDonePerTurn = acumAttack - otherArmor;
+    if (damageDonePerTurn < 0) { damageDonePerTurn = 1; }
+
+    int damageReceivedPerTurn = otherDamage - acumDefense;
+    if (damageReceivedPerTurn < 0) { damageReceivedPerTurn = 1; }
+
+    bool toReturn = damageDonePerTurn >= damageReceivedPerTurn;
+
+    return toReturn;
+
+}
+
+void day21()
+{
+    vector<day21_data> weapons = {
+        day21_data("Dagger",        8,     4,       0),
+        day21_data("Shortsword",   10,     5,       0),
+        day21_data("Warhammer",    25,     6,       0),
+        day21_data("Longsword",    40,     7,       0),
+        day21_data("Greataxe",     74,     8,       0),
+    };
+
+    vector<day21_data> armors = {
+        day21_data("Leather",      13,     0,       1),
+        day21_data("Chainmail",    31,     0,       2),
+        day21_data("Splintmail",   53,     0,       3),
+        day21_data("Bandedmail",   75,     0,       4),
+        day21_data("Platemail",   102,     0,       5),
+    };
+
+    vector<day21_data> rings = {
+        day21_data("Damage + 1",    25,     1,       0),
+        day21_data("Damage + 2",    50,     2,       0),
+        day21_data("Damage + 3",   100,     3,       0),
+        day21_data("Defense + 1",   20,     0,       1),
+        day21_data("Defense + 2",   40,     0,       2),
+        day21_data("Defense + 3",   80,     0,       3),
+    };
+
+    armors.insert(armors.begin(), day21_data("empty armor", 0, 0, 0));
+    rings.insert(rings.begin(), day21_data("empty ring", 0, 0, 0));
+
+    int otherDamage = 8;
+    int otherArmor = 2;
+    
+    int bestScoreWin = 100000;
+    int bestScoreLose = -1;
+
+    for (auto w : weapons)
+    {
+        for (auto a : armors)
+        {
+            for (auto r : rings)
+            {
+                for (auto r2 : rings)
+                {
+                    if (r.id == r2.id )
+                    {
+                        if (r.id != "empty ring")
+                        {
+                            continue;
+                        }
+                    }
+
+                    int score = w.cost + a.cost + r.cost + r2.cost;
+                    if (day21_checkWin({ w,a,r,r2 }, otherDamage, otherArmor))
+                    {
+                        if (score < bestScoreWin)
+                        {
+                            bestScoreWin = score;
+                        }
+                    }
+                    else
+                    {
+                        if (score > bestScoreLose)
+                        {
+                            bestScoreLose = score;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    std::cout << "day21_a => " << bestScoreWin << "\n";
+    std::cout << "day21_b => " << bestScoreLose << "\n";
+
+}
+
 int main()
 {
    //day1();
@@ -2502,10 +2881,10 @@ int main()
    //day15();
    //day16();
    //day17();
-   day18();
+   //day18();
    //day19();
    //day20();
-   //day21();
+   day21();
    //day22();
    //day23();
    //day24();
