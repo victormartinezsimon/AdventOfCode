@@ -2862,6 +2862,226 @@ void day21()
 
 }
 
+enum class day22_CAST_TYPE {misille, drain, shield, poison, recharge};
+struct day22_cast
+{
+    day22_CAST_TYPE id;
+    int cost;
+    int instantDamage;
+    int instantHeal;
+    int effectShield;
+    int effectMana;
+    int effectDamage;
+    int turns;
+
+    day22_cast(day22_CAST_TYPE i, int c, int i_d, int i_h, int e_s, int e_m, int e_d,  int t) : id(i), cost(c), instantDamage(i_d), instantHeal(i_h), effectShield(e_s), effectMana(e_m), effectDamage(e_d), turns(t) {}
+};
+
+struct day22_person
+{
+    int live;
+    int damage;
+    int mana;
+    int turnsShield = 0;
+    int turnsPoison = 0;
+    int turnsRecharge = 0;
+
+    day22_person(int l, int d, int m) :live(l), damage(d), mana(m) {}
+};
+
+
+vector<day22_cast> GetAvailableCasts(const day22_person& player, const vector<day22_cast>& casts)
+{
+    vector<day22_cast> solution;
+
+    for (auto&& cast : casts)
+    {
+        if (player.mana < cast.cost) { continue; }
+
+        if (cast.turns == 0)
+        {
+            //instant
+            solution.push_back(cast);
+        }
+        else
+        {
+            //pasive
+            if (cast.id == day22_CAST_TYPE::shield && player.turnsShield == 0) { solution.push_back(cast); }
+            if (cast.id == day22_CAST_TYPE::poison && player.turnsPoison == 0) { solution.push_back(cast); }
+            if (cast.id == day22_CAST_TYPE::recharge && player.turnsRecharge == 0) { solution.push_back(cast); }
+        }
+    }
+
+    return solution;
+}
+
+struct day22_node
+{
+public:
+    day22_person player;
+    day22_person enemy;
+    int acumMana;
+    bool playerTurn;
+    vector<day22_CAST_TYPE> castUsed;
+
+    day22_node(day22_person p, day22_person e, int mana, bool pt) :player(p), enemy(e), acumMana(mana), playerTurn(pt) {}
+
+    string GetID()
+    {
+        string str = "";
+        str += std::to_string(player.live) + "_" + std::to_string(player.mana) + "_" + std::to_string(player.turnsPoison) + "_" + std::to_string(player.turnsRecharge) + "_" + std::to_string(player.turnsShield) + "_" + std::to_string(enemy.live) + "_" + std::to_string(acumMana);
+        return str;
+    }
+
+};
+
+void day22_managePassiveEffect(day22_node& state)
+{
+    //shield
+    if (state.player.turnsShield > 0)
+    {
+        state.player.turnsShield--;
+    }
+
+    //poison
+    if (state.player.turnsPoison > 0)
+    {
+        state.enemy.live -= 3;
+        state.player.turnsPoison--;
+    }
+
+    //recharge
+    if (state.player.turnsRecharge > 0)
+    {
+        state.player.mana += 101;
+        state.player.turnsRecharge--;
+    }
+}
+
+int day22_calculate(day22_person& startPlayer, day22_person& startEnemy, vector<day22_cast>& casts, bool partB)
+{
+    vector<day22_node> nodes;
+    day22_node startNode(startPlayer, startEnemy, 0, true);
+
+    nodes.push_back(startNode);
+
+    std::set<string> alreadyAdded;
+    alreadyAdded.insert(startNode.GetID());
+
+    int bestSolution = 10000;
+
+    while (nodes.size() != 0)
+    {
+        auto currentState = nodes.front();
+        nodes.erase(nodes.begin());
+
+        if (currentState.player.live <= 0) { continue; }
+        if (currentState.enemy.live <= 0) 
+        { 
+            if (currentState.acumMana < bestSolution)
+            {
+                bestSolution = currentState.acumMana;
+            }
+            continue;
+        }
+
+        //apply passive effects
+        day22_node nextState(currentState.player, currentState.enemy, currentState.acumMana, !currentState.playerTurn);
+        nextState.castUsed.insert(nextState.castUsed.end(), currentState.castUsed.begin(), currentState.castUsed.end());
+
+        day22_managePassiveEffect(nextState);
+
+        if (nextState.enemy.live <= 0) 
+        {
+            if (currentState.acumMana < bestSolution)
+            {
+                bestSolution = currentState.acumMana;
+            }
+            continue;
+        }
+
+        if (currentState.playerTurn)
+        {
+            auto availableCast = GetAvailableCasts(nextState.player, casts);
+            if (availableCast.size() == 0) { continue; }
+
+            if (partB)
+            {
+                nextState.player.live--;
+                if (nextState.player.live <= 0) { continue; }
+            }
+
+            for (auto cast : availableCast)
+            {
+                day22_node stateAfterCast = nextState;
+                stateAfterCast.acumMana += cast.cost;
+                stateAfterCast.player.mana -= cast.cost;
+
+                stateAfterCast.castUsed.push_back(cast.id);
+
+                //inmediate effects
+                stateAfterCast.enemy.live -= cast.instantDamage;
+                stateAfterCast.player.live += cast.instantHeal;
+
+                //passive effects
+                if (cast.turns != 0)
+                {
+                    if (cast.id == day22_CAST_TYPE::poison) { stateAfterCast.player.turnsPoison = cast.turns; }
+                    if (cast.id == day22_CAST_TYPE::shield) { stateAfterCast.player.turnsShield = cast.turns; }
+                    if (cast.id == day22_CAST_TYPE::recharge) { stateAfterCast.player.turnsRecharge = cast.turns; }
+                }
+
+                if (alreadyAdded.find(stateAfterCast.GetID()) == alreadyAdded.end())
+                {
+                    alreadyAdded.insert(stateAfterCast.GetID());
+                    nodes.push_back(stateAfterCast);
+                }
+            }
+        }
+        else
+        {
+            //enemy attacks me!!
+            int myShield = 0;
+            if(nextState.player.turnsShield > 0)
+            {
+                myShield = 7;
+            }
+
+            int totalDamage = nextState.enemy.damage - myShield;
+            if (totalDamage <= 0) { totalDamage = 1; }
+            nextState.player.live -= totalDamage;
+
+            if (alreadyAdded.find(nextState.GetID()) == alreadyAdded.end())
+            {
+                alreadyAdded.insert(nextState.GetID());
+                nodes.push_back(nextState);
+            }
+        }
+    }
+    return bestSolution;
+    
+}
+
+void day22()
+{
+    vector<day22_cast> availableCasts = {
+        day22_cast(day22_CAST_TYPE::misille,   53,  4,  0,  0,   0,  0,  0),
+        day22_cast(day22_CAST_TYPE::drain,     73,  2,  2,  0,   0,  0,  0),
+        day22_cast(day22_CAST_TYPE::shield,   113,  0,  0,  7,   0,  0,  6),
+        day22_cast(day22_CAST_TYPE::poison,   173,  0,  0,  0,   0,  3,  6),
+        day22_cast(day22_CAST_TYPE::recharge, 229,  0,  0,  0, 101,  0,  5),
+    };
+   
+    day22_person player(50, 0, 500);
+    day22_person enemy(58, 9, 0);
+
+    int solution_a = day22_calculate(player, enemy, availableCasts, false);
+    std::cout << "day22_a => " << solution_a << "\n";
+
+    int solution_b = day22_calculate(player, enemy, availableCasts, true);
+    std::cout << "day22_b => " << solution_b << "\n";
+}
+
 int main()
 {
    //day1();
@@ -2884,8 +3104,8 @@ int main()
    //day18();
    //day19();
    //day20();
-   day21();
-   //day22();
+   //day21();
+   day22();
    //day23();
    //day24();
    //day25();
