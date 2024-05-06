@@ -3082,6 +3082,90 @@ void day22()
     std::cout << "day22_b => " << solution_b << "\n";
 }
 
+
+int day23_parseLine(const std::string& str, int index, std::map<string, int>& registers)
+{
+    string instruction = str.substr(0, 3);
+    auto parameters = trim_copy(str.substr(4));
+
+    if (instruction == "hlf")
+    {
+        registers[parameters] /= 2;
+        return index + 1;
+    }
+
+    if (instruction == "tpl")
+    {
+        registers[parameters] *= 3;
+        return index + 1;
+    }
+
+    if (instruction == "inc")
+    {
+        registers[parameters] += 1;
+        return index + 1;
+    }
+
+    if (instruction == "jmp")
+    {
+        int value = atoi(parameters.c_str());
+        return index + value;
+    }
+
+    auto values = split(parameters, ",");
+    std::string reg = trim_copy(values[0]);
+    int jump = atoi(trim_copy(values[1]).c_str());
+    if (instruction == "jie")
+    {
+        if (registers[reg] % 2 == 0)
+        {
+            return index + jump;
+        }
+        else
+        {
+            return index + 1;
+        }
+    }
+
+    if (instruction == "jio")
+    {
+        if (registers[reg] == 1)
+        {
+            return index + jump;
+        }
+        else
+        {
+            return index + 1;
+        }
+    }
+    return index;
+}
+
+void day23()
+{
+    auto lines = ReadFile("./input/day23.txt");
+
+    int currentLineIndex = 0;
+    std::map<string, int> registers = { {"a",0},{"b", 0} };
+
+    while (currentLineIndex < lines.size())
+    {
+        currentLineIndex = day23_parseLine(lines[currentLineIndex], currentLineIndex, registers);
+    }
+
+    std::cout << "day23_a => " << registers["b"] << "\n";
+
+    currentLineIndex = 0;
+    registers = { {"a",1},{"b", 0} };
+
+    while (currentLineIndex < lines.size())
+    {
+        currentLineIndex = day23_parseLine(lines[currentLineIndex], currentLineIndex, registers);
+    }
+
+    std::cout << "day23_b => " << registers["b"] << "\n";
+}
+
 int main()
 {
    //day1();
@@ -3105,8 +3189,8 @@ int main()
    //day19();
    //day20();
    //day21();
-   day22();
-   //day23();
+   //day22();
+   day23();
    //day24();
    //day25();
 }
