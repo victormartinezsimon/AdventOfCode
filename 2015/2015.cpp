@@ -3166,6 +3166,130 @@ void day23()
     std::cout << "day23_b => " << registers["b"] << "\n";
 }
 
+std::string day24_getKey(int desiredValue, const std::vector<int>& availableNumbers)
+{
+    std::string key = "";
+
+    key += std::to_string(desiredValue) + "_";
+    for (auto c : availableNumbers)
+    {
+        key += std::to_string(c) + "_";
+    }
+
+    return key;
+}
+
+std::vector<std::vector<int>> day24_getCombinations(int desiredValue, const std::vector<int>& availableNumbers, std::map<string, std::vector<std::vector<int>>>& cache)
+{
+    std::vector<std::vector<int>> earlyReturn;
+    if (desiredValue == 0)
+    {
+        earlyReturn.push_back({});
+        return earlyReturn;
+    }
+
+    if (desiredValue < 0)
+    {
+        return earlyReturn;
+    }
+
+    if (availableNumbers.size() == 0)
+    {
+        return earlyReturn;
+    }
+
+    std::string key = day24_getKey(desiredValue, availableNumbers);
+
+
+    if (cache.contains(key))
+    {
+        return cache[key];
+    }
+
+    int number = availableNumbers.front();
+    std::vector<int> newNumbers = availableNumbers;
+    newNumbers.erase(newNumbers.begin());
+
+    auto add = day24_getCombinations(desiredValue - number, newNumbers, cache);
+    auto notAdd = day24_getCombinations(desiredValue, newNumbers, cache);
+
+    std::vector<std::vector<int>> toReturn;
+    toReturn.insert(toReturn.end(), notAdd.begin(), notAdd.end());
+
+    for (auto x : add)
+    {
+        x.insert(x.begin(), number);
+        toReturn.push_back(x);
+    }
+
+    cache.insert({ key, toReturn });
+
+    return toReturn;
+}
+
+struct
+{
+    bool operator()(const std::vector<int>& a, const std::vector<int>& b) const 
+    { 
+        if (a.size() != b.size())
+        {
+            return a.size() < b.size();
+        }
+
+        long long qe_a = 1;
+        for (auto c : a)
+        {
+            qe_a *= c;
+        }
+
+        long long qe_b = 1;
+        for (auto c : b)
+        {
+            qe_b *= c;
+        }
+
+        return qe_a < qe_b;
+    }
+}
+day24_sorter;
+
+long long day24_calculate(const std::vector<int>& numbers, int totalGroups)
+{
+    int acum = std::accumulate(numbers.begin(), numbers.end(), 0);
+    int desiredValue = acum / totalGroups;
+    std::map<string, std::vector<std::vector<int>>> cache;
+    auto allCombinations = day24_getCombinations(desiredValue, numbers, cache);
+    std::sort(allCombinations.begin(), allCombinations.end(), day24_sorter);
+
+    auto best = allCombinations.front();
+
+    long long solution = 1;
+    for (auto c : best)
+    {
+        solution *= c;
+    }
+    return solution;
+}
+
+void day24()
+{
+    auto lines = ReadFile("./input/day24.txt");
+
+    std::vector<int> numbers;
+    for (auto l : lines)
+    {
+        int number = atoi(l.c_str());
+        numbers.push_back(number);
+    }
+
+    long long partA = day24_calculate(numbers, 3);
+    std::cout << "day24_a => " << partA << "\n";
+
+    long long partB = day24_calculate(numbers, 4);
+    std::cout << "day24_b => " << partB << "\n";
+
+}
+
 int main()
 {
    //day1();
@@ -3190,8 +3314,8 @@ int main()
    //day20();
    //day21();
    //day22();
-   day23();
-   //day24();
+   //day23();
+   day24();
    //day25();
 }
 
