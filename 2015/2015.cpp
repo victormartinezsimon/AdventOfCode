@@ -3290,33 +3290,65 @@ void day24()
 
 }
 
+void day25()
+{
+    int desiredRow =  3010;
+    int desiredCol =  3019;
+
+    int currentRow = 1;
+    int currentCol = 1;
+
+    long long number = 20151125;
+    long long multiplier = 252533;
+    long long mod = 33554393;
+
+    while (currentRow != desiredRow || currentCol != desiredCol)
+    {
+        //std::cout << number << "\n";
+        long long newNumber = (number * multiplier) % mod;
+
+        currentRow--;
+        currentCol++;
+
+        if (currentRow == 0)
+        {
+            currentRow = currentCol;
+            currentCol = 1;
+        }
+        number = newNumber;
+    }
+
+    std::cout << "day25_a => " << number;
+}
+
+
 int main()
 {
-   //day1();
-   //day2();
-   //day3();
-   //day4();
-   //day5();
-   //day6();
-   //day7();
-   //day8();
-   //day9();
-   //day10();
-   //day11();
-   //day12();
-   //day13();
-   //day14();
-   //day15();
-   //day16();
-   //day17();
-   //day18();
-   //day19();
-   //day20();
-   //day21();
-   //day22();
-   //day23();
+   day1();
+   day2();
+   day3();
+   day4();
+   day5();
+   day6();
+   day7();
+   day8();
+   day9();
+   day10();
+   day11();
+   day12();
+   day13();
+   day14();
+   day15();
+   day16();
+   day17();
+   day18();
+   day19();
+   day20();
+   day21();
+   day22();
+   day23();
    day24();
-   //day25();
+   day25();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
