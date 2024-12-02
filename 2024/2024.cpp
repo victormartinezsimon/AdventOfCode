@@ -145,13 +145,105 @@ void day1()
 
 }
 
+bool day2_checkList(std::vector<int>& list, int& indexIncorect)
+{
+    int v1 = list[0];
+    int v2 = list[1];
 
+    bool goingUp = v2 > v1;
+
+    bool valid = true;
+    for (int i = 1; i < list.size(); ++i)
+    {
+        int prev = list[i - 1];
+        int curr = list[i];
+
+        int diff = abs(curr - prev);
+
+        if (diff <= 0 || diff > 3)
+        {
+            indexIncorect = i;
+            return false;
+        }
+
+        bool currentSig = curr > prev;
+        if (currentSig != goingUp)
+        {
+            indexIncorect = i;
+            return false;
+        }
+    }
+    return true;
+}
+
+void day2()
+{
+    std::vector<string> fileTxt = ReadFile("./input/day2.txt");
+
+    int countA = 0;
+
+    std::vector<std::vector<int>> unsafeList;
+    std::vector<int> indexesIncorrect;
+
+    for (auto line : fileTxt)
+    {
+        auto numbers = split(line, " ");
+
+        std::vector<int> elemList;
+
+        for (auto x : numbers)
+        {
+            elemList.push_back(atoi(x.c_str()));
+        }
+
+        int indexIncorrect = -1;
+        bool valid = day2_checkList(elemList, indexIncorrect);
+       
+        if (valid)
+        {
+            countA++;
+        }
+        else
+        {
+            unsafeList.push_back(elemList);
+            indexesIncorrect.push_back(indexIncorrect);
+        }
+    }
+
+    std::cout << "Day 2 => " << countA << "\n";
+
+    int countB = 0;
+    for (int i = 0; i < indexesIncorrect.size(); ++i)
+    {
+        int indexIncorrect = indexesIncorrect[i];
+        auto elems_0 = unsafeList[i];
+        auto elems_i_1 = unsafeList[i];
+        auto elems_i = unsafeList[i];
+
+        elems_0.erase(elems_0.begin());//in case the sign is incorrect
+        elems_i_1.erase(elems_i_1.begin() + indexIncorrect -1);//remove the previous one, in case is incorrect
+        elems_i.erase(elems_i.begin() + indexIncorrect);//remove where we detect the error, in case is incorrect
+
+        int notNeeded = -1;
+        bool valid_0 = day2_checkList(elems_0, notNeeded);
+        bool valid_i_1 = day2_checkList(elems_i_1, notNeeded);
+        bool valid_i = day2_checkList(elems_i, notNeeded);
+        if (valid_0 || valid_i_1 || valid_i)
+        {
+            countB++;
+        }
+    }
+
+    std::cout << "Day 2_B => " << countA + countB << "\n";
+
+}
 
 int main()
 {
    day1();
-   /*
+   
    day2();
+   /*
    day3();
    day4();
    day5();
@@ -176,6 +268,7 @@ int main()
    day24();
    day25();
    */
+   
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
