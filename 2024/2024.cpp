@@ -238,11 +238,131 @@ void day2()
 
 }
 
+std::vector<int> day3_getPositions(const std::string& txt, const std::string& reg)
+{
+    std::vector<int> positions;
+    
+    std::regex dontRegex(reg);
+    auto dont_begin = std::sregex_iterator(txt.begin(), txt.end(), dontRegex);
+    auto dont_end = std::sregex_iterator();
+
+    for (std::sregex_iterator i = dont_begin; i != dont_end; ++i)
+    {
+        std::smatch mul = *i;
+
+        std::string mul_str = mul.str();
+        positions.push_back(mul.position());
+    }
+    
+    return positions;
+}
+
+bool day3_getValid(int currentPosition, const std::vector<int>& valid, const std::vector<int>& invalid)
+{
+    int indexValid = -1;
+    int indexInvalid = -1;
+
+    for (int i = 0; i < valid.size(); ++i)
+    {
+        if (valid[i] > currentPosition)
+        {
+            break;
+        }
+        indexValid = i;
+    }
+
+    for (int i = 0; i < invalid.size(); ++i)
+    {
+        if (invalid[i] > currentPosition)
+        {
+            break;
+        }
+        indexInvalid = i;
+    }
+
+    if (indexValid == -1 && indexInvalid == -1)
+    {
+        return true;
+    }
+
+    if (indexValid != -1 && indexInvalid == -1)
+    {
+        return true;
+    }
+
+    if (indexValid == -1 && indexInvalid != -1)
+    {
+        return false;
+    }
+
+    if (valid[indexValid] > invalid[indexInvalid])
+    {
+        return true;
+    }
+    return false;
+}
+
+void day3()
+{
+    std::vector<string> fileTxt = ReadFile("./input/day3.txt");
+
+    int valueA = 0;
+    int valueB = 0;
+
+
+    std::string regexA = "(mul\\(\\d{1,3}\\,\\d{1,3}\\))";
+
+    std::string textWithotLines = "";
+
+    for (auto line : fileTxt)
+    {
+        textWithotLines += line;
+    }
+
+    auto positionsDont = day3_getPositions(textWithotLines, "(don't\\(\\))");
+    auto positionsDo = day3_getPositions(textWithotLines, "(do\\(\\))");
+
+    std::regex mul_regex(regexA);
+    auto mul_begin = std::sregex_iterator(textWithotLines.begin(), textWithotLines.end(), mul_regex);
+    auto mul_end = std::sregex_iterator();
+
+    for (std::sregex_iterator i = mul_begin; i != mul_end; ++i)
+    {
+        std::smatch mul = *i;
+        std::string mul_str = mul.str();
+            
+        std::regex numbersRegex("(\\d{1,3})\\,(\\d{1,3})");
+        std::smatch sm;
+
+        std::regex_search(mul_str, sm, numbersRegex);
+        int num1 = atoi(sm.str(1).c_str());
+        int num2 = atoi(sm.str(2).c_str());
+        int toAdd = num1 * num2;
+
+        valueA += toAdd;
+
+
+        int mulPosition = mul.position();
+
+        if (day3_getValid(mulPosition, positionsDo, positionsDont))
+        {
+            valueB += toAdd;
+        }
+    }
+    
+    std::cout << "Day 3 => " << valueA << "\n";
+    std::cout << "Day 3_B => " << valueB << "\n";
+
+    
+
+
+}
+
 int main()
 {
    day1();
-   
    day2();
+   day3();
    /*
    day3();
    day4();
