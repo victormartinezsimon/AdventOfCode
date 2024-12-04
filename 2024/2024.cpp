@@ -92,6 +92,57 @@ static inline std::string trim_copy(std::string s) {
 }
 
 
+bool insideField(int row, int col, int width, int height)
+{
+    if (row < 0) { return false; }
+    if (col < 0) { return false; }
+    if (row >= width) { return false; }
+    if (col >= height) { return false; }
+
+    return true;
+}
+
+bool insideField(std::pair<int, int>position, int width, int height)
+{
+    return insideField(position.first, position.second, width, height);
+}
+
+enum class Directions {
+    NORTH, SOUTH, EAST, WEST, NORTHEAST, NORTHWEST, SOUTHEAST, SOUTHWEST
+};
+
+std::pair<int, int> getNextPosition(int row, int col, Directions dir)
+{
+    switch (dir)
+    {
+    case Directions::NORTH:
+        return { row -1, col + 0 };
+        break;
+    case Directions::SOUTH:
+        return { row + 1, col + 0 };
+        break;
+    case Directions::EAST:
+        return { row + 0, col + 1 };
+        break;
+    case Directions::WEST:
+        return { row + 0, col -1 };
+        break;
+    case Directions::NORTHEAST:
+        return { row -1, col + 1 };
+        break;
+    case Directions::NORTHWEST:
+        return { row -1, col -1 };
+        break;
+    case Directions::SOUTHEAST:
+        return { row + 1, col + 1 };
+        break;
+    case Directions::SOUTHWEST:
+        return { row + 1, col -1 };
+        break;
+    }
+    return { row, col };
+}
+
 void day1()
 {
     std::vector<string> fileTxt = ReadFile("./input/day1.txt");
@@ -358,14 +409,91 @@ void day3()
 
 }
 
+bool day4_findWord( const std::vector<string>& board, int row, int col, const std::string& word, Directions dir, int width, int height)
+{
+    int index = 0;
+
+    int currentRow = row;
+    int currentCol = col;
+
+    while (index < word.size())
+    {
+        if (!insideField(currentRow, currentCol, width, height))
+        {
+            return false;
+        }
+
+        if (board[currentRow][currentCol] != word[index]) { return false; }
+
+        auto nextPosition = getNextPosition(currentRow, currentCol, dir);
+        currentRow = nextPosition.first;
+        currentCol = nextPosition.second;
+        ++index;
+    }
+
+    return true;
+}
+
+bool day4_findCrossMAS(const std::vector<string>& board, int row, int col, int width, int height)
+{
+    if (board[row][col] != 'A') { return false; }
+    auto northWest = getNextPosition(row, col, Directions::NORTHWEST);
+    auto northEast = getNextPosition(row, col, Directions::NORTHEAST);
+    auto southWest = getNextPosition(row, col, Directions::SOUTHWEST);
+    auto southEast = getNextPosition(row, col, Directions::SOUTHEAST);
+
+    if (!insideField(northEast, width, height)) { return false; }
+    if (!insideField(northWest, width, height)) { return false; }
+    if (!insideField(southEast, width, height)) { return false; }
+    if (!insideField(southWest, width, height)) { return false; }
+
+    bool firstCross =   (board[northWest.first][northWest.second] == 'M' && board[southEast.first][southEast.second] == 'S') || (board[northWest.first][northWest.second] == 'S' && board[southEast.first][southEast.second] == 'M');
+
+    bool secondCross = (board[northEast.first][northEast.second] == 'M' && board[southWest.first][southWest.second] == 'S') || (board[northEast.first][northEast.second] == 'S' && board[southWest.first][southWest.second] == 'M');
+
+    return firstCross && secondCross;
+}
+
+void day4()
+{
+    std::vector<string> fileTxt = ReadFile("./input/day4.txt");
+
+    int countA = 0;
+    int countB = 0;
+    int width = fileTxt[0].size();
+    int height = fileTxt.size();
+    const std::string word = "XMAS";
+
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < width; ++col)
+        {
+            countA += day4_findWord(fileTxt, row, col, word, Directions::NORTH, width, height) ? 1: 0;
+            countA += day4_findWord(fileTxt, row, col, word, Directions::SOUTH, width, height) ? 1: 0;
+            countA += day4_findWord(fileTxt, row, col, word, Directions::EAST, width, height) ? 1: 0;
+            countA += day4_findWord(fileTxt, row, col, word, Directions::WEST, width, height) ? 1: 0;
+            countA += day4_findWord(fileTxt, row, col, word, Directions::NORTHEAST, width, height) ? 1: 0;
+            countA += day4_findWord(fileTxt, row, col, word, Directions::NORTHWEST, width, height) ? 1: 0;
+            countA += day4_findWord(fileTxt, row, col, word, Directions::SOUTHEAST, width, height) ? 1: 0;
+            countA += day4_findWord(fileTxt, row, col, word, Directions::SOUTHWEST, width, height) ? 1: 0;
+
+            countB += day4_findCrossMAS(fileTxt, row, col, width, height) ? 1 : 0;
+        }
+    }
+    std::cout << "day 4 => " << countA << "\n";
+    std::cout << "day4 B => " << countB << "\n";
+
+}
+
 int main()
 {
-   day1();
-   day2();
-   day3();
-   /*
-   day3();
+   //day1();
+   //day2();
+   //day3();
+   //day3();
+   
    day4();
+   /*
    day5();
    day6();
    day7();
