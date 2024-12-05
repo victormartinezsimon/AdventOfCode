@@ -485,6 +485,117 @@ void day4()
 
 }
 
+bool day5_valid(const std::vector<std::string>& values, std::map<std::string, std::set<std::string>>& nextValues, int& incorrectIndex)
+{
+    std::set<std::string> currentPrecedences;
+    bool valid = true;
+    for(int i = 0; i < values.size(); ++i)
+    {
+        std::string v = values[i];
+        std::set<std::string> unionSet;
+        auto forbiddenValues = nextValues[v];
+        set_intersection(currentPrecedences.begin(), currentPrecedences.end(), forbiddenValues.begin(), forbiddenValues.end(), std::inserter(unionSet, unionSet.begin()));
+        currentPrecedences.insert(v);
+
+        if (unionSet.size() != 0)
+        {
+            incorrectIndex = i;
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+int day5_fixLine(const string& list, std::map<std::string, std::set<std::string>>& nextValues, std::map<std::string, std::set<std::string>>& prevValues)
+{
+    auto values = split(list, ",");
+
+    int incorrectIndex = -1;
+    while (!day5_valid(values, nextValues, incorrectIndex))
+    {
+        std::string v = values[incorrectIndex];
+        values.erase(values.begin() + incorrectIndex);
+
+        //bubble sort
+        values.insert(values.begin() + incorrectIndex - 1, v);
+    }
+
+    int halfIndex = values.size() / 2;
+    int value = atoi(values[halfIndex].c_str());
+    return value;
+}
+
+void day5(bool calculateB)
+{
+    std::vector<string> fileTxt = ReadFile("./input/day5.txt");
+
+    std::map<std::string, std::set<std::string>> nextValues;
+    std::map<std::string, std::set<std::string>> prevValues;
+
+    int index = 0;
+    for (index = 0; index < fileTxt.size(); ++index)
+    {
+        std::string line = fileTxt[index];
+        if (line.empty()) { break; }
+
+        auto values = split(line, "|");
+        string v0 = trim_copy(values[0]);
+        string v1 = trim_copy(values[1]);
+
+        nextValues[v0].insert(v1);
+
+        prevValues[v1].insert(v0);
+    }
+
+    ++index;
+
+    int valueA = 0;
+
+    std::vector<string> incorrectValues;
+
+    while (index < fileTxt.size())
+    {
+        std::string line = fileTxt[index];
+
+        auto values = split(line, ",");
+
+        int notUsed = -1;
+        bool valid = day5_valid(values, nextValues, notUsed);
+
+        if (valid)
+        {
+            int halfIndex = values.size() / 2;
+            int value = atoi(values[halfIndex].c_str());
+            valueA += value;
+        }
+        else
+        {
+            incorrectValues.push_back(line);
+        }
+        ++index;
+    }
+
+    std::cout << "day 5 => " << valueA << "\n";
+
+    int valueB = 0;
+    if (calculateB)
+    {
+        for (auto incorrect : incorrectValues)
+        {
+            auto value = day5_fixLine(incorrect, nextValues, prevValues);
+            valueB += value;
+        }
+    }
+    else
+    {
+        valueB = 5479;
+    }
+
+    std::cout << "day5_b => " << valueB << "\n";
+}
+
 int main()
 {
    //day1();
@@ -492,9 +603,10 @@ int main()
    //day3();
    //day3();
    
-   day4();
+   //day4();
+   
+   day5(false);
    /*
-   day5();
    day6();
    day7();
    day8();
