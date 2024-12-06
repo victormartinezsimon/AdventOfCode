@@ -143,6 +143,38 @@ std::pair<int, int> getNextPosition(int row, int col, Directions dir)
     return { row, col };
 }
 
+Directions turn90Degress(Directions dir)
+{
+    switch (dir)
+    {
+    case Directions::NORTH:
+        return Directions::EAST;
+        break;
+    case Directions::SOUTH:
+        return Directions::WEST;
+        break;
+    case Directions::EAST:
+        return Directions::SOUTH;
+        break;
+    case Directions::WEST:
+        return Directions::NORTH;
+        break;
+    case Directions::NORTHEAST:
+        return Directions::SOUTHEAST;
+        break;
+    case Directions::NORTHWEST:
+        return Directions::NORTHEAST;
+        break;
+    case Directions::SOUTHEAST:
+        return Directions::SOUTHWEST;
+        break;
+    case Directions::SOUTHWEST:
+        return Directions::NORTHWEST;
+        break;
+    }
+    return dir;
+}
+
 void day1()
 {
     std::vector<string> fileTxt = ReadFile("./input/day1.txt");
@@ -596,16 +628,151 @@ void day5(bool calculateB)
     std::cout << "day5_b => " << valueB << "\n";
 }
 
+std::pair<int, int> day6_getStart(const std::vector<string>& board)
+{
+    for (int row = 0; row < board.size(); ++row)
+    {
+        for (int col = 0; col < board[0].size(); ++col)
+        {
+            if (board[row][col] == '^')
+            {
+                return { row, col };
+            }
+        }
+    }
+    return { -1,-1 };
+}
+
+
+bool day6_searchPath(const std::vector<string>& board, const int width, const int height, const int startRow, const int startCol, bool stopOnLoops, std::vector<std::vector<bool>>& usedTiles)
+{
+    int currentRow = startRow;
+    int currentCol = startCol;
+    Directions currentDir = Directions::NORTH;
+
+    usedTiles = std::vector<std::vector<bool>>(height, std::vector<bool>(width, false));
+
+    std::vector<std::vector<std::set<Directions>>> loopDetector(height, std::vector(width, std::set<Directions>()));
+
+    while (true)
+    {
+        if (!insideField(currentRow, currentCol, width, height))
+        {
+            break;
+        }
+
+        // detect loop
+        if (loopDetector[currentRow][currentCol].contains(currentDir) && stopOnLoops)
+        {
+            return false;
+        }
+
+        usedTiles[currentRow][currentCol] = true;
+        loopDetector[currentRow][currentCol].insert(currentDir);
+
+        //get next position
+        auto nextPosition = getNextPosition(currentRow, currentCol, currentDir);
+
+        auto originalDir = currentDir;
+        while (insideField(nextPosition, width, height) && board[nextPosition.first][nextPosition.second] == '#')
+        {
+            //change dir
+            currentDir = turn90Degress(currentDir);
+            nextPosition = getNextPosition(currentRow, currentCol, currentDir);
+
+            if (originalDir == currentDir)
+            {
+                //weird case
+                return false;
+            }
+        }
+
+        currentRow = nextPosition.first;
+        currentCol = nextPosition.second;
+    }
+
+    return true;
+}
+
+void day6A(std::vector<std::vector<bool>>& usedTiles, const int width, const int height)
+{
+    int countA = 0;
+
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < width; ++col)
+        {
+            countA += usedTiles[row][col] ? 1 : 0;
+        }
+    }
+    std::cout << "day 6 => " << countA << "\n";
+}
+
+void day6B(const std::vector<string>& board, const int width, const int height, const int startRow, const int startCol, std::vector<std::vector<bool>>& usedTiles)
+{
+    std::vector<std::vector<bool>> notUsed;
+
+    int countB = 0;
+
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < width; ++col)
+        {
+            if (row == startRow && col == startCol)
+            {
+                continue;
+            }
+
+            if (usedTiles[row][col])
+            {
+                std::vector<string> copyBoard = board;
+                copyBoard[row][col] = '#';
+
+                if (!day6_searchPath(copyBoard, width, height, startRow, startCol, true, notUsed))
+                {
+                    countB++;
+                }
+            }
+        }
+    }
+
+    std::cout << "day 6_B => " << countB << "\n";
+}
+
+void day6(bool resolvePartB)
+{
+    std::vector<string> board = ReadFile("./input/day6.txt");
+
+    int width = board[0].size();
+    int height = board.size();
+
+    auto startPosition = day6_getStart(board);
+
+    std::vector<std::vector<bool>> usedTiles;
+    day6_searchPath(board, width, height, startPosition.first, startPosition.second, false, usedTiles);
+
+    day6A(usedTiles, width, height);
+
+    if (resolvePartB)
+    {
+        day6B(board, width, height, startPosition.first, startPosition.second, usedTiles);
+    }
+    else
+    {
+        std::cout << "day 6_B => " << 2143 << "\n";
+    }
+}
+
+
 int main()
 {
    //day1();
    //day2();
    //day3();
    //day3();
-   
    //day4();
-   
-   day5(false);
+  // day5(false);
+    day6(false);
    /*
    day6();
    day7();
