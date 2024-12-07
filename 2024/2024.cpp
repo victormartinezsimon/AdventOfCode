@@ -763,6 +763,87 @@ void day6(bool resolvePartB)
     }
 }
 
+bool day7_calulate(unsigned long long objective, const std::vector<unsigned long long>& values, bool calculateB)
+{
+    if (values.size() == 0) { return false; }
+
+    if (values.size() == 1)
+    {
+        return objective == values[0];
+    }
+
+    auto copyValues = values;
+    auto v1 = values[0];
+    auto  v2 = values[1];
+
+    copyValues.erase(copyValues.begin());
+    copyValues.erase(copyValues.begin());
+
+    auto copyValuesAdd = copyValues;
+    auto add = v1 + v2;
+    copyValuesAdd.insert(copyValuesAdd.begin(), add);
+
+    bool solution = day7_calulate(objective, copyValuesAdd, calculateB);
+    if (!solution)
+    {
+        auto copyValuesMult = copyValues;
+        auto mult = v1 * v2;
+        copyValuesMult.insert(copyValuesMult.begin(), mult);
+        solution = day7_calulate(objective, copyValuesMult, calculateB);
+    }
+
+    if (calculateB && !solution)
+    {
+        auto copyValuesConcat = copyValues;
+        string v1_str = std::to_string(v1);
+        string v2_str = std::to_string(v2);
+        auto concat = stoull((v1_str + v2_str).c_str());
+        copyValuesConcat.insert(copyValuesConcat.begin(), concat);
+
+        solution = day7_calulate(objective, copyValuesConcat, calculateB);
+    }
+
+    return solution;
+}
+
+void day7()
+{
+    std::vector<string> fileTxt = ReadFile("./input/day7.txt");
+
+    long long valueA = 0;
+    long long valueB = 0;
+    for (auto line : fileTxt)
+    {
+        //string line = "3794488742: 949 7 425 5 84 8 211 2";
+        std::vector<unsigned long long> params;
+        auto split_1 = split(line, ":");
+        unsigned long long objective = stoull(split_1[0].c_str());
+
+        auto split_2 = split(split_1[1], " ");
+        for (auto v : split_2)
+        {
+            if (!v.empty())
+            {
+                params.push_back(stoull(v.c_str()));
+            }
+        }
+
+        if (day7_calulate(objective, params, false))
+        {
+            valueA += objective;
+        }
+        else
+        {
+            if (day7_calulate(objective, params, true))
+            {
+                valueB += objective;
+            }
+        }
+    }
+
+    std::cout << "day7 => " << valueA << "\n";
+    std::cout << "day7_B => " << (valueA + valueB) << "\n";
+}
 
 int main()
 {
@@ -772,10 +853,9 @@ int main()
    //day3();
    //day4();
   // day5(false);
-    day6(false);
-   /*
-   day6();
+   // day6(false);
    day7();
+   /*
    day8();
    day9();
    day10();
