@@ -725,6 +725,7 @@ void day6B(const std::vector<string>& board, const int width, const int height, 
 
             if (usedTiles[row][col])
             {
+                //TODO: OPTIMIZATION: NOT CREATE NEW VECTORS, UPDATE OBJECTIVE AND RESTORE AT THE END
                 std::vector<string> copyBoard = board;
                 copyBoard[row][col] = '#';
 
@@ -772,6 +773,7 @@ bool day7_calulate(unsigned long long objective, const std::vector<unsigned long
         return objective == values[0];
     }
 
+    //TODO: OPTIMIZATION: NOT CREATE NEW VECTORS, UPDATE OBJECTIVE AND RESTORE AT THE END
     auto copyValues = values;
     auto v1 = values[0];
     auto  v2 = values[1];
@@ -845,6 +847,160 @@ void day7()
     std::cout << "day7_B => " << (valueA + valueB) << "\n";
 }
 
+std::map<char, std::vector<pair<int, int>>> day8_getLocations(const vector<string>& board, int width, int height)
+{
+    std::map<char, std::vector<pair<int, int>>> locations;
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < width; ++col)
+        {
+            if (board[row][col] != '.')
+            {
+                locations[board[row][col]].push_back({ row, col });
+            }
+        }
+    }
+
+    return locations;
+}
+
+std::vector<std::pair<int, int>> day8_getAllAntinodes(int startRow, int startCol, int rowIncrement, int colIncrement, int width, int height)
+{
+    std::vector<std::pair<int, int>> solution;
+
+    int currentRow = startRow + rowIncrement;
+    int currentCol = startCol + colIncrement;
+
+    while (insideField(currentRow, currentCol, width, height))
+    {
+        solution.push_back({ currentRow, currentCol });
+        currentRow += rowIncrement;
+        currentCol += colIncrement;
+    }
+
+    return solution;
+}
+
+std::vector<std::pair<int, int>> day8_getAntinodes(const std::pair<int, int>& node1, const std::pair<int, int>& node2, int width, int height, bool partB)
+{
+    std::vector<std::pair<int, int>> solution;
+
+    std::pair<int, int> n1 = node1;
+    std::pair<int, int> n2 = node2;
+
+    if (n1.first > n2.second)
+    {
+        n1 = node2;
+        n2 = node1;
+    }
+
+    int diffHeight = n2.first - n1.first;
+
+    int diffWidth = n2.second - n1.second;
+    int diffWidthAbs = abs(diffWidth);
+
+    if(diffWidth < 0)
+    {
+        //this means:
+        //....n1
+        //n2....
+        if (!partB)
+        {
+            solution.push_back({ n1.first - diffHeight, n1.second + diffWidthAbs });//top right
+            solution.push_back({ n2.first + diffHeight, n2.second - diffWidthAbs });//bottom left
+        }
+        else
+        {
+            auto allTopRight = day8_getAllAntinodes(n1.first, n2.second, -diffHeight, diffWidthAbs, width, height);
+
+            auto allBottomLeft = day8_getAllAntinodes(n1.first, n2.second, diffHeight, -diffWidthAbs, width, height);
+
+            for (auto pos : allTopRight)
+            {
+                solution.push_back(pos);
+            }
+
+            for (auto pos : allBottomLeft)
+            {
+                solution.push_back(pos);
+            }
+        }
+    }
+    else
+    {
+        //this means:
+        //n1....
+        //....n2
+        if (!partB)
+        {
+            solution.push_back({ n1.first - diffHeight, n1.second - diffWidthAbs });//top left
+            solution.push_back({ n2.first + diffHeight, n2.second + diffWidthAbs });//bottom right
+        }
+        else
+        {
+            auto allTopLeft = day8_getAllAntinodes(n1.first, n2.second, -diffHeight, diffWidthAbs, width, height);
+
+            auto allBottomRight = day8_getAllAntinodes(n1.first, n2.second, diffHeight, diffWidthAbs, width, height);
+
+            for (auto pos : allTopLeft)
+            {
+                solution.push_back(pos);
+            }
+
+            for (auto pos : allBottomRight)
+            {
+                solution.push_back(pos);
+            }
+        }
+    }
+
+    return solution;
+}
+
+std::set<pair<int, int>> day8_calculate(const vector<string>& board, const std::map<char, std::vector<pair<int, int>>>& locations, int width, int height, bool partB)
+{
+    std::set<pair<int, int>> solution;
+    for (auto kvp : locations)
+    {
+        auto key = kvp.first;
+        auto positions = kvp.second;
+
+        for (int index1 = 0; index1 < positions.size(); ++index1)
+        {
+            for (int index2 = index1 + 1; index2 < positions.size(); ++index2)
+            {
+                auto antinodes = day8_getAntinodes(positions[index1], positions[index2], width, height, partB);
+
+                for(auto antinode:antinodes)
+                {
+                    if (insideField(antinode, width, height) /* && board[antinode.first][antinode.second] == '.'*/)
+                    {
+                        solution.insert(antinode);
+                    }
+                }
+
+            }
+        }
+    }
+
+    return solution;
+}
+
+void day8()
+{
+    std::vector<string> board = ReadFile("./input/day8.txt");
+    int width = board[0].size();
+    int height = board.size();
+
+    auto locations = day8_getLocations(board, width, height);
+
+    auto day8A = day8_calculate(board, locations, width, height, false);
+    auto day8B = day8_calculate(board, locations, width, height, true);
+
+    std::cout << "day 8 => " << day8A.size() << "\n";
+    std::cout << "day 8_B => " << day8B.size() << "\n";
+}
+
 int main()
 {
    //day1();
@@ -852,11 +1008,11 @@ int main()
    //day3();
    //day3();
    //day4();
-  // day5(false);
-   // day6(false);
-   day7();
-   /*
+   //day5(false);
+   //day6(false);
+   //day7();
    day8();
+   /*
    day9();
    day10();
    day11();
