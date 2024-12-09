@@ -1001,6 +1001,130 @@ void day8()
     std::cout << "day 8_B => " << day8B.size() << "\n";
 }
 
+struct day9_file
+{
+    int id;
+    int start;
+    int size;
+    bool moved = false;
+};
+
+int day9_GetFirstWidthSize(const std::vector<day9_file>& spaces, int size)
+{
+    for (int i = 0; i < spaces.size(); ++i)
+    {
+        if (spaces[i].size >= size)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void day9_Calculate(std::vector<day9_file>& files, std::vector<day9_file>& spaces)
+{
+    for (int i = files.size() - 1; i >= 0; --i)
+    {
+        auto&& file = files[i];
+        if (file.moved) { continue; }
+
+        int spaceID = day9_GetFirstWidthSize(spaces, file.size);
+        if (spaceID == -1) { continue; }
+
+        auto&& space = spaces[spaceID];
+
+        if (space.start > file.start) { continue; }
+
+        file.moved = true;
+        file.start = space.start;
+        if (space.size == file.size)
+        {
+            spaces.erase(spaces.begin() + spaceID);
+        }
+        else
+        {
+            file.moved = true;
+            file.start = space.start;
+            space.start = space.start + file.size;
+            space.size -= file.size;
+        }
+    }
+}
+
+void day9()
+{
+    string input = ReadFile("./input/day9.txt")[0];
+
+    std::vector<day9_file> filesPositions;
+    std::vector<day9_file> spaces;
+    std::vector<day9_file> filesAsUnities;
+
+    bool data = true;
+    int id = 0;
+    int currentStart = 0;
+    for (auto c : input)
+    {
+        int value = c - '0';
+
+        day9_file f;
+        f.id = data ? id : -1;
+        f.start = currentStart;
+        f.size = value;
+
+        if (data) { filesPositions.push_back(f); }
+        else { spaces.push_back(f); }
+
+        if (data)
+        {
+            for (int i = 0; i < value; ++i)
+            {
+                day9_file f;
+                f.id = data ? id : -1;
+                f.start = currentStart + i;
+                f.size = 1;
+                filesAsUnities.push_back(f);
+            }
+        }
+
+        currentStart += value;
+        data = !data;
+        if (!data)
+        {
+            ++id;
+        }
+    }
+
+    auto spacesCopy = spaces;
+    day9_Calculate(filesAsUnities, spacesCopy);
+    day9_Calculate(filesPositions, spaces);
+
+    long long acumB = 0;
+    for (auto file : filesPositions)
+    {
+        int start = file.start;
+        int id = file.id;
+
+        for (int i = start; i < start + file.size; ++i)
+        {
+            acumB += (id * i);
+        }
+    }
+
+    long long acumA = 0;
+    for (auto file : filesAsUnities)
+    {
+        int start = file.start;
+        int id = file.id;
+
+        for (int i = start; i < start + file.size; ++i)
+        {
+            acumA += (id * i);
+        }
+    }
+    std::cout << "day9 => " << acumA << "\n";
+    std::cout << "day9_B => " << acumB << "\n";
+}
+
 int main()
 {
    //day1();
@@ -1011,9 +1135,9 @@ int main()
    //day5(false);
    //day6(false);
    //day7();
-   day8();
-   /*
+   //day8();
    day9();
+   /*
    day10();
    day11();
    day12();
