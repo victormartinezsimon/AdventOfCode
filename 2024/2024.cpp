@@ -91,7 +91,6 @@ static inline std::string trim_copy(std::string s) {
     return s;
 }
 
-
 bool insideField(int row, int col, int width, int height)
 {
     if (row < 0) { return false; }
@@ -1125,6 +1124,82 @@ void day9()
     std::cout << "day9_B => " << acumB << "\n";
 }
 
+struct day10_Coord
+{
+    int row;
+    int col;
+
+    int startRow;
+    int startCol;
+};
+
+void day10_Calculate(const std::vector<string>& board, std::vector<day10_Coord> startPoints, int width, int height)
+{
+    int countB = 0;
+
+    std::set<string> paths;
+
+    while (startPoints.size() != 0)
+    {
+        auto position = startPoints[0];
+        startPoints.erase(startPoints.begin());
+
+        if (!insideField(position.row, position.col, width, height)) { continue; }
+
+        if (board[position.row][position.col] == '9')
+        {
+            ++countB;
+
+            std::string path = std::to_string(position.startRow) + "," + std::to_string(position.startCol) + "=>" + std::to_string(position.row) + "," + std::to_string(position.col);
+
+            paths.insert(path);
+        }
+        auto currentValue = board[position.row][position.col];
+
+        for (auto dir : { Directions::NORTH, Directions::EAST, Directions::SOUTH, Directions::WEST })
+        {
+            auto nextPosition = getNextPosition(position.row, position.col, dir);
+            if (!insideField(nextPosition, width, height)) { continue; }
+
+            int nextValue = board[nextPosition.first][nextPosition.second];
+            if (nextValue == '.') { continue; }
+
+            int diff = nextValue - currentValue;
+            if (diff == 1)
+            {
+                day10_Coord c(nextPosition.first, nextPosition.second, position.startRow, position.startCol);
+                startPoints.push_back(c);
+            }
+        }
+    }
+
+    std::cout << "day 10 => " << paths.size() << "\n";
+    std::cout << "day 10_ B => " << countB << "\n";
+}
+
+void day10()
+{
+    auto board = ReadFile("./input/day10.txt");
+
+    int width = board[0].size();
+    int height = board.size();
+
+    std::vector<day10_Coord> positionsToAnalyze;
+
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < width; ++col)
+        {
+            if (board[row][col] == '0')
+            {
+                day10_Coord c(row, col, row, col);
+                positionsToAnalyze.push_back(c);
+            }
+        }
+    }
+    day10_Calculate(board, positionsToAnalyze, width, height);
+}
+
 int main()
 {
    //day1();
@@ -1136,9 +1211,9 @@ int main()
    //day6(false);
    //day7();
    //day8();
-   day9();
-   /*
+   //day9();
    day10();
+   /*
    day11();
    day12();
    day13();
