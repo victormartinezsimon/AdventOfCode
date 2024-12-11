@@ -1200,6 +1200,143 @@ void day10()
     day10_Calculate(board, positionsToAnalyze, width, height);
 }
 
+std::vector<long long> day11_calculate(long long input, map<long long, vector<long long>>& cacheIndiviual)
+{
+    if (cacheIndiviual.find(input) != cacheIndiviual.end())
+    {
+        return cacheIndiviual[input];
+    }
+
+    if (input == 0)
+    {
+        cacheIndiviual[input] = { 1 };
+        return { 1 };
+    }
+
+    int numDigits = log10(input) + 1;
+    if (numDigits % 2 == 0)
+    {
+        int numToUse = pow(10, numDigits / 2);
+        auto left = input / numToUse;
+        auto right = input % numToUse;
+        cacheIndiviual[input] = { left, right };
+        return cacheIndiviual[input];
+    }
+
+    cacheIndiviual[input] = { input * 2024 };
+    return cacheIndiviual[input];
+}
+
+vector<long long> day11_calculateMultiple(long long input, int times, map<string, vector<long long>>& cacheMultiple, map<long long, vector<long long>>& cacheIndiviual)
+{
+    if(times == 0)
+    {
+        return {input};
+    }
+
+    string key = std::to_string(input) + "-" + std::to_string(times);
+
+    if (cacheMultiple.find(key)!= cacheMultiple.end())
+    {
+        return cacheMultiple[key];
+    }
+
+    auto firstUse = day11_calculate(input, cacheIndiviual);
+
+    std::vector<long long> result;
+
+    for (auto elem : firstUse)
+    {
+        auto res = day11_calculateMultiple(elem, times - 1, cacheMultiple, cacheIndiviual);
+        result.insert(result.end(), res.begin(), res.end());
+    }
+
+    cacheMultiple[key] = result;
+    return result;
+}
+
+void day11_a()
+{
+    auto input_txt = ReadFile("./input/day11.txt")[0];
+    auto input = split(input_txt, " ");
+
+    map<string, vector<long long>> cacheMultiple;
+    map<long long, vector<long long>> cacheIndiviual;
+
+    std::vector<long long> resultA;
+
+    for (auto elem : input)
+    {
+        long long value = stoll(elem.c_str());
+        auto res = day11_calculateMultiple(value, 25, cacheMultiple, cacheIndiviual);
+        resultA.insert(resultA.end(), res.begin(), res.end());
+    }
+    std::cout << "day 11 => " << resultA.size() << "\n";
+}
+
+
+void day11_b()
+{
+    auto input_txt = ReadFile("./input/day11.txt")[0];
+    auto input = split(input_txt, " ");
+
+    std::map<long long, unsigned long long> totalAppears;
+    for (auto i : input)
+    {
+        long long key = stoll(i);
+        totalAppears[key]++;
+    }
+
+    int totalTimes = 75;
+
+    for (int i = 0; i < totalTimes; ++i)
+    {
+        std::map<long long, unsigned long long> currentAppears;
+
+        for (auto kvp : totalAppears)
+        {
+            auto key = kvp.first;
+            auto times = kvp.second;
+
+            if (key == 0)
+            {
+                currentAppears[1] += times;
+                continue;
+            }
+
+            int numDigits = log10(key) + 1;
+            if (numDigits % 2 == 0)
+            {
+                int numToUse = pow(10, numDigits / 2);
+                auto left = key / numToUse;
+                auto right = key % numToUse;
+
+                currentAppears[left] += times;
+                currentAppears[right] += times;
+                continue;
+            }
+
+            currentAppears[key * 2024] += times;
+        }
+
+        totalAppears = currentAppears;
+    }
+
+    unsigned long long resultB = 0;
+    for (auto kvp : totalAppears)
+    {
+        resultB += kvp.second;
+    }
+    std::cout << "day 11_B => " << resultB << "\n";
+
+}
+
+void day11()
+{
+    day11_a();
+    day11_b();
+}
+
 int main()
 {
    //day1();
@@ -1212,9 +1349,9 @@ int main()
    //day7();
    //day8();
    //day9();
-   day10();
-   /*
+   //day10();
    day11();
+   /*
    day12();
    day13();
    day14();
