@@ -95,8 +95,8 @@ bool insideField(int row, int col, int width, int height)
 {
     if (row < 0) { return false; }
     if (col < 0) { return false; }
-    if (row >= width) { return false; }
-    if (col >= height) { return false; }
+    if (col >= width) { return false; }
+    if (row >= height) { return false; }
 
     return true;
 }
@@ -169,6 +169,38 @@ Directions turn90Degress(Directions dir)
         break;
     case Directions::SOUTHWEST:
         return Directions::NORTHWEST;
+        break;
+    }
+    return dir;
+}
+
+Directions turnMinus90Degress(Directions dir)
+{
+    switch (dir)
+    {
+    case Directions::NORTH:
+        return Directions::WEST;
+        break;
+    case Directions::SOUTH:
+        return Directions::EAST;
+        break;
+    case Directions::EAST:
+        return Directions::NORTH;
+        break;
+    case Directions::WEST:
+        return Directions::SOUTH;
+        break;
+    case Directions::NORTHEAST:
+        return Directions::NORTHWEST;
+        break;
+    case Directions::NORTHWEST:
+        return Directions::SOUTHWEST;
+        break;
+    case Directions::SOUTHEAST:
+        return Directions::NORTHEAST;
+        break;
+    case Directions::SOUTHWEST:
+        return Directions::SOUTHEAST;
         break;
     }
     return dir;
@@ -1337,6 +1369,290 @@ void day11()
     day11_b();
 }
 
+std::vector<std::pair<int, int>> day12_calculateShape(int row, int col, const std::vector<string>& board, std::vector<std::vector<bool>>& visited, int width, int height)
+{
+    if (visited[row][col])
+    {
+        return {};
+    }
+
+    std::vector<pair<int, int>> shape;
+    std::vector<pair<int, int>> toVisit;
+    toVisit.push_back({ row, col });
+    char shapeChar = board[row][col];
+
+    while (!toVisit.empty())
+    {
+        auto node = toVisit[0];
+        int row = node.first;
+        int col = node.second;
+
+
+        toVisit.erase(toVisit.begin());
+        if (visited[node.first][node.second]) { continue; }
+        shape.push_back(node);
+        visited[node.first][node.second] = true;
+
+        for (Directions dir : {Directions::NORTH, Directions::EAST, Directions::SOUTH, Directions::WEST})
+        {
+            auto neightbour = getNextPosition(node.first, node.second, dir);
+           
+            if (insideField(neightbour, width, height) 
+                && board[neightbour.first][neightbour.second] == shapeChar
+                && !visited[neightbour.first][neightbour.second])
+            {
+                toVisit.push_back(neightbour);
+            }
+        }
+    }
+
+    return shape;
+}
+
+int day12_getPerimeterPartA(const std::vector<pair<int, int>>& shape, const std::vector<string>& board, const int width, const int height)
+{
+    int countA = 0;
+
+    for (auto pos : shape)
+    {
+        for (Directions dir : {Directions::NORTH, Directions::EAST, Directions::SOUTH, Directions::WEST})
+        {
+            auto neightbour = getNextPosition(pos.first, pos.second, dir);
+            if (!insideField(neightbour, width, height) || board[pos.first][pos.second] != board[neightbour.first][neightbour.second])
+            {
+                ++countA;
+            }
+
+        }
+    }
+
+    return countA;
+}
+
+pair<int, int> day12_getTopLeftNode(const std::vector<pair<int, int>>& shape)
+{
+    auto topLeftNode = shape[0];
+
+    for (auto&& s : shape)
+    {
+        if (topLeftNode.first < s.first)
+        {
+            continue;
+        }
+
+        if (topLeftNode.second < s.second)
+        {
+            continue;
+        }
+        topLeftNode = s;
+    }
+
+    return topLeftNode;
+}
+
+void day12_calculatePerimeterBTopDown(const std::vector<string>& board, std::vector<std::vector<int>>& shapeIdx,
+    std::map<int, int>& acumPerimeters, const int width, const int height, Directions dirToCheck)
+{
+    for (int row = 0; row < height; ++row)
+    {
+        char lastValue = board[row][0];
+        auto previousPositionFirst = getNextPosition(row, 0, dirToCheck);
+        bool lastValid = !insideField(previousPositionFirst, width, height) || board[previousPositionFirst.first][previousPositionFirst.second] != lastValue;
+
+        for (int col = 1; col < width; ++col)
+        {
+            char currentValue = board[row][col];
+            auto previousPosition = getNextPosition(row, col, dirToCheck);
+            bool currentValid = !insideField(previousPosition, width, height) || board[previousPosition.first][previousPosition.second] != currentValue;
+
+            if (lastValue != currentValue || lastValid != currentValid)
+            {
+                if (lastValid)
+                {
+                    int id = shapeIdx[row][col - 1];
+                    acumPerimeters[id]++;
+                }
+            }
+
+            lastValue = currentValue;
+            lastValid = currentValid;
+        }
+
+        if (lastValid)
+        {
+            int id = shapeIdx[row][width - 1];
+            acumPerimeters[id]++;
+        }
+    }
+}
+
+void day12_calculatePerimeterBLeftRight(const std::vector<string>& board, std::vector<std::vector<int>>& shapeIdx,
+    std::map<int, int>& acumPerimeters, const int width, const int height, Directions dirToCheck)
+{
+    for (int col = 0; col < width; ++col)
+    {
+        char lastValue = board[0][col];
+        auto previousPositionFirst = getNextPosition(0, col, dirToCheck);
+        bool lastValid = !insideField(previousPositionFirst, width, height) || board[previousPositionFirst.first][previousPositionFirst.second] != lastValue;
+
+        for (int row = 1; row < height; ++row)
+        {
+            char currentValue = board[row][col];
+            auto previousPosition = getNextPosition(row, col, dirToCheck);
+            bool currentValid = !insideField(previousPosition, width, height) || board[previousPosition.first][previousPosition.second] != currentValue;
+
+            if (lastValue != currentValue || lastValid != currentValid)
+            {
+                if (lastValid)
+                {
+                    int id = shapeIdx[row - 1][col];
+                    acumPerimeters[id]++;
+                }
+            }
+
+            lastValue = currentValue;
+            lastValid = currentValid;
+        }
+
+        if (lastValid)
+        {
+            int id = shapeIdx[height -1][col];
+            acumPerimeters[id]++;
+        }
+    }
+}
+int calculateExternalPerimeter(const std::vector<pair<int, int>>& shape, const std::vector<string>& board, const int width, const int height, std::map<int, int>& acumPerimeters, std::vector<std::vector<int>>& shapeIdx)
+{
+    auto topLeft = day12_getTopLeftNode(shape);
+    Directions currentDir = Directions::EAST;
+    char shapeLetter = board[topLeft.first][topLeft.second];
+
+    auto currentPosition = topLeft;
+
+    int currentCount = 0;
+    bool firstTime = false;
+
+    bool continueCalculating = true;
+
+    std::set<int> differentLetter;
+
+    while (continueCalculating)
+    {
+        //if -90 is same type as mine => add 1 to the perimeter, move pointer and update dir
+        //else => just update the currentPosition
+        auto minus90Direction = turnMinus90Degress(currentDir);
+        auto minus90Position = getNextPosition(currentPosition.first, currentPosition.second, minus90Direction);
+
+        if (insideField(minus90Position, width, height) && board[minus90Position.first][minus90Position.second] == shapeLetter)
+        {
+            //esquina
+            ++currentCount;
+            currentDir = minus90Direction;
+            currentPosition = minus90Position;
+            if (currentPosition == topLeft && currentDir == Directions::EAST)
+            {
+                continueCalculating = false;
+            }
+            continue;
+        }
+
+        //if here, the top is empty or other, so we need to check the turn
+        auto nextPosition = getNextPosition(currentPosition.first, currentPosition.second, currentDir);
+
+        if (!insideField(nextPosition, width, height) || board[nextPosition.first][nextPosition.second] != shapeLetter)
+        {
+            //normal turn
+            ++currentCount;
+            currentDir = turn90Degress(currentDir);
+
+            if (insideField(nextPosition, width, height))
+            {
+                int borderShape = shapeIdx[nextPosition.first][nextPosition.second];
+                differentLetter.insert(borderShape);
+            }
+            else
+            {
+                differentLetter.insert(-1);
+            }
+
+            if (currentPosition == topLeft && currentDir == Directions::EAST)
+            {
+                continueCalculating = false;
+            }
+            //maybe not need to update
+            continue;
+        }
+
+        currentPosition = nextPosition;
+        if (currentPosition == topLeft && currentDir == Directions::EAST)
+        {
+            continueCalculating = false;
+        }
+    } 
+
+    if (differentLetter.size() == 1)
+    {
+        int id = *(differentLetter.begin());
+        acumPerimeters[id] += currentCount;
+    }
+
+    return currentCount;
+}
+
+void day12()
+{
+    auto board = ReadFile("./input/day12.txt");
+    int width = board[0].size();
+    int height = board.size();
+
+    std::vector<std::vector<bool>> visited(height, std::vector<bool>(width, false));
+
+    std::vector<std::vector<pair<int, int>>> shapes;
+
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < width; ++col)
+        {
+            auto shapeMembers = day12_calculateShape(row, col, board, visited, width, height);
+            if (!shapeMembers.empty())
+            {
+                shapes.push_back(shapeMembers);
+            }
+        }
+    }
+
+    std::vector<std::vector<int>> shapesIdx(height, std::vector<int>(width, -1));
+    for (int i = 0; i < shapes.size(); ++i)
+    {
+        for (auto s : shapes[i])
+        {
+            shapesIdx[s.first][s.second] = i;
+        }
+    }
+    std::map<int, int> acumPerimetersB;
+    day12_calculatePerimeterBTopDown(board, shapesIdx, acumPerimetersB, width, height, Directions::NORTH);
+    day12_calculatePerimeterBTopDown(board, shapesIdx, acumPerimetersB, width, height, Directions::SOUTH);
+
+    day12_calculatePerimeterBLeftRight(board, shapesIdx, acumPerimetersB, width, height, Directions::EAST);
+    day12_calculatePerimeterBLeftRight(board, shapesIdx, acumPerimetersB, width, height, Directions::WEST);
+      
+
+    long long valueA = 0;
+    long long valueB = 0;
+    for (int i = 0; i < shapes.size(); ++i)
+    {
+        auto&& shape = shapes[i];
+        auto perimeterA = day12_getPerimeterPartA(shape, board, width, height);
+        auto perimeterB = acumPerimetersB[i];
+        valueA += (shape.size()) * perimeterA;
+        valueB += (shape.size()) * perimeterB;
+
+    }
+
+    std::cout << "day 12 => " << valueA << "\n";
+    std::cout << "day 12_B => " << valueB << "\n";
+}
+
 int main()
 {
    //day1();
@@ -1350,9 +1666,9 @@ int main()
    //day8();
    //day9();
    //day10();
-   day11();
-   /*
+   //day11();
    day12();
+   /*
    day13();
    day14();
    day15();
