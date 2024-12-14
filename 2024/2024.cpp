@@ -1521,7 +1521,7 @@ void day12_calculatePerimeterBLeftRight(const std::vector<string>& board, std::v
         }
     }
 }
-int calculateExternalPerimeter(const std::vector<pair<int, int>>& shape, const std::vector<string>& board, const int width, const int height, std::map<int, int>& acumPerimeters, std::vector<std::vector<int>>& shapeIdx)
+int calculateExternalPerimeter (const std::vector<pair<int, int>>& shape, const std::vector<string>& board, const int width, const int height, std::map<int, int>& acumPerimeters, std::vector<std::vector<int>>& shapeIdx)
 {
     auto topLeft = day12_getTopLeftNode(shape);
     Directions currentDir = Directions::EAST;
@@ -1653,6 +1653,80 @@ void day12()
     std::cout << "day 12_B => " << valueB << "\n";
 }
 
+bool day13_calculate(double BAx, double BAy, double BBx, double BBy, double Px, double Py, unsigned long long& solA, unsigned long long& solB)
+{
+    double A1 = (Px - (Py * BBx / BBy));
+    double A2 = (BAx - (BAy * BBx / BBy));
+
+    double A = A1 / A2;
+    double B = (Py - (A * BAy)) / BBy;
+
+    solA = static_cast<unsigned long long>(A);
+    solB = static_cast<unsigned long long>(B);
+
+    bool checkX = (BAx * solA + BBx * solB) == Px;
+    bool checkY = (BAy * solA + BBy * solB) == Py;
+
+    if (!checkX || !checkY)
+    {
+        solA = static_cast<unsigned long long>(A + 0.1);
+        solB = static_cast<unsigned long long>(B + 0.1);
+
+        checkX = (BAx * solA + BBx * solB) == Px;
+        checkY = (BAy * solA + BBy * solB) == Py;
+    }
+
+    return checkX && checkY;
+}
+
+void day13()
+{
+    auto fileTxt = ReadFile("./input/day13.txt");
+
+    int line = 0;
+    long long acumA = 0;
+    long long acumB = 0;
+
+    std::regex buttonsRegex("X\\+(\\d*), Y\\+(\\d*)");
+    std::regex solutionRecex("X=(\\d*), Y=(\\d*)");
+
+    while (line < fileTxt.size())
+    {
+        std::smatch sm;
+
+        std::regex_search(fileTxt[line], sm, buttonsRegex);
+        int BAx = atoi(sm.str(1).c_str());
+        int BAy = atoi(sm.str(2).c_str());
+
+        std::regex_search(fileTxt[line + 1], sm, buttonsRegex);
+        int BBx = atoi(sm.str(1).c_str());
+        int BBy = atoi(sm.str(2).c_str());
+
+        std::regex_search(fileTxt[line + 2], sm, solutionRecex);
+        unsigned long long Px = stof(sm.str(1).c_str());
+        unsigned long long Py = stof(sm.str(2).c_str());
+
+        unsigned long long solA;
+        unsigned long long solB;
+        if (day13_calculate(BAx, BAy, BBx, BBy, Px, Py, solA, solB))
+        {
+            acumA += solA * 3 + solB;
+        }
+
+        Px += 10000000000000;
+        Py += 10000000000000;
+        if (day13_calculate(BAx, BAy, BBx, BBy, Px, Py, solA, solB))
+        {
+            acumB += solA * 3 + solB;
+        }
+
+        line += 4;
+    }
+
+    std::cout << "day13 => " << acumA << "\n";
+    std::cout << "day13_B => " << acumB << "\n";
+}
+
 int main()
 {
    //day1();
@@ -1667,9 +1741,9 @@ int main()
    //day9();
    //day10();
    //day11();
-   day12();
-   /*
+   //day12();
    day13();
+   /*
    day14();
    day15();
    day16();
