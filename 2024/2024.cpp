@@ -1893,6 +1893,357 @@ void day14(bool print)
     day14_partB(robots, width, height, print);
 }
 
+enum class day15_types{EMPTY, WALL, BOX, START_BOX, END_BOX};
+
+void day15_print(const std::vector<std::vector<day15_types>>& board, const std::pair<int, int>& playerPos)
+{
+    for (int row = 0; row < board.size(); ++row)
+    {
+        for (int col = 0; col < board[row].size(); ++col)
+        {
+            auto type = board[row][col];
+            std::pair<int, int> pos = { row,col };
+            if (playerPos == pos) { std::cout << "@"; continue; }
+            if (type == day15_types::EMPTY) { std::cout << "."; }
+            if (type == day15_types::BOX) { std::cout << "0"; }
+            if (type == day15_types::WALL) { std::cout << "#"; }
+            if (type == day15_types::START_BOX) { std::cout << "["; }
+            if (type == day15_types::END_BOX) { std::cout << "]"; }
+        }
+        std::cout << "\n";
+    }
+    std::cout << "\n";
+}
+
+bool day15_calculateBoxChain(std::vector<std::vector<day15_types>>& board, Directions dir, int& row, int& col)
+{
+    std::set<day15_types> boxTypes = { day15_types::BOX, day15_types::START_BOX, day15_types::END_BOX };
+    while (boxTypes.find(board[row][col]) != boxTypes.end())
+    {
+        auto next = getNextPosition(row, col, dir);
+        row = next.first;
+        col = next.second;
+    }
+
+    if (board[row][col] == day15_types::WALL) { return false; }
+
+    return true;
+}
+
+void day15_swapTypeBox(std::vector<std::vector<day15_types>>& board, std::pair<int, int>start, std::pair<int, int> end, Directions dir)
+{
+    while (start != end)
+    {
+        if (board[start.first][start.second] == day15_types::START_BOX)
+        {
+            board[start.first][start.second] = day15_types::END_BOX;
+        }
+        else
+        {
+            board[start.first][start.second] = day15_types::START_BOX;
+        }
+        start = getNextPosition(start.first, start.second, dir);
+    }
+}
+
+bool day15_canMoveBigBox(std::vector<std::vector<day15_types>>& board, Directions dir, const pair<int, int>& position, day15_types currentType)
+{
+    if (board[position.first][position.second] == day15_types::WALL)
+    {
+        return false;
+    }
+
+    if (board[position.first][position.second] == day15_types::EMPTY)
+    {
+        board[position.first][position.second] = currentType;
+        return true;
+    }
+
+    //if movement is north or south, we need to move the other part of the box
+    //if the movement is east or west, just move as allways
+
+    if (dir == Directions::EAST || dir == Directions::WEST)
+    {
+        auto nextPosition = getNextPosition(position.first, position.second, dir);
+        if (day15_canMoveBigBox(board, dir, nextPosition, board[position.first][position.second]))
+        {
+            if (board[position.first][position.second] == day15_types::START_BOX)
+            {
+                board[position.first][position.second] = day15_types::END_BOX;
+            }
+            else
+            {
+                board[position.first][position.second] = day15_types::START_BOX;
+            }
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    //here dir is north or south
+    std::pair<int, int> startBox, endBox;
+    if (board[position.first][position.second] == day15_types::START_BOX)
+    {
+        startBox = position;
+        endBox = { position.first, position.second + 1 };
+    }
+    else
+    {
+        endBox = position;
+        startBox = { position.first, position.second - 1 };
+    }
+
+    //now check if we can move the both parts.
+    auto nextPositionStart = getNextPosition(startBox.first, startBox.second, dir);
+    auto nextPositionEnd = getNextPosition(endBox.first, endBox.second, dir);
+    bool move1 = (day15_canMoveBigBox(board, dir, nextPositionStart, day15_types::EMPTY));
+    bool move2 = (day15_canMoveBigBox(board, dir, nextPositionEnd, day15_types::EMPTY));
+
+    if (move1 && move2)
+    {
+        //update all the big boxes
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+void day15_moveUpDownBigBox(std::vector<std::vector<day15_types>>& board, Directions dir, std::pair<int, int> position, day15_types type)
+{
+    auto nextPosition = getNextPosition(position.first, position.second, dir);
+    auto typeDirection = board[nextPosition.first][nextPosition.second];
+
+    if (typeDirection == day15_types::EMPTY)
+    {
+        board[position.first][position.second] = day15_types::EMPTY;
+        board[nextPosition.first][nextPosition.second] = type;
+        return;
+    }
+
+    if (typeDirection == type)
+    {
+        //only move one part, as the other part will be moved by the other part
+        day15_moveUpDownBigBox(board, dir, nextPosition, typeDirection);
+        board[nextPosition.first][nextPosition.second] = type;
+        board[position.first][position.second] = day15_types::EMPTY;
+        return;
+    }
+
+    //here there is another box
+    std::pair<int, int> startBox, endBox;
+    if (typeDirection == day15_types::START_BOX)
+    {
+        startBox = nextPosition;
+        endBox = { nextPosition.first, nextPosition.second + 1 };
+    }
+    else
+    {
+        startBox = { nextPosition.first, nextPosition.second - 1 };
+        endBox = nextPosition;
+    }
+    day15_moveUpDownBigBox(board, dir, startBox, day15_types::START_BOX);
+    day15_moveUpDownBigBox(board, dir, endBox, day15_types::END_BOX);
+
+    board[nextPosition.first][nextPosition.second] = type;
+    board[position.first][position.second] = day15_types::EMPTY;
+}
+
+void day15_updateBoard(std::vector<std::vector<day15_types>>& board, Directions dir, pair<int, int>& playerPos)
+{
+    auto destiny = getNextPosition(playerPos.first, playerPos.second, dir);
+
+    if (board[destiny.first][destiny.second] == day15_types::WALL) { return; }
+    if (board[destiny.first][destiny.second] == day15_types::EMPTY) 
+    { 
+        playerPos = destiny;
+        return;
+    }
+    if (board[destiny.first][destiny.second] == day15_types::BOX)
+    {
+        //try to move
+        int rowEnd = destiny.first;
+        int colEnd = destiny.second;
+        if (day15_calculateBoxChain(board, dir, rowEnd, colEnd))
+        {
+            board[rowEnd][colEnd] = day15_types::BOX;
+            board[destiny.first][destiny.second] = day15_types::EMPTY;
+            playerPos = destiny;
+        }
+    }
+
+    if (board[destiny.first][destiny.second] == day15_types::START_BOX || board[destiny.first][destiny.second] == day15_types::END_BOX)
+    {
+        if(day15_canMoveBigBox(board, dir, destiny, board[destiny.first][destiny.second]))
+        {
+            if (dir == Directions::NORTH || dir == Directions::SOUTH)
+            {
+                std::pair<int, int> startBox, endBox;
+                if (board[destiny.first][destiny.second] == day15_types::START_BOX)
+                {
+                    startBox = destiny;
+                    endBox = { destiny.first, destiny.second + 1 };
+                }
+                else
+                {
+                    endBox = destiny;
+                    startBox = { destiny.first, destiny.second - 1 };
+                }
+
+                day15_moveUpDownBigBox(board, dir, startBox, day15_types::START_BOX);
+                day15_moveUpDownBigBox(board, dir, endBox, day15_types::END_BOX);
+                
+                board[startBox.first][startBox.second] = day15_types::EMPTY;
+                board[endBox.first][endBox.second] = day15_types::EMPTY;
+            }
+            else
+            {
+                board[destiny.first][destiny.second] = day15_types::EMPTY;
+            }
+            playerPos = destiny;
+        }
+        
+    }
+}
+
+
+void day15_updateBoard(std::vector<std::vector<day15_types>>& board, char movement, pair<int, int>& playerPos)
+{
+    Directions dir = Directions::NORTH;
+    switch (movement)
+    {
+    case '>': dir = Directions::EAST; break;
+    case 'v': dir = Directions::SOUTH; break;
+    case '^': dir = Directions::NORTH; break;
+    case '<': dir = Directions::WEST; break;
+    }
+
+    day15_updateBoard(board, dir, playerPos);
+}
+
+void day15_doMovements(std::vector<std::vector<day15_types>>& board, const std::string& movements, pair<int, int>& playerPos)
+{
+    for (auto c : movements)
+    {
+        day15_updateBoard(board, c, playerPos);
+    }
+}
+
+int day15_calculate(const std::vector<std::vector<day15_types>>& board)
+{
+    long long acumA = 0;
+    for (int row = 0; row < board.size(); ++row)
+    {
+        for (int col = 0; col < board[row].size(); ++col)
+        {
+            if (board[row][col] == day15_types::BOX || board[row][col] == day15_types::START_BOX)
+            {
+                acumA += (row * 100 + col);
+            }
+        }
+    }
+    return acumA;
+
+}
+
+void day15_A()
+{
+    auto fileTxt = ReadFile("./input/day15.txt");
+    std::vector<std::vector<day15_types>> boardA;
+    int rowID = 0;
+
+    std::pair<int, int> playerPos;
+
+    while (!fileTxt[rowID].empty())
+    {
+        std::vector<day15_types> rowA;
+        int colID = 0;
+
+        while(colID < fileTxt[rowID].size())
+        {
+            char c = fileTxt[rowID][colID];
+            ++colID;
+            if (c == '@') { rowA.push_back(day15_types::EMPTY); playerPos = { rowID, colID -1}; continue; }
+            if (c == '#') { rowA.push_back(day15_types::WALL); continue; }
+            if (c == 'O') { rowA.push_back(day15_types::BOX); continue; }
+            if (c == '.') { rowA.push_back(day15_types::EMPTY); continue; }
+        }
+        boardA.push_back(rowA);
+        ++rowID;
+    }
+
+    ++rowID;
+
+    std::string instructions = "";
+    while (rowID < fileTxt.size())
+    {
+        instructions += fileTxt[rowID];
+        ++rowID;
+    }
+
+    day15_doMovements(boardA, instructions, playerPos);
+    int acumA = day15_calculate(boardA);
+    std::cout << "day 15 => " << acumA << "\n";
+
+}
+
+void day15_B()
+{
+    auto fileTxt = ReadFile("./input/day15.txt");
+    std::vector<std::vector<day15_types>> board;
+    int rowID = 0;
+
+    std::pair<int, int> playerPos;
+
+    while (!fileTxt[rowID].empty())
+    {
+        std::vector<day15_types> row;
+        int colID = 0;
+
+        while (colID < fileTxt[rowID].size())
+        {
+            char c = fileTxt[rowID][colID];
+            ++colID;
+            if (c == '@') 
+            { 
+                row.push_back(day15_types::EMPTY); 
+                playerPos = { rowID, row.size()-1}; 
+                row.push_back(day15_types::EMPTY);
+                continue; 
+            }
+            if (c == '#') { row.push_back(day15_types::WALL); row.push_back(day15_types::WALL); continue; }
+            if (c == 'O') { row.push_back(day15_types::START_BOX); row.push_back(day15_types::END_BOX); continue; }
+            if (c == '.') { row.push_back(day15_types::EMPTY); row.push_back(day15_types::EMPTY); continue; }
+        }
+        board.push_back(row);
+        ++rowID;
+    }
+
+    ++rowID;
+
+    std::string instructions = "";
+    while (rowID < fileTxt.size())
+    {
+        instructions += fileTxt[rowID];
+        ++rowID;
+    }
+
+    day15_doMovements(board, instructions, playerPos);
+    int acumB = day15_calculate(board);
+    std::cout << "day 15_B => " << acumB << "\n";
+
+}
+
+void day15()
+{
+    day15_A();
+    day15_B();
+}
+
 int main()
 {
    //day1();
@@ -1909,7 +2260,8 @@ int main()
    //day11();
    //day12();
    //day13();
-   day14(false);
+   //day14(false);
+    day15();
    /*
    day15();
    day16();
