@@ -1727,6 +1727,172 @@ void day13()
     std::cout << "day13_B => " << acumB << "\n";
 }
 
+struct day14_robot
+{
+    int startX;
+    int startY;
+    int moveX;
+    int moveY;
+};
+
+int day14_getQuadrantNumber(int startX, int endX, int startY, int endY, const std::map<std::pair<int, int>, int>& positions)
+{
+    int totalCount = 0;
+    for (auto r : positions)
+    {
+        auto position = r.first;
+        auto count = r.second;
+
+        if (position.first >= startX && position.first <= endX &&
+            position.second >= startY && position.second <= endY)
+        {
+            totalCount += count;
+        }
+    }
+
+    return totalCount;
+}
+
+void day14_calculateMovements(int totalMovements, int maxWidth, int maxHeight, const std::vector<day14_robot>& robots)
+{
+    std::map<std::pair<int, int>, int> robotsInPositions;
+
+    for (auto&& r : robots)
+    {
+        long long finalX = r.startX + totalMovements * r.moveX;
+        long long finalY = r.startY + totalMovements * r.moveY;
+
+        while (finalX < maxWidth)
+        {
+            finalX += maxWidth;
+        }
+
+        while (finalY < maxHeight)
+        {
+            finalY += maxHeight;
+        }
+
+        finalX = finalX % maxWidth;
+        finalY = finalY % maxHeight;
+
+        robotsInPositions[{finalX, finalY}]++;
+    }
+
+    int halfX_1 = (maxWidth / 2) - 1;
+    int halfX_2 = (maxWidth / 2) + 1;
+
+    int halfY_1 = (maxHeight / 2) - 1;
+    int halfY_2 = (maxHeight / 2) + 1;
+
+    int q1 = day14_getQuadrantNumber(0, halfX_1, 0, halfY_1, robotsInPositions);
+    int q2 = day14_getQuadrantNumber(halfX_2, maxWidth-1, 0, halfY_1, robotsInPositions);
+    int q3 = day14_getQuadrantNumber(0, halfX_1, halfY_2, maxHeight-1, robotsInPositions);
+    int q4 = day14_getQuadrantNumber(halfX_2, maxWidth - 1, halfY_2, maxHeight - 1, robotsInPositions);
+
+
+    int valueA = q1 * q2 * q3 * q4;
+    std::cout << "day14 => " << valueA << "\n";
+
+}
+
+void day14_doMovement(std::vector<day14_robot>& robots, int maxWidth, int maxHeight)
+{
+    int totalMovements = 1;
+    for (auto& r : robots)
+    {
+        long long finalX = r.startX + totalMovements * r.moveX;
+        long long finalY = r.startY + totalMovements * r.moveY;
+
+        while (finalX < maxWidth)
+        {
+            finalX += maxWidth;
+        }
+
+        while (finalY < maxHeight)
+        {
+            finalY += maxHeight;
+        }
+
+        finalX = finalX % maxWidth;
+        finalY = finalY % maxHeight;
+
+        r.startX = finalX;
+        r.startY = finalY;
+    }
+}
+
+void day14_print(const std::vector<day14_robot>& robots, int maxWidth, int maxHeight)
+{
+    std::set<pair<int, int>> positions;
+    for (auto&& r : robots)
+    {
+        positions.insert({ r.startX, r.startY });
+    }
+
+    for (int row = 0; row < maxHeight; ++row)
+    {
+        for (int col = 0; col < maxWidth; ++col)
+        {
+            if (positions.find({ col, row }) != positions.end())
+            {
+                std::cout << "#";
+            }
+            else
+            {
+                std::cout << ".";
+            }
+        }
+        std::cout << "\n";
+    }
+}
+
+void day14_partB(std::vector<day14_robot> robots, int maxWidth, int maxHeight, bool print)
+{
+    int movementID = 0;
+    while (movementID < 8149)
+    {
+        day14_doMovement(robots, maxWidth, maxHeight);
+        ++movementID;
+    }
+
+    std::set<pair<int, int>> positions;
+    for (auto&& r : robots)
+    {
+        positions.insert({ r.startX, r.startY });
+    }
+        
+    std::cout << "day 14_B => " << movementID << "\n";
+    if (print)
+    {
+        day14_print(robots, maxWidth, maxHeight);
+    }
+}
+
+void day14(bool print)
+{
+    auto fileTxt = ReadFile("./input/day14.txt");
+
+    std::vector<day14_robot> robots;
+    std::regex buttonsRegex("p=(-*\\d*),(-*\\d*) v=(-*\\d*),(-*\\d*)");
+
+    for (auto&& l : fileTxt)
+    {
+        std::smatch sm;
+        std::regex_search(l, sm, buttonsRegex);
+
+        day14_robot r(atoi(sm.str(1).c_str()), atoi(sm.str(2).c_str()), atoi(sm.str(3).c_str()), atoi(sm.str(4).c_str()));
+
+        robots.push_back(r);
+    }
+
+    int totalMovmement = 100;
+    int width = 101;
+    int height = 103;
+
+    day14_calculateMovements(totalMovmement, width, height, robots);
+    day14_partB(robots, width, height, print);
+}
+
 int main()
 {
    //day1();
@@ -1742,9 +1908,9 @@ int main()
    //day10();
    //day11();
    //day12();
-   day13();
+   //day13();
+   day14(false);
    /*
-   day14();
    day15();
    day16();
    day17();
