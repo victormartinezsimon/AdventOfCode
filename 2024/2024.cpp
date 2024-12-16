@@ -2244,6 +2244,224 @@ void day15()
     day15_B();
 }
 
+struct day16_node
+{
+    int row;
+    int col;
+    Directions dir;
+    long long currentCost;
+    long long manhattan;
+    long long stimatedCost;
+
+    std::vector<std::pair<int, int>> ancestors;
+
+    friend bool operator<(const day16_node& a, const day16_node& b)
+    {
+        return a.stimatedCost > b.stimatedCost;
+    }
+};
+
+void day16_updateNode(day16_node& node, std::pair<int, int> endPosition)
+{
+    int height = abs(endPosition.first - node.row);
+    int width = abs(endPosition.second - node.col);
+
+    node.manhattan = width + height;
+    node.stimatedCost = node.manhattan + node.currentCost;
+}
+
+void day16_addAncestor(day16_node& baseNode, day16_node& node, std::pair<int, int> position)
+{
+    node.ancestors.insert(node.ancestors.end(), baseNode.ancestors.begin(), baseNode.ancestors.end());
+    node.ancestors.push_back(position);
+}
+
+void day16_print(const std::vector<string>& board, const std::set < std::pair<int, int>>& ancestors)
+{
+    for (int row = 0; row < board.size(); ++row)
+    {
+        for (int col = 0; col < board.size(); ++col)
+        {
+            std::pair<int, int> toSearch = { row, col };
+            if (std::find(ancestors.begin(), ancestors.end(), toSearch) != ancestors.end())
+            {
+                std::cout << "O";
+            }
+            else
+            {
+                std::cout << board[row][col];
+            }
+        }
+        std::cout << "\n";
+    }
+
+    std::cout << "\n";
+}
+
+int day16_calculate(const std::vector<string>& board, int width, int height, std::pair<int, int>& start, const std::pair<int, int>& endPosition, const int increaseForward, const int increaseTurn, Directions startDir, std::set<std::pair<int, int>>& knownPath, bool partA)
+{
+    day16_node startNode(start.first, start.second, startDir, 0);
+    day16_updateNode(startNode, endPosition);
+
+    std::priority_queue<day16_node> nodesToInvestigate;
+    nodesToInvestigate.push(startNode);
+
+    int inf = std::numeric_limits<int>::max();
+
+    std::vector<std::vector<std::map<Directions, int>>> costToReach(height, std::vector<std::map<Directions, int>>(width, std::map<Directions, int>({ {Directions::NORTH,inf }, {Directions::SOUTH, inf},{Directions::EAST, inf}, {Directions::WEST, inf} })));
+
+    int bestCost = -1;
+
+    while (nodesToInvestigate.size() != 0)
+    {
+        auto node = nodesToInvestigate.top();
+        nodesToInvestigate.pop();
+
+        std::pair<int, int> coord = { node.row, node.col };
+        if (coord == endPosition)
+        {
+            int cost = node.currentCost;
+            node.ancestors.push_back(endPosition);
+
+            if (bestCost == -1)
+            {
+                bestCost = cost;
+
+                for (auto n : node.ancestors)
+                {
+                    knownPath.insert(n);
+                }
+
+                if (partA)
+                {
+                    return bestCost;
+                }
+            }
+            else
+            {
+                if (cost != bestCost)
+                {
+                    return bestCost;
+                }
+                else
+                {
+                        for (auto n : node.ancestors)
+                    {
+                        knownPath.insert(n);
+                    }
+                    continue;
+                }
+            }
+        }
+
+        int knowCost = costToReach[node.row][node.col][node.dir];
+
+        if (partA)
+        {
+            if (knowCost < node.currentCost)
+            {
+                continue;
+            }
+        }
+        else
+        {
+            if (knowCost == node.currentCost)
+            {
+                std::pair<int, int> toSearch = { node.row, node.col };
+                if (knownPath.find(toSearch) == knownPath.end())
+                {
+                    continue;
+                }
+            }
+            else
+            {
+                if (knowCost < node.currentCost)
+                {
+                    continue;
+                }
+            }
+        }
+        
+        costToReach[node.row][node.col][node.dir] = node.currentCost;
+
+        //forward
+        {
+            auto forward = getNextPosition(node.row, node.col, node.dir);
+            if (board[forward.first][forward.second] != '#')
+            {
+                auto nextCost = node.currentCost + increaseForward;
+
+                day16_node goForward(forward.first, forward.second, node.dir, nextCost);
+                day16_updateNode(goForward, endPosition);
+                day16_addAncestor(node, goForward, { node.row, node.col });
+                nodesToInvestigate.push(goForward);
+            }
+        }
+        
+        //90
+        {
+            auto newDir = turn90Degress(node.dir);
+            auto nextCost = node.currentCost + increaseTurn;
+
+            day16_node turn90(node.row, node.col, newDir, nextCost);
+            day16_updateNode(turn90, endPosition);
+            day16_addAncestor(node, turn90, { node.row, node.col });
+            nodesToInvestigate.push(turn90);
+        }
+
+        //-90
+        {
+            auto newDir = turnMinus90Degress(node.dir);
+            auto nextCost = node.currentCost + increaseTurn;
+
+            day16_node turnMinus90(node.row, node.col, newDir, nextCost);
+            day16_updateNode(turnMinus90, endPosition);
+            day16_addAncestor(node, turnMinus90, { node.row, node.col });
+            nodesToInvestigate.push(turnMinus90);
+        }
+    }
+        
+    return 0;
+    
+}
+
+void day16()
+{
+    auto board = ReadFile("./input/day16.txt");
+    int width = board[0].size();
+    int height = board.size();
+
+    std::pair<int, int> start;
+    std::pair<int, int> end;
+
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < width; ++col)
+        {
+            if (board[row][col] == 'S')
+            {
+                start = { row, col };
+            }
+            if (board[row][col] == 'E')
+            {
+                end = { row, col };
+            }
+        }
+    }
+    std::set<std::pair<int, int>> pathForA;
+
+    int valueA = day16_calculate(board, width, height, start, end, 1, 1000, Directions::EAST, pathForA, true);
+
+    std::cout << "day 16 => " << valueA << "\n";
+   // day16_print(board, pathForA);
+
+    day16_calculate(board, width, height, start, end, 1, 1000, Directions::EAST, pathForA, false);
+
+    std::cout << "day 16_B => " << pathForA.size() << "\n";
+    //day16_print(board, pathForA);
+
+}
+
 int main()
 {
    //day1();
@@ -2261,10 +2479,9 @@ int main()
    //day12();
    //day13();
    //day14(false);
-    day15();
-   /*
-   day15();
+    //day15();
    day16();
+   /*
    day17();
    day18();
    day19();
