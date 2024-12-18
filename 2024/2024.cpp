@@ -143,6 +143,11 @@ std::pair<int, int> getNextPosition(int row, int col, Directions dir)
     return { row, col };
 }
 
+std::pair<int, int> getNextPosition(std::pair<int, int>pos, Directions dir)
+{
+    return getNextPosition(pos.first, pos.second, dir);
+}
+
 Directions turn90Degress(Directions dir)
 {
     switch (dir)
@@ -2826,6 +2831,134 @@ void day17()
     //day17_genetic(instructions_str, instructions);
 }
 
+struct day18_node
+{
+    std::pair<int, int> position;
+    long long currentCost;
+    long long manhattan;
+    long long stimatedCost;
+
+    std::vector<std::pair<int, int>> ancestors;
+
+    friend bool operator<(const day18_node& a, const day18_node& b)
+    {
+        return a.stimatedCost > b.stimatedCost;
+    }
+
+    void updateHeuristic(std::pair<int, int> endPosition)
+    {
+        int height = abs(endPosition.first - position.first);
+        int width = abs(endPosition.second - position.second);
+
+        manhattan = width + height;
+        stimatedCost = manhattan + currentCost;
+    }
+
+    void addAncestor(std::pair<int, int> position)
+    {
+        ancestors.push_back(position);
+    }
+
+    void addAllAncestors(std::vector<pair<int, int>> anc)
+    {
+        ancestors.insert(ancestors.end(), anc.begin(), anc.end());
+    }
+};
+
+
+int day18_findWay(const std::vector<std::vector<bool>>& board, const std::pair<int, int>& start, const std::pair<int, int>& end, int width, int height)
+{
+    day18_node s(start, 0);
+    std::vector<std::vector<bool>> investigated(height, std::vector<bool>(width, false));
+
+    priority_queue<day18_node> nodesToInvestigate;
+
+    nodesToInvestigate.push(s);
+
+    while (!nodesToInvestigate.empty())
+    {
+        auto node = nodesToInvestigate.top();
+        nodesToInvestigate.pop();
+
+        if (node.position == end)
+        {
+            return node.currentCost;
+        }
+
+        if (investigated[node.position.first][node.position.second])
+        {
+            continue;
+        }
+
+        investigated[node.position.first][node.position.second] = true;
+
+        for (Directions dir : {Directions::EAST, Directions::NORTH, Directions::SOUTH, Directions::WEST})
+        {
+            auto destiny = getNextPosition(node.position, dir);
+            if (insideField(destiny, width, height) && board[destiny.first][destiny.second])
+            {
+                day18_node n(destiny, node.currentCost + 1);
+                n.updateHeuristic(end);
+                n.addAllAncestors(node.ancestors);
+                nodesToInvestigate.push(n);
+            }
+        }
+    }
+
+    return -1;
+}
+
+void day18( bool calculateB)
+{
+    auto fileTxt = ReadFile("./input/day18.txt");
+
+    int width =  71;
+    int height =  71;
+
+    std::vector<std::vector<bool>> board(height, std::vector<bool>(width, true));
+
+    int totalTime = 1024;
+
+    for(int i = 0; i < totalTime; ++i)
+    {
+        auto line = fileTxt[i];
+        auto coord = split(line, ",");
+        int col = atoi(coord[0].c_str());
+        int row = atoi(coord[1].c_str());
+        board[row][col] = false;
+    }
+
+    std::pair<int, int> start = { 0, 0};
+    std::pair<int, int> end = { height -1, width-1 };
+
+    auto resultA = day18_findWay(board, start, end, width, height);
+    std::cout << "day 18 => " << resultA << "\n";
+    if (calculateB)
+    {
+        int totalTry = fileTxt.size();
+        for (int i = totalTime; i < fileTxt.size(); ++i)
+        {
+            std::cout << i << "[" << totalTry << "]" << "\n";
+            auto line = fileTxt[i];
+            auto coord = split(line, ",");
+            int col = atoi(coord[0].c_str());
+            int row = atoi(coord[1].c_str());
+            board[row][col] = false;
+
+            auto resB = day18_findWay(board, start, end, width, height);
+            if (resB == -1)
+            {
+                std::cout << "day18_b => " << col << "," << row << "\n";
+                break;
+            }
+        }
+    }
+    else
+    {
+        std::cout << "day18_b => 56,8 \n";
+    }
+}
+
 int main()
 {
    //day1();
@@ -2846,7 +2979,7 @@ int main()
    //day15();
    //day16();
    //day17();
-   day18();
+   day18(false);
    /*
    day19();
    day20();
