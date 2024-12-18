@@ -17,6 +17,7 @@
 #include <queue>
 #include <iomanip>
 #include <stack>
+#include <bitset>
 
 using namespace std;
 
@@ -2462,6 +2463,369 @@ void day16()
 
 }
 
+unsigned long long day17_getComboValue(unsigned long long& ra, unsigned long long& rb, unsigned long long rc, int literalOperand)
+{
+    if (literalOperand <= 3) { return literalOperand; }
+    if (literalOperand == 4) { return ra; }
+    if (literalOperand == 5) { return rb; }
+    if (literalOperand == 6) { return rc; }
+    return -1;
+}
+
+int day17_runInstruction(unsigned long long& ra, unsigned long long& rb, unsigned long long& rc, string inst, string operand, int& instructionIdx, std::string& valueToPrint)
+{
+    int inst_int = atoi(inst.c_str());
+    unsigned long long literalOperand = stoull(operand.c_str());
+    unsigned long long comboOperand = day17_getComboValue(ra, rb, rc, literalOperand);
+
+    switch (inst_int)
+    {
+    case 0: ra = std::floor(ra / pow(2, comboOperand)); break;
+    case 1: rb = rb ^ literalOperand;  break;
+    case 2: rb = comboOperand % 8; break;
+    case 3: if (ra != 0) { return literalOperand; }break;
+    case 4: rb = rb ^ rc;  break;
+    case 5://std::cout << (comboOperand % 8) << ","; 
+        valueToPrint += std::to_string(comboOperand % 8) + ","; break;
+    case 6: rb = std::floor(ra / pow(2, comboOperand)); break;
+    case 7: rc = std::floor(ra/ pow(2, comboOperand)); break;
+    }
+    return instructionIdx + 2;
+}
+
+std::string day17_run(unsigned long long ra, unsigned long long rb, unsigned long long rc, const vector<string>& instructions)
+{
+    int instructionIdx = 0;
+
+    std::string result = "";
+
+    while (instructionIdx < instructions.size())
+    {
+        string instruction = instructions[instructionIdx];
+        string operand = instructions[instructionIdx + 1];
+
+        instructionIdx = day17_runInstruction(ra, rb, rc, instruction, operand, instructionIdx, result);
+
+    }
+    return result;
+}
+
+std::string day17_getValue(const std::bitset<48>& gen, const std::vector<string>& instructions)
+{
+    auto value = gen.to_ullong();
+    return day17_run(value, 0, 0, instructions);
+}
+
+long long day17_getScore(const std::string& calculation, const std::string& objective)
+{
+    long long score = 0;
+    int maxValue = min(objective.size(), calculation.size());
+    for (int i = 0; i < maxValue; ++i)
+    {
+        if (calculation[i] == objective[i] && calculation[i] != ',')
+        {
+            score += (i + 1);
+        }
+    }
+    return score;
+}
+
+int day17_getRandom(int maxValue)
+{
+    if (maxValue == 0)
+    {
+        return 0;
+    }
+    int randValue = std::rand() / ((RAND_MAX + 1u) / maxValue);
+    return randValue;
+}
+
+std::string day17_getBest(const std::vector<std::bitset<48>> genes, const std::string& objective, const std::vector<string>& instructions, std::bitset<48>& bestGen)
+{
+    auto bestScore = 0;
+    std::string bestValue;
+
+    for (auto&& gen : genes)
+    {
+        auto calculation = day17_getValue(gen, instructions);
+        auto score = day17_getScore(calculation, objective);
+        if (score > bestScore)
+        {
+            bestValue = calculation;
+            bestScore = score;
+            bestGen = gen;
+        }
+    }
+    return bestValue;
+}
+
+int day17_getRandomNode(const std::vector<int>& scoresAcum)
+{
+    int maxValue = scoresAcum.back();
+    int randV1 = day17_getRandom(maxValue);
+
+    int id = 0;
+    int minVal = 0;
+    int maxVal = scoresAcum[id];
+
+    while (minVal <= randV1 && randV1 < maxVal)
+    {
+        ++id;
+        minVal = maxVal;
+        maxVal = scoresAcum[id];
+    }
+
+    return id;
+
+    /*
+    int acum1 = 0;
+    int id1 = 0;
+    while (acum1 < randV1)
+    {
+        acum1 += scoresAcum[id1];
+        ++id1;
+    }
+    
+    return id1;
+    */
+
+}
+
+void day17_merge(std::bitset<48> g1, std::bitset<48> g2, std::bitset<48>& son1, std::bitset<48>& son2)
+{
+    int half = g1.size() / 2;
+
+    for (int i = 0; i < g1.size(); ++i)
+    {
+        if (i < half)
+        {
+            son1[i] = g1[i];
+            son2[i] = g2[i];
+        }
+        else
+        {
+            son1[i] = g2[i];
+            son2[i] = g1[i];
+        }
+    }
+}
+
+void day17_genetic(const std::string& objective, const std::vector<string>& instructions)
+{
+    int totalNodes = 50;
+    float percerntMutation = 5;
+
+    std::vector<std::bitset<48>> genes;
+
+    std::srand(std::time(nullptr));
+
+    for (int i = 0; i < totalNodes; ++i)
+    {
+        std::bitset<48> gen;
+        for (int j = 0; j < gen.size(); ++j)
+        {
+            int randValue = day17_getRandom(2);
+            gen[j] = randValue;
+        }
+        genes.push_back(gen);
+    }
+
+    std::bitset<48> bestEver = genes[0];
+
+    std::string bestString = "";
+
+    int generation = 0;
+
+    while (bestString != objective)
+    {
+        //calculate score for all
+        std::vector<int> scoresAcum;
+        std::vector<int> scores;
+        {
+            int acum = 0;
+            for (auto g : genes)
+            {
+                auto calculation = day17_getValue(g, instructions);
+                auto score = day17_getScore(calculation, objective);
+                acum += score;
+                scoresAcum.push_back(acum);
+                scores.push_back(score);
+            }
+        }
+
+        std::vector<std::bitset<48>> nextGeneration;
+        while (nextGeneration.size() != totalNodes)
+        {
+            //select 2
+            auto id1 = day17_getRandomNode(scoresAcum);
+            auto id2 = day17_getRandomNode(scoresAcum);
+
+            std::bitset<48> son1, son2;
+            //merge 
+            day17_merge(genes[id1],genes[id2], son1, son2);
+
+            nextGeneration.push_back(son1);
+            nextGeneration.push_back(son2);
+        }
+        //mutate
+
+        for (auto& g : nextGeneration)
+        {
+            if (day17_getRandom(100) < percerntMutation)
+            {
+                for (int i = 0; i < g.size(); ++i)
+                {
+                    if (day17_getRandom(100) < percerntMutation)
+                    {
+                        int randValue = day17_getRandom(2);
+                        g[i] = randValue;
+                    }
+                }
+            }
+        }
+
+        genes = nextGeneration;
+        ++generation;
+        std::bitset<48> currentBest;
+
+        //get best
+        bestString = day17_getBest(genes, objective, instructions, currentBest);
+        int bestScore = day17_getScore(bestString, objective);
+
+        if (bestScore > day17_getScore(day17_getValue(bestEver, instructions), objective))
+        {
+            bestEver = currentBest;
+        }
+        genes.push_back(bestEver);
+
+        std::cout << "generation: " << generation << ", bestScore: " << bestScore << ", => "<< bestString <<"\n";
+    }    
+}
+
+std::vector<int> day17_getNumber(const std::vector<int>& currentValue, int start)
+{
+    std::vector<int> result;
+    for (int i = start - 2; i <= start; ++i)
+    {
+        if (i >= 0)
+        {
+            result.push_back(currentValue[i]);
+        }
+        else
+        {
+            result.push_back(0);
+        }
+    }
+    return result;
+}
+
+unsigned long long day17_convertToInt(const std::vector<int>& values)
+{
+    unsigned long long acum = 0;
+    int totalDigits = values.size() - 1;
+    for (int i = totalDigits; i >= 0; --i)
+    {
+        acum += values[i] * pow(2, totalDigits - i);
+    }
+    return acum;
+}
+
+unsigned long long day17_partB(std::vector<string>& instructions)
+{
+    std::vector<int> result;
+
+    for (int i = instructions.size() - 1; i >= 0; --i)
+    {
+        int number = atoi(instructions[i].c_str());
+
+        int number2 = number ^ 7; //111
+
+        for (int i = 0; i < 7; ++i)
+        {
+            auto possibleC_bits = day17_getNumber(result, result.size() - 1 - i);
+            auto possibleC_int = day17_convertToInt(possibleC_bits);
+            auto tempB = number2 ^ possibleC_int;
+            auto B = tempB ^ 2;
+
+            auto tempResult = result;
+            auto toAdd = std::bitset<3>(B);
+            for (int j = 0; j < toAdd.size(); ++j)
+            {
+                tempResult.push_back(toAdd[j]);
+            }
+            int realB1 = B ^ 2;
+            auto realC_bit = day17_getNumber(tempResult, result.size() - 1 - realB1);
+            auto realC_int = day17_convertToInt(realC_bit);
+            if (realC_int == i)
+            {
+                for (int j = 0; j < toAdd.size(); ++j)
+                {
+                    result.push_back(toAdd[j]);
+                }
+                break;
+            }
+
+            /*
+            if (tempB == i)
+            {
+                auto B = tempB ^ 2;//010
+                auto toAdd = std::bitset<3>(B);
+                for (int j = 0; j < toAdd.size(); ++j)
+                {
+                    result.push_back(toAdd[j]);
+                }
+                break;
+            }
+            */
+        }
+            
+    }
+    
+    auto number = day17_convertToInt(result);
+    return number;
+}
+
+void day17()
+{
+    auto fileTxt = ReadFile("./input/day17.txt");
+
+    unsigned long long registerA = 0;
+    unsigned long long registerB = 0;
+    unsigned long long registerC = 0;
+
+    std::regex registerRegex("Register A: (\\d*)");
+
+    std::smatch sm;
+    std::regex_search(fileTxt[0], sm, registerRegex);
+    registerA = stoull(sm.str(1));
+
+    string instructions_str = split(fileTxt[4], ": ")[1];
+    auto instructions = split(instructions_str, ",");
+    instructions_str += ",";
+
+    /*
+    {
+        registerA = 0;
+        registerB = 2024;
+        registerC = 43690;
+        instructions = split("4,0", ",");
+    }
+    */
+    auto resA = day17_run(registerA, registerB, registerC, instructions);
+    std::cout << "day 17 => " << resA << "\n";
+    
+    int resultB = day17_partB(instructions);
+
+    std::cout << instructions_str << "\n";
+    auto resB = day17_run(resultB, 0, 0, instructions);
+    std::cout << resB << "\n";
+
+    //std::cout << instructions_str << "\n";
+    //day17_run(100000000000000 / 2, registerB, registerC, instructions); std::cout << "\n";
+    //day17_run(100000000000000 , registerB, registerC, instructions); std::cout << "\n";
+    //day17_genetic(instructions_str, instructions);
+}
+
 int main()
 {
    //day1();
@@ -2479,11 +2843,11 @@ int main()
    //day12();
    //day13();
    //day14(false);
-    //day15();
-   day16();
-   /*
-   day17();
+   //day15();
+   //day16();
+   //day17();
    day18();
+   /*
    day19();
    day20();
    day21();
