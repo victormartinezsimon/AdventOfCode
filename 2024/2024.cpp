@@ -2720,6 +2720,142 @@ void day18( bool calculateB)
     }
 }
 
+bool day19_canUseTowel(const std::string& towel, const std::string& pattern)
+{
+    if (towel.size() > pattern.size())
+    {
+        return false;
+    }
+
+    for (int index = 0; index < towel.size(); ++index)
+    {
+        if (towel[index] != pattern[index])
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::string day19_getCacheKey(const std::vector<string>& towels, const std::string& pattern)
+{
+    std::string result = "";
+    for (auto t : towels)
+    {
+        result += t + "-";
+    }
+
+    result += "#" + pattern;
+
+    return result;
+}
+
+unsigned long long day19_getTotalPatterns(std::vector<string>& towels, std::string pattern, std::map<std::string, unsigned long long>& cache)
+{
+    if (pattern.empty())
+    {
+        return 1;
+    }
+
+    std::string key = day19_getCacheKey(towels, pattern);
+
+    if (cache.find(key) != cache.end())
+    {
+        return cache[key];
+    }
+
+    unsigned long long acumWays = 0;
+    for (int i = 0; i < towels.size(); ++i)
+    {
+        std::string towel = towels[i];
+        if (day19_canUseTowel(towel, pattern))
+        {
+            string newPattern = pattern.substr(towel.size());
+
+            auto waysUseAndRemain = day19_getTotalPatterns(towels, newPattern, cache);
+
+            acumWays += waysUseAndRemain;
+        }
+    }
+
+    cache[key] = acumWays;
+    return acumWays;
+}
+
+bool day19_canBeBuildPattern(std::vector<string>& towels, std::string pattern, std::map<std::string, bool>& cache)
+{
+    if (pattern.empty())
+    {
+        return true;
+    }
+
+    std::string key = day19_getCacheKey(towels, pattern);
+
+    if (cache.find(key) != cache.end())
+    {
+        return cache[key];
+    }
+
+    bool canBeBuild = false;
+    for (int i = 0; i < towels.size(); ++i)
+    {
+        std::string towel = towels[i];
+        if (day19_canUseTowel(towel, pattern))
+        {
+            string newPattern = pattern.substr(towel.size());
+
+            auto useAndRemain = day19_canBeBuildPattern(towels, newPattern, cache);
+
+            if (useAndRemain)
+            {
+                canBeBuild = true;
+                break;
+            }
+        }
+    }
+
+    cache[key] = canBeBuild;
+    return canBeBuild;
+}
+
+
+void day19()
+{
+    auto fileTxt = ReadFile("./input/day19.txt");
+
+    auto towels_tmp = split(fileTxt[0], ",");
+
+    std::vector<string> towels;
+
+    for (auto t : towels_tmp)
+    {
+        towels.push_back(trim_copy(t));
+    }
+
+    std::map<std::string, bool> cacheBuild;
+    std::map<std::string, unsigned long long> cacheTimes;
+
+    int acumA = 0;
+    unsigned long long acumB = 0;
+
+    for (int i = 2; i < fileTxt.size(); ++i)
+    {
+        auto pattern = fileTxt[i];
+
+        auto canBeBuild = day19_canBeBuildPattern(towels, pattern, cacheBuild);
+
+        if (canBeBuild)
+        {
+            ++acumA;
+            acumB += day19_getTotalPatterns(towels, pattern, cacheTimes);
+        }
+    }
+
+
+    std::cout << "day 19 => " << acumA << "\n";
+    std::cout << "day 19_b => " << acumB << "\n";
+}
+
 int main()
 {
    //day1();
@@ -2739,10 +2875,10 @@ int main()
    //day14(false);
    //day15();
    //day16();
-   day17();
+   //day17();
    //day18(false);
-   /*
    day19();
+   /*
    day20();
    day21();
    day22();
