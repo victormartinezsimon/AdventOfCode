@@ -2856,6 +2856,503 @@ void day19()
     std::cout << "day 19_b => " << acumB << "\n";
 }
 
+std::pair<int, int> day20_findPosition(const std::vector<string>& board, char c)
+{
+    for (int row = 0; row < board.size(); ++row)
+    {
+        for (int col = 0; col < board[row].size(); ++col)
+        {
+            if (board[row][col] == c)
+            {
+                return { row, col };
+            }
+        }
+    }
+    return { -1,-1 };
+}
+
+struct day20_node
+{
+    std::pair<int, int> position;
+    int cost;
+
+    /*
+    friend bool operator<(const day20_node& a, const day20_node& b)
+    {
+        return a.cost > b.cost;
+    }
+    */
+};
+
+std::vector<std::vector<int>> day20_calculateDistances(const std::vector<string>& board, int width, int height, const std::pair<int, int>& start, std::pair<int, int>& end)
+{
+    int inf = std::numeric_limits<int>::max();
+    std::vector<std::vector<int>> toReturn(height, std::vector<int>(width, inf));
+
+    day20_node startNode(start, 0);
+
+    std::vector<day20_node> nodesToVisit;
+    nodesToVisit.push_back(startNode);
+
+    while (!nodesToVisit.empty())
+    {
+        auto node = nodesToVisit[0];
+        nodesToVisit.erase(nodesToVisit.begin());
+
+        if (toReturn[node.position.first][node.position.second] < node.cost) { continue; }
+
+        toReturn[node.position.first][node.position.second] = node.cost;
+
+        if (node.position == end) { continue; }
+
+        for (Directions dir : {Directions::NORTH, Directions::EAST, Directions::SOUTH, Directions::WEST})
+        {
+            auto nextPosition = getNextPosition(node.position, dir);
+            if (!insideField(nextPosition, width, height) || board[nextPosition.first][nextPosition.second] == '#') { continue; }
+
+            day20_node newNode(nextPosition, node.cost + 1);
+            nodesToVisit.push_back(newNode);
+        }
+    }
+
+    return toReturn;
+}
+
+bool day20_validPosition(const std::vector<string>& board, int width, int height, const std::pair<int, int>& pos)
+{
+    return insideField(pos, width, height) && board[pos.first][pos.second] != '#';
+}
+
+std::map<int, std::set<pair<int, int>>> day20_calculateCheats_partA(const std::vector<string>& board, int width, int height, const std::vector<std::vector<int>>& distances)
+{
+    std::map<int, std::set<pair<int, int>>> toReturn;
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < width; ++col)
+        {
+            if (board[row][col] == '#')
+            {
+                auto north = getNextPosition(row, col, Directions::NORTH);
+                auto south = getNextPosition(row, col, Directions::SOUTH);
+                auto east = getNextPosition(row, col, Directions::EAST);
+                auto west = getNextPosition(row, col, Directions::WEST);
+
+                //there are few cases, so check manually
+                if (day20_validPosition(board, width, height, north))
+                {
+                    if (day20_validPosition(board, width, height, south))
+                    {
+                        int diff = abs(distances[north.first][north.second] - distances[south.first][south.second]) - 2;
+                        toReturn[diff].insert({row, col});
+                    }
+
+                    if (day20_validPosition(board, width, height, east))
+                    {
+                        int diff = abs(distances[north.first][north.second] - distances[east.first][east.second]) - 2;
+                        toReturn[diff].insert({ row, col });
+                    }
+
+                    if (day20_validPosition(board, width, height, west))
+                    {
+                        int diff = abs(distances[north.first][north.second] - distances[west.first][west.second]) - 2;
+                        toReturn[diff].insert({ row, col });
+                    }
+                }
+
+                if (day20_validPosition(board, width, height, south))
+                {
+                    if (day20_validPosition(board, width, height, east))
+                    {
+                        int diff = abs(distances[south.first][south.second] - distances[east.first][east.second]) - 2;
+                        toReturn[diff].insert({ row, col });
+                    }
+
+                    if (day20_validPosition(board, width, height, west))
+                    {
+                        int diff = abs(distances[south.first][south.second] - distances[west.first][west.second]) - 2;
+                        toReturn[diff].insert({ row, col });
+                    }
+                }
+
+                if (day20_validPosition(board, width, height, east))
+                {
+                    if (day20_validPosition(board, width, height, west))
+                    {
+                        int diff = abs(distances[east.first][east.second] - distances[west.first][west.second]) - 2;
+                        toReturn[diff].insert({ row, col });
+                    }
+                }
+            }
+        }
+    }
+
+    return toReturn;
+}
+
+void day20_printDistances(std::vector<std::vector<int>>& dist, std::vector<string>& board)
+{
+    int width = dist[0].size();
+    int height = dist.size();
+
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < height; ++col)
+        {
+            if (board[row][col] == '#') { std::cout << "####|"; }
+            else
+            {
+                char buff[10];
+                sprintf_s(buff, "%02d|", dist[row][col]);
+                std::cout << buff;
+            }
+        }
+
+        std::cout << "\n";
+    }
+    std::cout << "\n";
+
+}
+
+void day20_calculateA(std::vector<std::vector<int>> distances, std::vector<string>& board, int width, int height)
+{
+    auto cheats = day20_calculateCheats_partA(board, width, height, distances);
+
+    long long solA = 0;
+
+    int limit = 100;
+
+    for (auto kvp : cheats)
+    {
+        if (kvp.first >= limit)
+        {
+            solA += kvp.second.size();
+        }
+    }
+
+    std::cout << "day 20 => " << solA << "\n";
+}
+
+void day20_printRecheables(std::set < pair<int, int>> recheables, std::pair<int, int> position, std::vector<string>& board)
+{
+    for (int row = 0; row < board.size(); ++row)
+    {
+        for (int col = 0; col < board[row].size(); ++col)
+        {
+            std::pair<int, int> pos = { row, col };
+            if (pos == position) { std::cout << "*"; continue; }
+
+            if (recheables.find(pos) != recheables.end())
+            {
+                std::cout << "O";
+                continue;
+            }
+
+            std::cout << board[row][col];
+        }
+        std::cout << "\n";
+    }
+    std::cout << "\n";
+}
+
+int day20_distanceBetweenPoints(const std::pair<int, int>& p1, const std::pair<int, int>& p2)
+{
+    return abs(p1.first - p2.first) + abs(p1.second - p2.second);
+}
+
+void day20_calculateB(std::vector<std::vector<int>> distances, std::vector<string>& board, int width, int height, std::pair<int, int> & endPosition)
+{
+    std::map<int, std::set<pair<int, int>>> cheatsB;
+
+    std::map<string, std::set<pair<int, int>>> cache;
+
+    int limitTime = 20;
+
+    long long solB = 0;
+    int minimunCheat = 100;
+
+    int timeToReachEnd = distances[endPosition.first][endPosition.second];
+
+    std::map<int, int> count;
+
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < width; ++col)
+        {
+            if (board[row][col] == '#')
+            {
+                continue;
+            }
+
+            for (int row2 = row - limitTime; row2 <= row + limitTime; ++row2)
+            {
+                for (int col2 = col - limitTime; col2 <= col + limitTime; ++col2)
+                {
+                    if (!insideField(row2, col2, width, height))
+                    {
+                        continue;
+                    }
+
+                    if (board[row2][col2] == '#')
+                    {
+                        continue;
+                    }
+
+                    
+                    if (row2 == row && col2 == col)
+                    {
+                        continue;
+                    }
+                    
+
+                    int distanceBetweenPoints = day20_distanceBetweenPoints({row2, col2}, {row, col});
+                    if (distanceBetweenPoints > limitTime)
+                    {
+                        continue;
+                    }
+
+                    if (distances[row2][col2] < distances[row][col])
+                    {
+                        int timeUsingThisCheat = distances[row2][col2];
+                        timeUsingThisCheat += distanceBetweenPoints;
+                        timeUsingThisCheat += (timeToReachEnd - distances[row][col]);
+
+                        int realWin = timeToReachEnd - timeUsingThisCheat;
+
+
+                        if (realWin >= minimunCheat)
+                        {
+                            ++solB;
+                        }
+                    }
+                }
+            }
+
+        }
+   }
+
+    std::cout << "day 20_B => " << solB << "\n";
+}
+
+
+void day20()
+{
+    auto board = ReadFile("./input/day20.txt");
+
+    auto start = day20_findPosition(board, 'S');
+    auto end = day20_findPosition(board, 'E');
+
+    int width = board[0].size();
+    int height = board.size();
+
+    auto distances = day20_calculateDistances(board, width, height, start, end);
+    //day20_printDistances(distances, board);
+
+    day20_calculateA(distances, board, width, height);
+    day20_calculateB(distances, board, width, height, end);
+}
+
+namespace day21_buildPaths
+{
+    char day21_getCharFromDirection(Directions dir)
+    {
+        switch (dir)
+        {
+        case Directions::NORTH:return '^';
+        case Directions::SOUTH:return 'v';
+        case Directions::EAST:return '>';
+        case Directions::WEST:return '<';
+        }
+        return '#';
+    }
+
+    std::vector<std::string> day21_buildAllPath(const std::pair<int, int>& curr, const std::pair<int, int>& end, std::vector<Directions>& availableMovements, const std::string& currentStr, std::vector<std::vector<char>>& board, const int width, const int height)
+    {
+        if (curr == end) { return { currentStr + "A"}; }
+
+        std::vector<std::string> toReturn;
+
+        for (auto dir : availableMovements)
+        {
+            auto nextPosition = getNextPosition(curr, dir);
+            if (insideField(nextPosition, width, height) && board[nextPosition.first][nextPosition.second] != '#')
+            {
+                auto newStr = currentStr + day21_getCharFromDirection(dir);
+                auto solTmp = day21_buildAllPath(nextPosition, end, availableMovements, newStr, board, width, height);
+                toReturn.insert(toReturn.end(), solTmp.begin(), solTmp.end());
+            }
+        }
+
+        return toReturn;
+    }
+
+    std::pair<int, int> day21_getPositionInBoard(char c, std::vector<std::vector<char>>& board)
+    {
+        for (int row = 0; row < board.size(); ++row)
+        {
+            for (int col = 0; col < board[row].size(); ++col)
+            {
+                if (board[row][col] == c)
+                {
+                    return { row, col };
+                }
+            }
+        }
+        return { -1,-1 };
+    }
+
+    std::vector<string> day21_getAllPaths(char start, char end, std::vector<std::vector<char>>& board)
+    {
+        auto startPos = day21_getPositionInBoard(start, board);
+        auto endPos = day21_getPositionInBoard(end, board);
+
+        std::vector<Directions> availableMovements;
+
+        if (startPos.first < endPos.first) { availableMovements.push_back(Directions::SOUTH); }
+        if (startPos.first > endPos.first) { availableMovements.push_back(Directions::NORTH); }
+        if (startPos.second < endPos.second) { availableMovements.push_back(Directions::EAST); }
+        if (startPos.second > endPos.second) { availableMovements.push_back(Directions::WEST); }
+
+        auto solution = day21_buildAllPath(startPos, endPos, availableMovements, "", board, board[0].size(), board.size());
+
+        return solution;
+    }
+
+    std::map<string, std::vector<string>> day21_getAllPaths(std::vector<std::vector<char>>& board)
+    {
+        int width = board[0].size();
+        int height = board.size();
+
+        std::vector<char> availableButtons;
+
+        for (int row = 0; row < height; ++row)
+        {
+            for (int col = 0; col < width; ++col)
+            {
+                if (board[row][col] != '#')
+                {
+                    availableButtons.push_back(board[row][col]);
+                }
+            }
+        }
+
+
+        std::map<string, std::vector<string>> toReturn;
+        for (int i = 0; i < availableButtons.size(); ++i)
+        {
+            for (int j = 0; j < availableButtons.size(); ++j)
+            {
+                std::string key = string(1, availableButtons[i]) + string(1, availableButtons[j]);
+                toReturn[key] = day21_getAllPaths(availableButtons[i], availableButtons[j], board);
+            }
+        }
+        return toReturn;
+    }
+}
+
+long long day21_getMinCode(char a, char b, std::map<string, std::vector<string >> pathsNumbers, std::map<string, std::vector<string>>& pathsDirections, std::vector<std::vector<std::vector<long long>>>& cache, int currentLayer, int totalLayers)
+{
+    if (currentLayer == totalLayers-1) { return 1; }//in the last layer, press directly the button
+    if (cache[a][b][currentLayer] != -1) { return cache[a][b][currentLayer]; }
+
+    std::string key = string(1, a) + string(1, b);
+
+    std::vector<string> allPaths = currentLayer == 0 ? pathsNumbers[key] : pathsDirections[key];
+
+    long long best = -1;
+    for (auto&& path : allPaths)
+    {
+        long long solTmp = 0;
+        char currentPosition = 'A';
+        for (int pos = 0; pos < path.size(); ++pos)
+        {
+            solTmp += day21_getMinCode(currentPosition, path[pos], pathsNumbers, pathsDirections, cache, currentLayer + 1, totalLayers);
+            currentPosition = path[pos];
+        }
+
+        if (best == -1 || solTmp < best)
+        {
+            best = solTmp;
+        }
+
+    }
+    cache[a][b][currentLayer] = best;
+    return best;
+}
+
+long long day21_getMinCodeSize(const std::string& code, std::map<string, std::vector<string>> pathsNumbers, std::map<string, std::vector<string>>& pathsDirections, std::vector<std::vector<std::vector<long long>>>& cache, int totalLayers)
+{
+    //always we do the path from A => first letter
+    //then path from N letter to N+1
+
+    long long solution = 0;
+    char currentPosition = 'A';
+    for (int pos = 0; pos < code.size(); ++pos)
+    {
+        solution += day21_getMinCode(currentPosition, code[pos], pathsNumbers, pathsDirections, cache, 0, totalLayers);
+        currentPosition = code[pos];
+    }
+
+    return solution;
+}
+
+void day21()
+{
+    //+---+---+---+
+    //| 7 | 8 | 9 |
+    //+---+---+---+
+    //| 4 | 5 | 6 |
+    //+---+---+---+
+    //| 1 | 2 | 3 |
+    //+---+---+---+
+    //    | 0 | A |
+    //    +---+---+
+    std::vector<std::vector<char>> boardNumbers = {
+       {'7','8','9'},
+       {'4','5','6'},
+       {'1','2','3'},
+       {'#','0','A'},
+    };
+
+    auto allPathsNumbers = day21_buildPaths::day21_getAllPaths(boardNumbers);
+
+    //    +---+---+
+    //    | ^ | A |
+    //+---+---+---+
+    //| < | v | > |
+    //+---+---+---+
+
+    std::vector<std::vector<char>> boardDirections = {
+       {'#','^','A'},
+       {'<','v','>'},
+    };
+    auto allPathsDirections = day21_buildPaths::day21_getAllPaths(boardDirections);
+
+    std::vector<std::vector<std::vector<long long>>> cacheA(128, std::vector<std::vector<long long>>(128, std::vector<long long>(5, -1)));
+
+    std::vector<std::vector<std::vector<long long>>> cacheB(128, std::vector<std::vector<long long>>(128, std::vector<long long>(28, -1)));
+
+    
+    auto codes = ReadFile("./input/day21.txt");
+
+    long long solA = 0;
+    long long solB = 0;
+
+    for (auto&& c : codes)
+    {
+       // c = "029A";
+        long long codeSizeA = day21_getMinCodeSize(c, allPathsNumbers, allPathsDirections, cacheA, 4);
+        long long  codeSizeB = day21_getMinCodeSize(c, allPathsNumbers, allPathsDirections, cacheB, 27);
+
+        int number = atoi(c.substr(0, 3).c_str());
+
+        solA += codeSizeA * number;
+        solB += codeSizeB * number;
+    }
+
+    std::cout << "day21 => " << solA << "\n";
+    std::cout << "day21_B => " << solB << "\n";
+}
+
 int main()
 {
    //day1();
@@ -2877,10 +3374,11 @@ int main()
    //day16();
    //day17();
    //day18(false);
-   day19();
-   /*
-   day20();
+   //day19();
+   //day20();
    day21();
+   other::run();
+   /*
    day22();
    day23();
    day24();
