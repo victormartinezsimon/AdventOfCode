@@ -3353,6 +3353,130 @@ void day21()
     std::cout << "day21_B => " << solB << "\n";
 }
 
+long long day22_manipulateNumber(long long start, int times, std::vector<int>& lastDigits)
+{
+    long long secretNumber = start;
+
+    lastDigits.push_back(secretNumber % 10);
+
+    for (int i = 0; i < times; ++i)
+    {
+        //step 1
+        auto step1 = secretNumber * 64;
+        secretNumber = step1 ^ secretNumber;
+        secretNumber = secretNumber % 16777216;
+
+        //step 2
+        auto step2 = secretNumber / 32;
+        secretNumber = step2 ^ secretNumber;
+        secretNumber = secretNumber % 16777216;
+
+        //step 3
+        auto step3 = secretNumber * 2048;
+        secretNumber = step3 ^ secretNumber;
+        secretNumber = secretNumber % 16777216;
+
+        //string s = std::to_string(secretNumber);
+        //int number = atoi(s.substr(s.size() - 1).c_str());
+        lastDigits.push_back(secretNumber % 10);
+    }
+
+    return secretNumber;
+}
+
+std::string day22_buildKey(const std::vector<int>& sequence)
+{
+    std::string toReturn = "";
+    for (auto s : sequence)
+    {
+        toReturn += std::to_string(s)+"|";
+    }
+    return toReturn;
+}
+
+std::map<string, int> day22_buildPartB(const std::vector<int>& lastDigits)
+{
+    std::vector<int> sequence;
+    std::map<string, int> sequeceValue;
+    int lastValue = lastDigits[0];
+    for (int i = 1; i < lastDigits.size(); ++i)
+    {
+        int diff = lastDigits[i] - lastValue;
+        lastValue = lastDigits[i];
+        sequence.push_back(diff);
+        if (sequence.size() == 4)
+        {
+            std::string key = day22_buildKey(sequence);
+            if (sequeceValue.find(key) == sequeceValue.end())
+            {
+                sequeceValue[key] = lastDigits[i];
+            }
+            sequence.erase(sequence.begin());
+        }
+    }
+
+    return sequeceValue;
+}
+
+void day22( bool calculateB)
+{
+    auto fileTxt = ReadFile("./input/day22.txt");
+
+    long long resA = 0;
+    std::map<long long, std::vector<int>> allLastDigits;
+    for (auto l : fileTxt)
+    {
+        long long value = stoll(l.c_str());
+        std::vector<int> lastDigits;
+        auto res = day22_manipulateNumber(value, 2000, lastDigits);
+        allLastDigits[value] = lastDigits;
+        resA += res;
+    }
+
+    std::cout << "day 22=> " << resA << "\n";
+
+    if (!calculateB)
+    {
+        std::cout << "day 22_b =>" << 2100 << "\n";
+    }
+
+    std::map<string, std::vector<long long>> relationSequenceNumber;
+    std::map<long long, std::map<string, int>> relationNumberWithAllSequences;
+
+    for (auto kvp : allLastDigits)
+    {
+        auto key = kvp.first;
+        auto lastDigits = kvp.second;
+        auto sequenceValue = day22_buildPartB(lastDigits);
+        relationNumberWithAllSequences[key] = sequenceValue;
+
+        for (auto seqKvp : sequenceValue)
+        {
+            relationSequenceNumber[seqKvp.first].push_back(key);
+        }
+    }
+
+    long long bestAcum = -1;
+    for (auto kvp : relationSequenceNumber)
+    {
+        long long acum = 0;
+        string key = kvp.first;
+        auto sequencesWithThisKey = kvp.second;
+
+        for (auto s : sequencesWithThisKey)
+        {
+            acum += relationNumberWithAllSequences[s][key];
+        }
+
+        if (acum > bestAcum)
+        {
+            bestAcum = acum;
+        }
+    }
+
+    std::cout << "day 22_b =>" << bestAcum << "\n";
+}
+
 int main()
 {
    //day1();
@@ -3376,10 +3500,9 @@ int main()
    //day18(false);
    //day19();
    //day20();
-   day21();
-   other::run();
+   //day21();
+   day22(false);
    /*
-   day22();
    day23();
    day24();
    day25();
