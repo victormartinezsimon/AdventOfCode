@@ -3477,6 +3477,177 @@ void day22( bool calculateB)
     std::cout << "day 22_b =>" << bestAcum << "\n";
 }
 
+void day23_checkIntersections(const string& nodeStart, const std::map<string, set<string>>& allNodes, std::set<string>& allIntersections)
+{
+    auto myNeightbours = allNodes.at(nodeStart);
+
+    std::set<string> trios;
+
+    for (auto n : myNeightbours)
+    {
+        auto otherNeightBours = allNodes.at(n);
+        std::set<string> unionSet;
+
+        set_intersection(myNeightbours.begin(), myNeightbours.end(), otherNeightBours.begin(), otherNeightBours.end(), std::inserter(unionSet, unionSet.begin()));
+
+        //on unionSet is the nodes that have a common between nodeStart and n
+        std::vector<string>key = { nodeStart, n };
+
+        for (auto u : unionSet)
+        {
+            std::vector<string>key = { nodeStart, n, u };
+            std::sort(key.begin(), key.end());
+
+            std::string toAdd = "";
+            for (auto k : key)
+            {
+                toAdd += k + "-";
+            }
+            allIntersections.insert(toAdd);
+        }
+    }
+}
+
+void day23_a(const std::vector<string>& fileTxt)
+{
+    std::map<string, set<string>> allNodes;
+
+    std::set<string> t_starters;
+
+    for (auto&& c : fileTxt)
+    {
+        auto nodes = split(c, "-");
+        auto key1 = trim_copy(nodes[0]);
+        auto key2 = trim_copy(nodes[1]);
+
+        allNodes[key1].insert(key2);
+        allNodes[key2].insert(key1);
+
+        if (key1[0] == 't') { t_starters.insert(key1); }
+        if (key2[0] == 't') { t_starters.insert(key2); }
+    }
+
+    std::set<string> allIntersections;
+    for (auto node : t_starters)
+    {
+        day23_checkIntersections(node, allNodes, allIntersections);
+    }
+
+    int solA = allIntersections.size();
+
+    std::cout << "day 23=> " << solA << "\n";
+}
+string day23_buildKey(const std::set<string>& possibleNodes, const set<string>& currentSelection)
+{
+    string toReturn= "";
+
+    for (auto n : possibleNodes)
+    {
+        toReturn += n +",";
+    }
+    toReturn += "|";
+
+    for (auto n : currentSelection)
+    {
+        toReturn += n + ",";
+    }
+
+    return toReturn;
+}
+set<string> day23_calculateIntersection(const std::map<string, set<string>>& allNodes, const set<string>& possibleNodes, set<string>& currentSelection, std::map<string, set<string>>& cache)
+{
+    if (possibleNodes.size() == 0)
+    {
+        return currentSelection;
+    }
+
+    string key = day23_buildKey(possibleNodes, currentSelection);
+
+    if (cache.find(key) != cache.end())
+    {
+        return cache[key];
+    }
+
+    set<string> currentBest;
+    for (auto n : possibleNodes)
+    {
+        auto neigthbours = allNodes.at(n);
+
+        std::set<string> unionSet;
+        set_intersection(neigthbours.begin(), neigthbours.end(), possibleNodes.begin(), possibleNodes.end(), std::inserter(unionSet, unionSet.begin()));
+
+        currentSelection.insert(n);
+        auto res = day23_calculateIntersection(allNodes, unionSet, currentSelection, cache);
+        currentSelection.erase(n);
+
+        if (res.size() > currentBest.size())
+        {
+            currentBest = res;
+        }
+    }
+
+    cache[key] = currentBest;
+    return currentBest;
+}
+
+void day23_b(const std::vector<string>& fileTxt)
+{
+    std::map<string, set<string>> allNodes;
+
+    for (auto&& c : fileTxt)
+    {
+        auto nodes = split(c, "-");
+        auto key1 = trim_copy(nodes[0]);
+        auto key2 = trim_copy(nodes[1]);
+
+        allNodes[key1].insert(key2);
+        allNodes[key2].insert(key1);
+    }
+
+    std::vector<string> nodesIds;
+    for (auto c : allNodes)
+    {
+        nodesIds.push_back(c.first);
+    }
+
+    std::map<string, set<string>> cacheV3;
+
+    std::set<string> best;
+    for (auto c : nodesIds)
+    {
+        auto possibleNodes = allNodes[c];
+        std::set<string> currentSelection = { c };
+
+        auto res = day23_calculateIntersection(allNodes, possibleNodes, currentSelection, cacheV3);
+
+        if (res.size() > best.size())
+        {
+            best = res;
+        }
+    }
+
+    std::cout << "day 23_b => ";
+    for (auto c : best)
+    {
+        std::cout << c << ",";
+    }
+    std::cout << "\n";
+}
+
+void day23(bool calculateB)
+{
+    auto fileTxt = ReadFile("./input/day23.txt");
+    day23_a(fileTxt);
+    if (calculateB)
+    {
+        day23_b(fileTxt);
+    }
+    else
+    {
+        std::cout << "day 23_b => ar,cd,hl,iw,jm,ku,qo,rz,vo,xe,xm,xv,ys,\n";
+    }
+}
+
 int main()
 {
    //day1();
@@ -3501,9 +3672,9 @@ int main()
    //day19();
    //day20();
    //day21();
-   day22(false);
+   //day22(false);
+   day23(false);
    /*
-   day23();
    day24();
    day25();
    */
