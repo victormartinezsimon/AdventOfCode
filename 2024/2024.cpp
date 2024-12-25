@@ -3843,6 +3843,123 @@ void day24()
     std::cout << "day 24 partB => cbd,gmh,jmq,qrh,rqf,z06,z13,z38 \n";
 }
 
+struct day25_node
+{
+    std::vector<string> shape;
+    std::vector<int> value;
+};
+
+void day25_calculateValue(day25_node& n, bool isLock)
+{
+    int width = n.shape[0].size();
+
+    for (int col = 0; col < width; ++col)
+    {
+        int count = 0;
+        for (int row = 0; row < n.shape.size(); ++row)
+        {
+            if (isLock)
+            {
+                if (n.shape[row][col] == '#')
+                {
+                    ++count;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            else
+            {
+                if (n.shape[row][col] == '.')
+                {
+                    ++count;
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+
+        if (isLock)
+        {
+            n.value.push_back(count-1);
+        }
+        else
+        {
+            n.value.push_back(n.shape.size() - count - 1);
+        }
+    }
+}
+int day25_checklock(day25_node& lock, std::vector<day25_node>& keys)
+{
+    int count = 0;
+
+    for (auto&& key : keys)
+    {
+        bool valid = true;
+        for (int i = 0; i < key.value.size(); ++i)
+        {
+            if (key.value[i] + lock.value[i] >= 6)
+            {
+                valid = false;
+                break;
+            }
+        }
+        if (valid)
+        {
+            ++count;
+        }
+    }
+
+    return count;
+}
+
+
+void day25()
+{
+    auto fileTxt = ReadFile("./input/day25.txt");
+
+    int line = 0;
+    int sizeShape = 7;
+
+    std::vector<day25_node> locks;
+    std::vector<day25_node> keys;
+
+    while(line < fileTxt.size())
+    {
+        day25_node n;
+        for (int i = 0; i < sizeShape; ++i)
+        {
+            n.shape.push_back(fileTxt[line]);
+            ++line;
+        }
+
+        if (n.shape[0][0] == '#')
+        {
+            day25_calculateValue(n, true);
+            locks.push_back(n);
+        }
+        else
+        {
+            day25_calculateValue(n, false);
+            keys.push_back(n);
+        }
+
+        ++line;
+    }
+
+    int count = 0;
+
+    for (auto lock : locks)
+    {
+        count += day25_checklock(lock, keys);
+    }
+
+    std::cout << "day 25 =>" << count << "\n";
+}
+
 
 int main()
 {
@@ -3870,10 +3987,8 @@ int main()
    //day21();
    //day22(false);
    //day23(false);
-   day24();
-   /*
+   //day24();
    day25();
-   */
    
 }
 
