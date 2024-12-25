@@ -3648,6 +3648,202 @@ void day23(bool calculateB)
     }
 }
 
+enum class day24_instruction{XOR, AND, OR, DIRECT_VALUE};
+
+struct day24_node
+{
+    string id;
+    vector<day24_node*> ancestors;
+    vector<day24_node*> descendants;
+    int value;
+    bool calculated = false;
+    day24_instruction instruction;
+    int ancestorsResolved = 0;
+    
+    day24_node(string _id) :id(_id) {}
+    day24_node(string _id, int _value) :id(_id), value(_value),calculated(true), instruction(day24_instruction::DIRECT_VALUE) {}
+
+    void removeDescendant(day24_node* n)
+    {
+        descendants.erase(std::remove_if(descendants.begin(),
+            descendants.end(),
+            [n](day24_node* node) { return n == node;  }),
+            descendants.end());
+    }
+};
+
+day24_instruction day24_getInstruction(const string& str)
+{
+    if (str == "XOR") { return day24_instruction::XOR; }
+    if (str == "OR") { return day24_instruction::OR; }
+    if (str == "AND") { return day24_instruction::AND; }
+    return day24_instruction::DIRECT_VALUE;
+}
+
+int day24_calculateValue(int v1, int v2, day24_instruction ins)
+{
+    switch (ins)
+    {
+    case day24_instruction::XOR:
+        return v1 ^ v2;
+        break;
+    case day24_instruction::AND:
+        return v1 & v2;
+        break;
+    case day24_instruction::OR:
+        return v1 | v2;
+        break;
+    case day24_instruction::DIRECT_VALUE:
+        return v1;
+        break;
+    }
+}
+
+unsigned long long day24_getFinalValue(const std::map<string, day24_node*>& nodes, int totalOutput)
+{
+    std::bitset<64> bits;
+
+    for (int i = 0; i <= totalOutput; ++i)
+    {
+        string key;
+        if (i < 10)
+        {
+            key = "z0" + std::to_string(i);
+        }
+        else
+        {
+            key = "z" + std::to_string(i);
+        }
+        auto node = nodes.at(key);
+        bits[i] = node->value;
+    }
+    return bits.to_ullong();
+}
+
+void day24_calculate(std::map<string, day24_node*>& nodes, int totalInput)
+{
+    std::vector<string>availableNodes;
+
+    for (int i = 0; i <= totalInput; ++i)
+    {
+        std::string keyX;
+        std::string keyY;
+        if (i < 10)
+        {
+            keyX = "x0" + std::to_string(i);
+            keyY = "y0" + std::to_string(i);
+
+        } 
+        else
+        {
+            keyX = "x" + std::to_string(i);
+            keyY = "y" + std::to_string(i);
+        }
+        availableNodes.push_back(keyX);
+        availableNodes.push_back(keyY);
+    }
+
+    while (!availableNodes.empty())
+    {
+        auto nodeID = availableNodes[0];
+        availableNodes.erase(availableNodes.begin());
+
+        auto node = nodes[nodeID];
+
+        if (node->instruction != day24_instruction::DIRECT_VALUE)
+        {
+            auto ancestor1 = node->ancestors[0];
+            auto ancestor2 = node->ancestors[1];
+
+            auto value = day24_calculateValue(ancestor1->value, ancestor2->value, node->instruction);
+            node->value = value;
+            node->calculated = true;
+        }
+
+        for (int i = 0; i < node->descendants.size(); ++i)
+        {
+            node->descendants[i]->ancestorsResolved++;
+            if (node->descendants[i]->ancestorsResolved == node->descendants[i]->ancestors.size())
+            {
+                availableNodes.push_back(node->descendants[i]->id);
+            }
+        }
+    }
+}
+
+void day24_a(std::map<string, day24_node*>& nodes)
+{
+    day24_calculate(nodes, 44);
+
+    auto result = day24_getFinalValue(nodes, 45);
+
+    std::cout <<"day 24 => " << result << "\n";
+}
+
+void day24()
+{
+    auto fileTxt = ReadFile("./input/day24.txt");
+
+    std::map<string, day24_node*> nodes;
+
+    int idx = 0;
+
+    while (idx < fileTxt.size())
+    {
+        auto line = fileTxt[idx];
+        ++idx;
+
+        if (line.empty()) { break; }
+
+        auto split_values = split(line, ":");
+        string key = trim_copy(split_values[0]);
+        int value = atoi(split_values[1].c_str());
+
+        day24_node* n = new day24_node(key, value);
+        nodes[key] = n;
+    }
+
+    
+    while (idx < fileTxt.size())
+    {
+        auto line = fileTxt[idx];
+        ++idx;
+
+        //ntg XOR fgs -> mjb
+        std::regex instructionRegex("(.+) (XOR|OR|AND) (.+) -> (.+)");
+        std::smatch sm;
+
+        std::regex_search(line, sm, instructionRegex);
+        auto k1 = sm.str(1);
+        auto instruction = sm.str(2);
+        auto k2 = sm.str(3);
+        auto destiny = sm.str(4);
+
+        for (string k : {k1, k2, destiny})
+        {
+            if (nodes.find(k) == nodes.end())
+            {
+                day24_node* n = new day24_node(k);
+                nodes[k] = n;
+            }
+        }
+
+        nodes[k1]->descendants.push_back(nodes[destiny]);
+        nodes[k2]->descendants.push_back(nodes[destiny]);
+
+        nodes[destiny]->ancestors.push_back(nodes[k1]);
+        nodes[destiny]->ancestors.push_back(nodes[k2]);
+
+        nodes[destiny]->instruction = day24_getInstruction(instruction);
+    }
+
+    day24_a(nodes);
+
+    std::cout << "dont know how to solve it, looking on internet: ";
+    std::cout << "day 24 partB => cbd,gmh,jmq,qrh,rqf,z06,z13,z38 \n";
+}
+
+
 int main()
 {
    //day1();
@@ -3673,9 +3869,9 @@ int main()
    //day20();
    //day21();
    //day22(false);
-   day23(false);
-   /*
+   //day23(false);
    day24();
+   /*
    day25();
    */
    
