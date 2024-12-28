@@ -3649,6 +3649,7 @@ void day23(bool calculateB)
 }
 
 enum class day24_instruction{XOR, AND, OR, DIRECT_VALUE};
+enum class day24_gateType {DIRECT_INPUT_XOR, DIRECT_INPUT_AND, CARRY_AND, CARRY_OR_OUT, OUTPUT, INPUT, UNKNOWN};
 
 struct day24_node
 {
@@ -3659,7 +3660,8 @@ struct day24_node
     bool calculated = false;
     day24_instruction instruction;
     int ancestorsResolved = 0;
-    
+    day24_gateType gateType;
+
     day24_node(string _id) :id(_id) {}
     day24_node(string _id, int _value) :id(_id), value(_value),calculated(true), instruction(day24_instruction::DIRECT_VALUE) {}
 
@@ -3678,6 +3680,17 @@ day24_instruction day24_getInstruction(const string& str)
     if (str == "OR") { return day24_instruction::OR; }
     if (str == "AND") { return day24_instruction::AND; }
     return day24_instruction::DIRECT_VALUE;
+}
+
+string day24_getInstructionStr(const day24_instruction& ins)
+{
+    switch (ins)
+    {
+    case day24_instruction::XOR: return "XOR";
+    case day24_instruction::AND: return "AND";
+    case day24_instruction::OR: return "OR";
+    }
+    return "";
 }
 
 int day24_calculateValue(int v1, int v2, day24_instruction ins)
@@ -3780,6 +3793,250 @@ void day24_a(std::map<string, day24_node*>& nodes)
     std::cout <<"day 24 => " << result << "\n";
 }
 
+void day24_buildGateTypeBaseOnInputs(day24_node* n)
+{
+    //diagram
+    //1. xor1_a_b = a xor b
+    //2. xor2_a_b = xor1_a_b xor other
+    //3. and1_a_b = a and b
+    //4. and2_a_b = xor1_a_b xor other
+    //5. or_a_b = and1_a_b and or and2_a_b
+
+    if (n->instruction == day24_instruction::DIRECT_VALUE)
+    {
+        n->gateType = day24_gateType::INPUT;
+        return;
+    }
+    if (n->instruction == day24_instruction::OR)
+    {
+        if (n->id == "z45")
+        {
+            //last or is the output, not the carry out
+            n->gateType = day24_gateType::OUTPUT;
+        }
+        else
+        {
+            n->gateType = day24_gateType::CARRY_OR_OUT;
+        }
+        return;
+    }
+
+    
+
+    if (n->instruction == day24_instruction::XOR)
+    {
+        //2 options, or the input comes from direct_values or comes from other gates
+        if (n->ancestors[0]->instruction == day24_instruction::DIRECT_VALUE)
+        {
+            if (n->ancestors[0]->id == "x00" || n->ancestors[1]->id == "x00")
+            {
+                //there is no inintial carry
+                n->gateType = day24_gateType::OUTPUT;
+            }
+            else
+            {
+                n->gateType = day24_gateType::DIRECT_INPUT_XOR;
+            }
+        }
+        else
+        {
+            n->gateType = day24_gateType::OUTPUT;
+        }
+        return;
+    }
+
+    if (n->instruction == day24_instruction::AND)
+    {
+        //2 options, or the input comes from direct values or comes from other gates
+        if (n->ancestors[0]->instruction == day24_instruction::DIRECT_VALUE)
+        {
+            if (n->ancestors[0]->id == "x00" || n->ancestors[1]->id == "x00")
+            {
+                //there is no inintial carry
+                n->gateType = day24_gateType::DIRECT_INPUT_AND;
+            }
+            else
+            {
+                n->gateType = day24_gateType::DIRECT_INPUT_AND;
+            }
+        }
+        else
+        {
+            n->gateType = day24_gateType::CARRY_AND;
+        }
+        return;
+    }
+    n->gateType = day24_gateType::UNKNOWN;
+    
+}
+
+void day24_checkAlternativeNames(day24_node* n, std::set<string>& possibleIncorrect)
+{
+    if (n->gateType == day24_gateType::OUTPUT)
+    {
+        if (n->id[0] != 'z')
+        {
+            //allways should be output
+            possibleIncorrect.insert(n->id);
+        }
+        return;
+    }
+
+    if (n->gateType == day24_gateType::CARRY_AND)
+    {
+        if (n->descendants.size() != 1)
+        {
+            possibleIncorrect.insert(n->id);
+            return;
+        }
+
+        if (n->descendants[0]->gateType == day24_gateType::OUTPUT && n->descendants[0]->id == "z45")
+        {
+            return;
+        }
+
+        if (n->descendants[0]->gateType != day24_gateType::CARRY_OR_OUT)
+        {
+            possibleIncorrect.insert(n->id);
+        }
+        return;
+    }
+
+    if (n->gateType == day24_gateType::INPUT)
+    {
+        if (n->descendants.size() != 2)
+        {
+            possibleIncorrect.insert(n->id);
+            return;
+        }
+
+        if (n->descendants[0]->gateType == day24_gateType::OUTPUT && n->descendants[1]->gateType == day24_gateType::DIRECT_INPUT_AND)
+        {
+            //special case for x00 and y00
+            return;
+        }
+
+        if (n->descendants[0]->gateType == day24_gateType::DIRECT_INPUT_AND && n->descendants[1]->gateType == day24_gateType::OUTPUT)
+        {
+            //special case for x00 and y00
+            return;
+        }
+
+        if (n->descendants[0]->gateType == day24_gateType::DIRECT_INPUT_XOR && n->descendants[1]->gateType == day24_gateType::DIRECT_INPUT_AND)
+        {
+            return;
+        }
+
+        if (n->descendants[1]->gateType == day24_gateType::DIRECT_INPUT_XOR && n->descendants[0]->gateType == day24_gateType::DIRECT_INPUT_AND)
+        {
+            return;
+        }
+        possibleIncorrect.insert(n->id);
+        return;
+    }
+
+    if (n->gateType == day24_gateType::DIRECT_INPUT_XOR)
+    {
+        if (n->descendants.size() != 2)
+        {
+            possibleIncorrect.insert(n->id);
+            return;
+        }
+
+        if (n->descendants[0]->gateType == day24_gateType::OUTPUT && n->descendants[1]->gateType == day24_gateType::CARRY_AND)
+        {
+            return;
+        }
+        if (n->descendants[1]->gateType == day24_gateType::OUTPUT && n->descendants[0]->gateType == day24_gateType::CARRY_AND)
+        {
+            return;
+        }
+
+        possibleIncorrect.insert(n->id);
+        return;
+    }
+   
+    if (n->gateType == day24_gateType::DIRECT_INPUT_AND)
+    {
+        if (n->descendants.size() != 1)
+        {
+            if (n->descendants.size() == 2)
+            {
+                if (n->descendants[0]->id == "z01" || n->descendants[1]->id == "z01")
+                {
+                    return;
+                }
+            }
+
+            possibleIncorrect.insert(n->id);
+            return;
+        }
+
+        if (n->descendants[0]->gateType == day24_gateType::OUTPUT && n->descendants[0]->id == "z45")
+        {
+            return;
+        }
+
+        if (n->descendants[0]->gateType != day24_gateType::CARRY_OR_OUT)
+        {
+            possibleIncorrect.insert(n->id);
+            return;
+        }
+        return;
+    }
+
+    if (n->gateType == day24_gateType::CARRY_OR_OUT)
+    {
+        if (n->descendants.size() != 2)
+        {
+            possibleIncorrect.insert(n->id);
+            return;
+        }
+
+        if (n->descendants[0]->gateType == day24_gateType::OUTPUT && n->descendants[1]->gateType == day24_gateType::CARRY_AND)
+        {
+            return;
+        }
+
+        if (n->descendants[1]->gateType == day24_gateType::OUTPUT && n->descendants[0]->gateType == day24_gateType::CARRY_AND)
+        {
+            return;
+        }
+
+        possibleIncorrect.insert(n->id);
+        return;
+    }
+
+    
+    std::cout << "please, review: " << n->id << "\n";
+}
+
+void day24_b(std::map<string, day24_node*> nodes, int totalOutput)
+{
+    for (auto& n : nodes)
+    {
+        day24_buildGateTypeBaseOnInputs(n.second);
+    }
+    set<string> result_tmp;
+    day24_buildGateTypeBaseOnInputs(nodes["x00"]);
+    day24_checkAlternativeNames(nodes["x00"], result_tmp);
+
+    set<string> result;
+
+    for (auto& n : nodes)
+    {
+        day24_checkAlternativeNames(n.second, result);
+    }
+
+    std::cout << "day24_b => ";
+    for (auto& n : result)
+    {
+        std::cout << n <<",";
+    }
+    std::cout << "\n";
+
+}
+
 void day24()
 {
     auto fileTxt = ReadFile("./input/day24.txt");
@@ -3839,8 +4096,7 @@ void day24()
 
     day24_a(nodes);
 
-    std::cout << "dont know how to solve it, looking on internet: ";
-    std::cout << "day 24 partB => cbd,gmh,jmq,qrh,rqf,z06,z13,z38 \n";
+    day24_b(nodes, 45);
 }
 
 struct day25_node
@@ -3962,6 +4218,7 @@ void day25()
 
 
 int main()
+
 {
    //day1();
    //day2();
@@ -3987,8 +4244,8 @@ int main()
    //day21();
    //day22(false);
    //day23(false);
-   //day24();
-   day25();
+   day24();
+   //day25();
    
 }
 
