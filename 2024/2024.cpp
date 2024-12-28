@@ -3433,11 +3433,12 @@ void day22( bool calculateB)
         resA += res;
     }
 
-    std::cout << "day 22=> " << resA << "\n";
+    std::cout << "day 22 => " << resA << "\n";
 
     if (!calculateB)
     {
         std::cout << "day 22_b =>" << 2100 << "\n";
+        return;
     }
 
     std::map<string, std::vector<long long>> relationSequenceNumber;
@@ -4017,10 +4018,7 @@ void day24_b(std::map<string, day24_node*> nodes, int totalOutput)
     {
         day24_buildGateTypeBaseOnInputs(n.second);
     }
-    set<string> result_tmp;
-    day24_buildGateTypeBaseOnInputs(nodes["x00"]);
-    day24_checkAlternativeNames(nodes["x00"], result_tmp);
-
+    
     set<string> result;
 
     for (auto& n : nodes)
@@ -4220,32 +4218,32 @@ void day25()
 int main()
 
 {
-   //day1();
-   //day2();
-   //day3();
-   //day3();
-   //day4();
-   //day5(false);
-   //day6(false);
-   //day7();
-   //day8();
-   //day9();
-   //day10();
-   //day11();
-   //day12();
-   //day13();
-   //day14(false);
-   //day15();
-   //day16();
-   //day17();
-   //day18(false);
-   //day19();
-   //day20();
-   //day21();
-   //day22(false);
-   //day23(false);
+   day1();
+   day2();
+   day3();
+   day3();
+   day4();
+   day5(false);
+   day6(false);
+   day7();
+   day8();
+   day9();
+   day10();
+   day11();
+   day12();
+   day13();
+   day14(false);
+   day15();
+   day16();
+   day17();
+   day18(false);
+   day19();
+   day20();
+   day21();
+   day22(false);
+   day23(false);
    day24();
-   //day25();
+   day25();
    
 }
 
