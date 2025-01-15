@@ -65,10 +65,88 @@ void day1()
     std::cout << "day 1_B => " << acumB << "\n";
 }
 
+void day2_runProgram(std::vector<long long>& memory)
+{
+    int index = 0;
+
+    while (memory[index] != 99)
+    {
+        int operation = memory[index];
+        int pos1 = memory[index + 1];
+        int pos2 = memory[index + 2];
+        int dest = memory[index + 3];
+        index += 4;
+
+        auto val1 = memory[pos1];
+        auto val2 = memory[pos2];
+
+        long long result = 0;
+        if (operation == 1)
+        {
+            result = val1 + val2;
+        }
+        else
+        {
+            if (operation == 2)
+            {
+                result = val1 * val2;
+            }
+            else
+            {
+                std::cout << "error;";
+            }
+        }
+        
+        memory[dest] = result;
+
+    }
+
+}
+
+void day2()
+{
+    auto txt = ReadFile("./input/day2.txt")[0];
+    auto split_value = split(txt, ",");
+    std::vector<long long> memory;
+    
+    for (auto v : split_value)
+    {
+        memory.push_back(atoll(v.c_str()));
+    }
+
+    std::vector<long long> copyMemory = memory;
+
+    memory[1] = 12;
+    memory[2] = 2;
+
+    day2_runProgram(memory);
+
+    std::cout << "day2 => " << memory[0] << "\n";
+
+
+    for (int noun = 0; noun <= 99; ++noun)
+    {
+        for (int verb = 0; verb <= 99; ++verb)
+        {
+            auto mem = copyMemory;
+            mem[1] = noun;
+            mem[2] = verb;
+
+            day2_runProgram(mem);
+            if (mem[0] == 19690720)
+            {
+                std::cout << "day2_b => " << (100 * noun) + verb;
+                return;
+            }
+        }
+    }
+
+}
 
 int main()
 {
-    day1();
+    //day1();
+    day2();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
