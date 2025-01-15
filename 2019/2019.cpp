@@ -21,11 +21,54 @@
 #include <bitset>
 using namespace std;
 
+int day1_b(int value, std::map<int, int>& cache)
+{
+    if (value <= 0) { return 0; }
+    
+    if (cache.find(value) != cache.end())
+    {
+        return cache[value];
+    }
+    
+    int newValue = (value / 3) - 2;
 
+    int toReturn = day1_b(newValue, cache);
+
+    if (newValue > 0)
+    {
+        toReturn += newValue;
+    }
+
+    cache[value] = toReturn;
+    return toReturn;
+}
+
+void day1()
+{
+    auto fileTxt = ReadFile("./input/day1.txt");
+
+    long long acumA = 0;
+    long long acumB = 0;
+    std::map<int, int> cacheB;
+
+    for (auto n : fileTxt)
+    {
+        int val = atoi(n.c_str());
+        long long calcA = (val / 3) - 2;
+        acumA += calcA;
+
+       int calcB = day1_b(val, cacheB);
+       acumB += calcB;
+
+    }
+    std::cout << "day 1 => " << acumA << "\n";
+    std::cout << "day 1_B => " << acumB << "\n";
+}
 
 
 int main()
 {
+    day1();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
