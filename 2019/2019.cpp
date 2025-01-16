@@ -337,10 +337,6 @@ void day4()
     int minValue = 128392;
     int maxValue = 643281;
 
-    auto digits = day4_getDigits(111122);
-    day4_validB(digits);
-
-    
     int acumA = 0;
     int acumB = 0;
     for (int i = minValue; i <= maxValue; ++i)
