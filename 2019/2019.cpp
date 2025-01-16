@@ -269,11 +269,103 @@ void day3()
 
 }
 
+bool day4_validA(std::vector<int>& digits)
+{
+    bool someEqual = false;
+    int lastDigit = digits[0];
+    for (int i = 1; i < digits.size(); ++i)
+    {
+        int currDigit = digits[i];
+        if (currDigit == lastDigit)
+        {
+            someEqual = true;
+        }
+        if (currDigit < lastDigit)
+        {
+            return false;
+        }
+        lastDigit = currDigit;
+    }
+
+    return someEqual;
+}
+
+bool day4_validB(std::vector<int>& digits)
+{
+    int countEqual = 1;
+    int lastDigit = digits[0];
+    bool somePair = false;
+    for (int i = 1; i < digits.size(); ++i)
+    {
+        int currDigit = digits[i];
+        if (currDigit == lastDigit)
+        {
+            ++countEqual;
+        }
+        else
+        {
+            if (countEqual == 2)
+            {
+                somePair = true;
+            }
+            countEqual = 1;
+        }
+        if (currDigit < lastDigit)
+        {
+            return false;
+        }
+        lastDigit = currDigit;
+    }
+
+    return somePair || countEqual == 2;
+}
+
+std::vector<int> day4_getDigits(int value)
+{
+    std::vector<int> digits;
+    while (value != 0)
+    {
+        int v = value % 10;
+        value = value / 10;
+        digits.insert(digits.begin(), v);
+    }
+    return digits;
+}
+
+void day4()
+{
+    int minValue = 128392;
+    int maxValue = 643281;
+
+    auto digits = day4_getDigits(111122);
+    day4_validB(digits);
+
+    
+    int acumA = 0;
+    int acumB = 0;
+    for (int i = minValue; i <= maxValue; ++i)
+    {
+        auto digits = day4_getDigits(i);
+        if (day4_validA(digits))
+        {
+            ++acumA;
+        }
+        if (day4_validB(digits))
+        {
+            ++acumB;
+        }
+    }
+    std::cout << "day4 =>" << acumA << "\n";
+    std::cout << "day4 =>" << acumB << "\n";
+    
+}
+
 int main()
 {
     //day1();
     //day2();
-    day3();
+    //day3();
+    day4();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
