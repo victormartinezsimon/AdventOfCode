@@ -143,10 +143,137 @@ void day2()
 
 }
 
+std::vector<std::pair<int, int>> day3_getPath(std::string& path, std::vector<int>& acumDistances)
+{
+    int currentX = 0;
+    int currentY = 0;
+
+    auto movements = split(path, ",");
+    std::vector<std::pair<int, int>> result;
+    result.push_back({ 0,0 });
+    int distAcum = 0;
+    acumDistances.push_back(distAcum);
+    for (auto m : movements)
+    {
+        char dir = m[0];
+        string num = m.substr(1);
+        int number = atoi(num.c_str());
+        distAcum += number;
+        acumDistances.push_back(distAcum);
+
+        if (dir == 'U')
+        {
+            currentY += number;
+        }
+        if (dir == 'D')
+        {
+            currentY -= number;
+        }
+        if (dir == 'L')
+        {
+            currentX -= number;
+        }
+        if (dir == 'R')
+        {
+            currentX += number;
+        }
+
+        result.push_back({ currentX, currentY });
+    }
+    return result;
+}
+
+bool day3_checkCollision(std::pair<int, int>& start1, std::pair<int, int>& end1, std::pair<int, int>& start2, std::pair<int, int>& end2, std::pair<int,int>& result )
+{
+    bool firstHorizontal = start1.second == end1.second;
+    bool secondHorizontal = start2.second == end2.second;
+
+    if (firstHorizontal == secondHorizontal) { return false; }//paralell lines
+
+    if (firstHorizontal)
+    {
+        int minX = min(start1.first, end1.first);
+        int maxX = max(start1.first, end1.first);
+        int minY = min(start2.second, end2.second);
+        int maxY = max(start2.second, end2.second);
+        if (minX < start2.first && start2.first < maxX
+            &&
+            minY < start1.second && start1.second < maxY)
+        {
+            result = {start2.first, end1.second};
+            return true;
+        }
+    }
+    else
+    {
+        int minX = min(start2.first, end2.first);
+        int maxX = max(start2.first, end2.first);
+        int minY = min(start1.second, end1.second);
+        int maxY = max(start1.second, end1.second);
+        if (minX < start1.first && start1.first < maxX
+            &&
+            minY < start2.second && start2.second < maxY)
+        {
+            result = { start1.first, end2.second };
+            return true;
+        }
+    }
+    return false;
+}
+
+void day3()
+{
+    auto txt = ReadFile("./input/day3.txt");
+    std::vector<int> acumDist1;
+    std::vector<int> acumDist2;
+    auto path1 = day3_getPath(txt[0], acumDist1);
+    auto path2 = day3_getPath(txt[1], acumDist2);
+
+    int bestA = -1;
+    int bestB = -1;
+    std::vector<pair<int, int>> collsisions;
+    for (int path1I = 0; path1I < path1.size() - 1; ++path1I)
+    {
+        for (int path2I = 0; path2I < path2.size() - 1; ++path2I)
+        {
+            auto start1 = path1[path1I];
+            auto end1 = path1[path1I + 1];
+
+            auto start2 = path2[path2I];
+            auto end2 = path2[path2I + 1];
+           
+            std::pair<int, int> collision;
+            if (day3_checkCollision(start1, end1, start2, end2, collision))
+            {
+                int dist = abs(collision.first) + abs(collision.second);
+                if (bestA == -1 || dist < bestA)
+                {
+                    bestA = dist;
+                }
+
+                int valueB = acumDist1[path1I] + acumDist2[path2I];
+                valueB += (abs(collision.first - start1.first) + abs(collision.second - start1.second));
+                valueB += (abs(collision.first - start2.first) + abs(collision.second - start2.second));
+
+
+                if (bestB == -1 || valueB < bestB)
+                {
+                    bestB = valueB;
+                }
+            }
+        }
+    }
+
+    std::cout << "day3 =>" << bestA << "\n";
+    std::cout << "day3_b => " << bestB << "\n";
+
+}
+
 int main()
 {
     //day1();
-    day2();
+    //day2();
+    day3();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
