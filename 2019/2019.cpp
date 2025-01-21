@@ -356,12 +356,233 @@ void day4()
     
 }
 
+namespace day5_intcode
+{
+    long long getValueOperation(int operation, std::vector<long long> params)
+    {
+        switch (operation)
+        {
+        case 1: return params[0] + params[1]; break;
+        case 2: return params[0] * params[1]; break;
+        case 3: return params[0]; break;
+        case 4: return params[0]; break;
+        case 5: return params[0] != 0; break;
+        case 6: return params[0] == 0; break;
+        case 7: return params[0] < params[1]; break;
+        case 8: return params[0] == params[1]; break;
+        }
+
+        std::cout << "error\n";
+        return 0;
+    }
+
+    long long getValue(int value, int type, const std::vector<long long>& memory)
+    {
+        switch(type)
+        {
+        case 0: return memory[value];
+        case 1: return value;
+        }
+        std::cout << "error \n";
+        return 0;
+    }
+
+    std::vector<int> parseInstruction(int value, int totalElements)
+    {
+        std::vector<int> result;
+
+        int instruction = value % 100;
+        result.push_back(instruction);
+        totalElements -= 2;
+
+        value = value / 100;
+        while (totalElements >= 0)
+        {
+            int val = value % 10;
+            result.push_back(val);
+            value = value / 10;
+            --totalElements;
+        }
+
+        return result;
+    }
+
+    int getParametersForOperation(int operation)
+    {
+        switch (operation)
+        {
+        case 1: 
+        case 2: return 3;
+        case 3:
+        case 4: return 1;
+        case 5:
+        case 6: return 2;
+        case 7:
+        case 8: return 3;
+        }
+        return 0;
+    }
+
+    std::vector<long long> getInstrucionInput(std::vector<long long>& memory, int index, int operation, std::vector<int> parameterInfo, std::vector<long long>& input)
+    {
+        std::vector<long long> result;
+
+        if (operation == 3)
+        {
+            int value = (input.front());
+            input.erase(input.begin());
+            result.push_back(value);
+            auto value2 = memory[index + 1];
+            result.push_back(value2);
+            return result;
+        }
+
+        int totalParameters = getParametersForOperation(operation);
+        for (int i = 0; i < totalParameters -1; ++i)
+        {
+            auto value = getValue(memory[index + i + 1], parameterInfo[i + 1], memory);
+            result.push_back(value);
+        }
+
+        //exit
+        if (operation == 6 || operation == 5 || operation == 4)
+        {
+            int i = totalParameters - 1;
+            auto value = getValue(memory[index + i + 1], parameterInfo[i + 1], memory);
+            result.push_back(value);
+        }
+        else
+        {
+            int i = totalParameters - 1;
+            auto value2 = memory[index + 1 + i];
+            result.push_back(value2);
+        }
+
+        return result;
+    }
+
+    void writeResult(std::vector<long long>& memory, std::vector<long long>& output, long long result, int index, int operation, std::vector<long long>& parameterInfo)
+    {
+        if (operation == 5 || operation == 6)
+        {
+            return;
+        }
+
+        if (operation == 4)
+        {
+            output.push_back(result);
+            return;
+        }
+
+
+        int totalParams = getParametersForOperation(operation);
+        int indexSave = parameterInfo.back();
+        memory[indexSave] = result;
+    }
+
+    void updateIndex(std::vector<long long>& memory, std::vector<long long>& parameters, int& index, int operation, int result)
+    {
+        if (operation == 5 || operation == 6)
+        {
+            if (result)
+            {
+                index = parameters[1];
+                return;
+            }
+        }
+
+        int totalParams = getParametersForOperation(operation);
+        index += totalParams +1;
+    }
+
+    void executeInstruction(std::vector<long long>& memory, std::vector<long long>& input, std::vector<long long>& output, int& index)
+    {
+        auto parameterInfo = parseInstruction(memory[index], 5);
+        int operation = parameterInfo[0];
+        int totalParameters = getParametersForOperation(operation);
+
+        auto parameters = getInstrucionInput(memory, index, operation, parameterInfo, input);
+
+        auto result = getValueOperation(operation, parameters);
+
+        writeResult(memory, output, result, index, operation, parameters);
+
+        updateIndex(memory, parameters, index, operation, result);
+
+    }
+
+    void runProgram(std::vector<long long>& memory, std::vector<long long>& input, std::vector<long long>& output)
+    {
+        int index = 0;
+
+        while (index < memory.size() && memory[index] != 99)
+        {
+            executeInstruction(memory, input, output, index);
+        }
+    }
+
+    std::vector<long long> buildMemory(const std::string& txt)
+    {
+        auto split_value = split(txt, ",");
+        std::vector<long long> memory;
+
+        for (auto v : split_value)
+        {
+            memory.push_back(atoll(v.c_str()));
+        }
+
+        return memory;
+    }
+}
+
+void day5()
+{
+    auto txt = ReadFile("./input/day5.txt")[0];
+
+    {
+        auto memory = day5_intcode::buildMemory(txt);
+
+        std::vector<long long> input = { 1 };
+        std::vector<long long> output;
+        day5_intcode::runProgram(memory, input, output);
+
+        std::cout << "day 5 => ";
+        for (auto c : output)
+        {
+            if (c != 0)
+            {
+                std::cout << c;
+            }
+        }
+        std::cout << "\n";
+    }
+
+    {
+        auto memory = day5_intcode::buildMemory(txt);
+
+        std::vector<long long> input = { 5 };
+        std::vector<long long> output;
+        day5_intcode::runProgram(memory, input, output);
+
+        std::cout << "day 5_B => ";
+        for (auto c : output)
+        {
+            if (c != 0)
+            {
+                std::cout << c;
+            }
+        }
+        std::cout << "\n";
+    }
+}
+
 int main()
 {
     //day1();
     //day2();
     //day3();
-    day4();
+   // day4();
+    day5();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
