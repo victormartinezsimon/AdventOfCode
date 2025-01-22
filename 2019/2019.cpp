@@ -576,13 +576,115 @@ void day5()
     }
 }
 
+struct day6_planet
+{
+    std::string name;
+    int orbits = 0;
+    day6_planet* parent = nullptr;
+};
+
+int day6_calculateOrbits(day6_planet* p)
+{
+    if (p->orbits != 0)
+    {
+        return p->orbits;
+    }
+
+    if (p->parent == nullptr)
+    {
+        return 0;
+    }
+
+    int result = day6_calculateOrbits(p->parent) + 1;
+    p->orbits = result;
+    return result;
+}
+
+void day6_buildPath(day6_planet* p, std::vector<string>& path)
+{
+    path.insert(path.begin(), p->name);
+    if (p->parent != nullptr)
+    {
+        day6_buildPath(p->parent, path);
+    }
+}
+
+void day6()
+{
+    auto fileTxt = ReadFile("./input/day6.txt");
+
+    std::map<std::string, day6_planet*> planets;
+
+    std::string regexTxt = "(.*)\\)(.*)";
+    for (auto&& line : fileTxt)
+    {
+        std::regex numbersRegex(regexTxt);
+        std::smatch sm;
+
+        std::regex_search(line, sm, numbersRegex);
+        std::string parent = sm.str(1);
+        std::string son = sm.str(2);
+
+        if (planets.find(parent) == planets.end())
+        {
+            day6_planet* p = new day6_planet();
+            p->name = parent;
+            planets[parent] = p;
+        }
+
+        if (planets.find(son) == planets.end())
+        {
+            day6_planet* p = new day6_planet();
+            p->name = son;
+            planets[son] = p;
+        }
+
+        planets[son]->parent = planets[parent];
+    }
+
+    int valueA = 0;
+    for (auto kvp : planets)
+    {
+        auto planet = kvp.second;
+
+        valueA += day6_calculateOrbits(planet);
+    }
+
+    std::cout << "day 6 => " << valueA << "\n";
+
+    std::vector<string> pathYOU;
+    std::vector<string> pathSAN;
+
+    day6_buildPath(planets["YOU"], pathYOU);
+    day6_buildPath(planets["SAN"], pathSAN);
+    
+    int minPathSize = min(pathYOU.size(), pathSAN.size());
+
+    int valueB = 0;
+    for (int i = 0; i < minPathSize - 1; ++i)
+    {
+        if (pathYOU[i] != pathSAN[i])
+        {
+            int toReachYou = pathYOU.size() - i - 1;
+            int toReachSan = pathSAN.size() - i - 1;
+
+            valueB = toReachSan + toReachYou;
+            break;
+        }
+    }
+
+
+    std::cout << "day 6_B => " << valueB << "\n";
+}
+
 int main()
 {
     //day1();
     //day2();
     //day3();
    // day4();
-    day5();
+    //day5();
+    day6();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
