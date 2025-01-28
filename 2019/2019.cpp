@@ -19,6 +19,10 @@
 #include <iomanip>
 #include <stack>
 #include <bitset>
+#include <functional>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 using namespace std;
 
 int day1_b(int value, std::map<int, int>& cache)
@@ -494,7 +498,7 @@ namespace day5_intcode
         int totalParams = getParametersForOperation(operation);
         index += totalParams +1;
     }
-
+    
     void executeInstruction(std::vector<long long>& memory, std::vector<long long>& input, std::vector<long long>& output, int& index)
     {
         auto parameterInfo = parseInstruction(memory[index], 5);
@@ -677,6 +681,404 @@ void day6()
     std::cout << "day 6_B => " << valueB << "\n";
 }
 
+namespace day7_intcode
+{
+    using inputFunction = function<long long()>;
+    using outputFunction = function<void(long long)>;
+
+    long long getValueOperation(int operation, std::vector<long long> params)
+    {
+        switch (operation)
+        {
+        case 1: return params[0] + params[1]; break;
+        case 2: return params[0] * params[1]; break;
+        case 3: return params[0]; break;
+        case 4: return params[0]; break;
+        case 5: return params[0] != 0; break;
+        case 6: return params[0] == 0; break;
+        case 7: return params[0] < params[1]; break;
+        case 8: return params[0] == params[1]; break;
+        }
+
+        std::cout << "error\n";
+        return 0;
+    }
+
+    long long getValue(int value, int type, const std::vector<long long>& memory)
+    {
+        switch (type)
+        {
+        case 0: return memory[value];
+        case 1: return value;
+        }
+        std::cout << "error \n";
+        return 0;
+    }
+
+    std::vector<int> parseInstruction(int value, int totalElements)
+    {
+        std::vector<int> result;
+
+        int instruction = value % 100;
+        result.push_back(instruction);
+        totalElements -= 2;
+
+        value = value / 100;
+        while (totalElements >= 0)
+        {
+            int val = value % 10;
+            result.push_back(val);
+            value = value / 10;
+            --totalElements;
+        }
+
+        return result;
+    }
+
+    int getParametersForOperation(int operation)
+    {
+        switch (operation)
+        {
+        case 1:
+        case 2: return 3;
+        case 3:
+        case 4: return 1;
+        case 5:
+        case 6: return 2;
+        case 7:
+        case 8: return 3;
+        }
+        return 0;
+    }
+
+    std::vector<long long> getInstrucionInput(std::vector<long long>& memory, int index, int operation, std::vector<int> parameterInfo, inputFunction& inputFun)
+    {
+        std::vector<long long> result;
+
+        if (operation == 3)
+        {
+            /*
+            int value = (input.front());
+            input.erase(input.begin());
+            result.push_back(value);
+            auto value2 = memory[index + 1];
+            result.push_back(value2);
+            return result;
+            */
+            auto val = inputFun();
+            result.push_back(val);
+
+            auto value2 = memory[index + 1];
+            result.push_back(value2);
+            return result;
+        }
+
+        int totalParameters = getParametersForOperation(operation);
+        for (int i = 0; i < totalParameters - 1; ++i)
+        {
+            auto value = getValue(memory[index + i + 1], parameterInfo[i + 1], memory);
+            result.push_back(value);
+        }
+
+        //exit
+        if (operation == 6 || operation == 5 || operation == 4)
+        {
+            int i = totalParameters - 1;
+            auto value = getValue(memory[index + i + 1], parameterInfo[i + 1], memory);
+            result.push_back(value);
+        }
+        else
+        {
+            int i = totalParameters - 1;
+            auto value2 = memory[index + 1 + i];
+            result.push_back(value2);
+        }
+
+        return result;
+    }
+
+    void writeResult(std::vector<long long>& memory, outputFunction& outputFun, long long result, int index, int operation, std::vector<long long>& parameterInfo)
+    {
+        if (operation == 5 || operation == 6)
+        {
+            return;
+        }
+
+        if (operation == 4)
+        {
+            outputFun(result);
+            return;
+        }
+
+
+        int totalParams = getParametersForOperation(operation);
+        int indexSave = parameterInfo.back();
+        memory[indexSave] = result;
+    }
+
+    void updateIndex(std::vector<long long>& memory, std::vector<long long>& parameters, int& index, int operation, int result)
+    {
+        if (operation == 5 || operation == 6)
+        {
+            if (result)
+            {
+                index = parameters[1];
+                return;
+            }
+        }
+
+        int totalParams = getParametersForOperation(operation);
+        index += totalParams + 1;
+    }
+    //
+    //1:+
+    //2:*
+    //3:Read
+    //4:Write
+    //5:Jmp !=
+    //6:Jmp ==
+    //7:<
+    //8: ==
+   
+    void runProgram(std::vector<long long>& memory, inputFunction& inputFun, outputFunction& outputFun)
+    {
+        int index = 0;
+
+        while (index < memory.size() && memory[index] != 99)
+        {
+            auto parameterInfo = parseInstruction(memory[index], 5);
+            int operation = parameterInfo[0];
+            int totalParameters = getParametersForOperation(operation);
+
+            auto parameters = getInstrucionInput(memory, index, operation, parameterInfo, inputFun);
+
+            auto result = getValueOperation(operation, parameters);
+
+            writeResult(memory, outputFun, result, index, operation, parameters);
+
+            updateIndex(memory, parameters, index, operation, result);
+        }
+    }
+
+    std::vector<long long> buildMemory(const std::string& txt)
+    {
+        auto split_value = split(txt, ",");
+        std::vector<long long> memory;
+
+        for (auto v : split_value)
+        {
+            memory.push_back(atoll(v.c_str()));
+        }
+
+        return memory;
+    }
+}
+
+std::vector<std::vector<int>> day7_getCombinations(std::vector<int>& values, std::map<string, std::vector<std::vector<int>>>& cache)
+{
+    if (values.size() == 1)
+    {
+        return { {values[0]} };
+    }
+
+    std::string key = "";
+    for (auto&& v : values)
+    {
+        key += std::to_string(v)+ ",";
+    }
+
+    if (cache.find(key) != cache.end())
+    {
+        return cache[key];
+    }
+
+    std::vector<std::vector<int>> result;
+    for (int i = 0; i < values.size(); ++i)
+    {
+        int value = values[i];
+        values.erase(values.begin() + i);
+        auto res = day7_getCombinations(values, cache);
+
+        for (auto& r : res)
+        {
+            r.push_back(value);
+            result.push_back(r);
+        }
+
+        values.insert(values.begin() + i, value);
+
+    }
+    cache[key] = result;
+
+    return result;
+}
+
+long long day7_calculateA(std::vector<int>& combination, std::vector<std::vector<long long>>& allAmplifiers, long long startValue)
+{
+    std::vector<long long> input = { startValue };
+
+    for (int i = 0; i < allAmplifiers.size(); ++i)
+    {
+        input.insert(input.begin(), combination[i]);
+        day7_intcode::inputFunction inptuFun = [&input]()
+        {
+            long long valueToReturn = input.front();
+            input.erase(input.begin());
+            return valueToReturn;
+        };
+
+        std::vector<long long> output;
+        day7_intcode::outputFunction outputFun = [&output](long long val) {output.push_back(val); };
+        
+        auto& memory = allAmplifiers[i];
+        //hay que guardar en que posicion esta la maquina para poder seguir desde ahi
+        //eso sera un indice nuevo
+        //pararemos cuando la ulitma se pare
+        day7_intcode::runProgram(memory, inptuFun, outputFun);
+
+        auto result = output[0];
+
+        input.clear();
+        input.push_back(result);
+    }
+
+    return input[0];
+}
+
+void day7A(std::string& txt)
+{
+    int totalAmplifiers = 5;
+
+    std::vector<int> possibleValuesLow;
+    for (int i = 0; i < totalAmplifiers; ++i)
+    {
+        possibleValuesLow.push_back(i);
+    }
+    std::map<string, std::vector<std::vector<int>>> cache;
+    auto allCombinationsLow = day7_getCombinations(possibleValuesLow, cache);
+
+    long long bestResultA = -1;
+
+    for (auto&& comb : allCombinationsLow)
+    {
+        std::vector<std::vector<long long>> allAmplifiers;
+        for (int i = 0; i < totalAmplifiers; ++i)
+        {
+            allAmplifiers.push_back(day5_intcode::buildMemory(txt));
+        }
+
+        auto result = day7_calculateA(comb, allAmplifiers, 0);
+
+        if (result > bestResultA)
+        {
+            bestResultA = result;
+        }
+    }
+
+    std::cout << "day 7=> " << bestResultA << "\n";
+}
+
+void day7B(std::string& txt)
+{
+    int totalAmplifiers = 5;
+
+    std::vector<int> possibleValues;
+    for (int i = 0; i < totalAmplifiers; ++i)
+    {
+        possibleValues.push_back(i + 5);
+    }
+    std::map<string, std::vector<std::vector<int>>> cache;
+    auto allCombinationsLow = day7_getCombinations(possibleValues, cache);
+
+    long long bestResult = -1;
+
+    for (int combIdx = 0; combIdx < allCombinationsLow.size(); ++combIdx)
+    {
+        std::cout << combIdx << " of " << allCombinationsLow.size() << "\n";
+        auto comb = allCombinationsLow[combIdx];
+
+        //init amplifiers
+        std::vector<std::vector<long long>> inputs;
+        std::vector<day7_intcode::inputFunction> inputsFuns;
+        std::vector<day7_intcode::outputFunction> outputsFuns;
+        std::vector<std::vector<long long>> memories;
+        std::array < std::condition_variable, 5> conditions;
+        std::array<std::mutex, 5> mutexes;//total amplifiers
+
+        //prepare thing
+        for (int i = 0; i < totalAmplifiers; ++i)
+        {
+            day7_intcode::inputFunction inputFun = [i, &inputs, inputsFuns, &conditions, &mutexes]()
+            {
+                //wait notification
+                std::unique_lock<std::mutex> lk(mutexes[i]);
+
+                //if(inputs[i].size() == 0)
+                //    std::cout << "Waiting..."+ std::to_string( i) + "\n";
+
+                conditions[i].wait(lk, [&inputs, i] { 
+                    return inputs[i].size() != 0; 
+                    });
+                //std::cout << "Read..." + std::to_string(i) + "\n";
+
+                long long value = inputs[i].front();
+                inputs[i].erase(inputs[i].begin());
+
+                return value;
+            };
+
+            day7_intcode::outputFunction outputFun = [i, &inputs, totalAmplifiers, &conditions](long long val)
+            {
+                int next = (i + 1) % totalAmplifiers;
+                inputs[next].push_back(val);
+                
+                //notify 
+                //std::cout << "Notify..." + std::to_string(next) + "\n";
+                conditions[next].notify_all();
+            };
+
+            inputsFuns.push_back(inputFun);
+            outputsFuns.push_back(outputFun);
+
+            std::vector<long long> inputThis;
+            inputThis.push_back(comb[i]);
+            inputs.push_back(inputThis);
+
+            memories.push_back(day7_intcode::buildMemory(txt));
+
+        }
+
+        //initialization
+        inputs[0].push_back(0);
+
+        std::vector<thread> threads;
+        totalAmplifiers = 5;
+        for (int i = 0; i < totalAmplifiers; ++i)
+        {
+            threads.push_back(std::thread(day7_intcode::runProgram, std::ref(memories[i]), std::ref(inputsFuns[i]),std::ref( outputsFuns[i])));
+        }
+
+        for (auto& t : threads)
+        {
+            t.join();
+        }
+
+        if (inputs[0].front() > bestResult)
+        {
+            bestResult = inputs[0].front();
+        }
+    }
+    std::cout << "day7 b => " << bestResult << "\n";
+}
+
+void day7()
+{
+    auto txt = ReadFile("./input/day7.txt")[0];
+    day7A(txt);
+    day7B(txt);
+
+}
+
 int main()
 {
     //day1();
@@ -684,7 +1086,8 @@ int main()
     //day3();
    // day4();
     //day5();
-    day6();
+    //day6();
+    day7 ();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
