@@ -1079,6 +1079,74 @@ void day7()
 
 }
 
+void day8()
+{
+    auto txt = ReadFile("./input/day8.txt")[0];
+    int width = 25;
+    int height = 6;
+    int totalSize = width * height;
+    int min0 = totalSize;
+    int valueA = 0;
+
+    std::vector<std::vector<int>> layers;
+    for (int start = 0; start < txt.size(); start += totalSize)
+    {
+        std::array<int, 3> counts;
+        counts.fill(0);
+        std::vector<int> layer;
+        for (int index = start; index < start + totalSize; ++index)
+        {
+            char v = txt[index];
+            int value = v - '0';
+
+            counts[value]++;
+            layer.push_back(value);
+        }
+
+        layers.push_back(layer);
+
+        if (counts[0] < min0)
+        {
+            min0 = counts[0];
+            valueA = counts[1] * counts[2];
+        }
+    }
+
+    std::cout << "day8 => " << valueA << "\n";
+    std::cout << "day8 B => \n";
+
+
+    std::vector<int> finalLayer;
+    int countLine = 0;
+    for (int i = 0; i < totalSize; ++i)
+    {
+        int currLayer = 0;
+        while (layers[currLayer][i] == 2)
+        {
+            ++currLayer;
+        }
+
+        int value = layers[currLayer][i];
+        if (value == 0)
+        {
+            std::cout << ".";
+        }
+        else
+        {
+            std::cout << "#";
+        }
+        ++countLine;
+        if (countLine == width)
+        {
+            std::cout << "\n";
+            countLine = 0;
+        }
+        finalLayer.push_back(layers[currLayer][i]);
+    }
+
+
+}
+
 int main()
 {
     //day1();
@@ -1087,7 +1155,8 @@ int main()
    // day4();
     //day5();
     //day6();
-    day7 ();
+    //day7 ();
+    day8();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
