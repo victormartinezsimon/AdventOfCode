@@ -1147,6 +1147,247 @@ void day8()
 
 }
 
+class day9_intcode
+{
+    using inputFunction = function<long long()>;
+    using outputFunction = function<void(long long)>;
+    
+private:
+    int instructionIndex = 0;
+    inputFunction inputFun;
+    outputFunction outputFun;
+    std::vector<long long> memory;
+
+    long long calculateInstruction(int operation, std::vector<long long> params)
+    {
+        switch (operation)
+        {
+        case 1: return params[0] + params[1]; break;
+        case 2: return params[0] * params[1]; break;
+        case 3: return -1; break;
+        case 4: return -1; break;
+        case 5: return params[0] != 0; break;
+        case 6: return params[0] == 0; break;
+        case 7: return params[0] < params[1]; break;
+        case 8: return params[0] == params[1]; break;
+        }
+
+        std::cout << "error\n";
+        return 0;
+    }
+
+    long long getValue(int value, int type, const std::vector<long long>& memory)
+    {
+        switch (type)
+        {
+        case 0: return memory[value];
+        case 1: return value;
+        }
+        std::cout << "error \n";
+        return 0;
+    }
+
+    std::vector<int> parseParamsInfo(int value, int totalElements)
+    {
+        std::vector<int> result;
+
+        int instruction = value % 100;
+        result.push_back(instruction);
+        totalElements -= 2;
+
+        value = value / 100;
+        while (totalElements >= 0)
+        {
+            int val = value % 10;
+            result.push_back(val);
+            value = value / 10;
+            --totalElements;
+        }
+
+        return result;
+    }
+
+    int getParametersForOperation(int operation)
+    {
+        switch (operation)
+        {
+        case 1:
+        case 2: return 3;
+        case 3:
+        case 4: return 1;
+        case 5:
+        case 6: return 2;
+        case 7:
+        case 8: return 3;
+        }
+        return 0;
+    }
+
+    std::vector<long long> readParametersFromInstruction(std::vector<long long>& memory, int operation)
+    {
+        int totalParams = getParametersForOperation(operation);
+        std::vector<long long> result;
+        for (int i = 0; i < totalParams; ++i)
+        {
+            auto value = memory[instructionIndex + i + 1];
+            result.push_back(value);
+        }
+        return result;
+    }
+    std::vector<long long> transformParameters(int operation, const std::vector<long long>& memory, const std::vector<long long>& params, const std::vector<int>& parameterInfo)
+    {
+        std::vector<long long> result;
+        for (int i = 0; i < params.size(); ++i)
+        {
+            auto value = getValue(params[i], parameterInfo[i + 1], memory);
+            result.push_back(value);
+        }
+        //direct result
+        std::set<int> directResult = {1,2,3,7,8};
+        if (directResult.find(operation) != directResult.end())
+        {
+            result[result.size() - 1] = params.back();
+        }
+        return result;
+    }
+
+    std::vector<long long> getInstrucionInput_deprecated(std::vector<long long>& memory, int operation, std::vector<int> parameterInfo, inputFunction& inputFun)
+    {
+        std::vector<long long> result;
+
+        if (operation == 3)
+        {
+            auto val = inputFun();
+            result.push_back(val);
+
+            auto value2 = memory[instructionIndex + 1];
+            result.push_back(value2);
+            return result;
+        }
+
+        int totalParameters = getParametersForOperation(operation);
+        for (int i = 0; i < totalParameters - 1; ++i)
+        {
+            auto value = getValue(memory[instructionIndex + i + 1], parameterInfo[i + 1], memory);
+            result.push_back(value);
+        }
+
+        //exit
+        if (operation == 6 || operation == 5 || operation == 4)
+        {
+            int i = totalParameters - 1;
+            auto value = getValue(memory[instructionIndex + i + 1], parameterInfo[i + 1], memory);
+            result.push_back(value);
+        }
+        else
+        {
+            int i = totalParameters - 1;
+            auto value2 = memory[instructionIndex + 1 + i];
+            result.push_back(value2);
+        }
+
+        return result;
+    }
+
+    void writeResult(std::vector<long long>& memory, long long result, int operation, std::vector<long long>& paramsTransformed)
+    {
+        if (operation == 5 || operation == 6)
+        {
+            return;
+        }
+
+        if (operation == 4)
+        {
+            outputFun(paramsTransformed[0]);
+            return;
+        }
+
+        if (operation == 3)
+        {
+            result = inputFun();
+        }
+
+
+        int indexSave = paramsTransformed.back();
+        memory[indexSave] = result;
+    }
+
+    void updateIndex(std::vector<long long>& memory, std::vector<long long>& paramsTransformed, int operation, int result)
+    {
+        if (operation == 5 || operation == 6)
+        {
+            if (result)
+            {
+                instructionIndex = paramsTransformed[1];
+                return;
+            }
+        }
+
+        int totalParams = getParametersForOperation(operation);
+        instructionIndex += totalParams + 1;
+    }
+    //
+    //1:+
+    //2:*
+    //3:Read
+    //4:Write
+    //5:Jmp !=
+    //6:Jmp ==
+    //7:<
+    //8: ==
+
+    void runProgram()
+    {
+        while (instructionIndex < memory.size() && memory[instructionIndex] != 99)
+        {
+            auto paramsInfo = parseParamsInfo(memory[instructionIndex], 5);
+            int operation = paramsInfo[0];
+            auto paramsForInstruction = readParametersFromInstruction(memory, operation);
+            auto paramsTransformed = transformParameters(operation, memory, paramsForInstruction, paramsInfo);
+
+            auto result = calculateInstruction(operation, paramsTransformed);
+
+            writeResult(memory, result, operation, paramsTransformed);
+            updateIndex(memory, paramsTransformed, operation, result);
+        }
+    }
+
+    std::vector<long long> buildMemory(const std::string& txt)
+    {
+        auto split_value = split(txt, ",");
+        std::vector<long long> memory;
+
+        for (auto v : split_value)
+        {
+            memory.push_back(atoll(v.c_str()));
+        }
+
+        return memory;
+    }
+
+public:
+
+    void Init(const std::string& txt, inputFunction input, outputFunction output )
+    {
+        inputFun = input;
+        outputFun = output;
+        memory = buildMemory(txt);
+    }
+
+    void Run()
+    {
+        runProgram();
+    }
+};
+
+void day9()
+{
+    auto txt = ReadFile("./input/day5.txt")[0];
+    day9_intcode program;
+    program.Init(txt, []() {return 5; }, [](long long v) {std::cout << v; });
+    program.Run();
+}
+
 int main()
 {
     //day1();
@@ -1156,7 +1397,8 @@ int main()
     //day5();
     //day6();
     //day7 ();
-    day8();
+    //day8();
+    day9();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
