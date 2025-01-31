@@ -1149,16 +1149,19 @@ void day8()
 
 class day9_intcode
 {
-    using inputFunction = function<long long()>;
-    using outputFunction = function<void(long long)>;
+public:
+    using memoryType = unsigned long long;
+    using inputFunction = function<memoryType()>;
+    using outputFunction = function<void(memoryType)>;
     
 private:
     int instructionIndex = 0;
+    memoryType relativeBase = 0;
     inputFunction inputFun;
     outputFunction outputFun;
-    std::vector<long long> memory;
+    std::map<int, memoryType> memory;
 
-    long long calculateInstruction(int operation, std::vector<long long> params)
+    memoryType calculateInstruction(int operation, std::vector<memoryType> params)
     {
         switch (operation)
         {
@@ -1170,18 +1173,20 @@ private:
         case 6: return params[0] == 0; break;
         case 7: return params[0] < params[1]; break;
         case 8: return params[0] == params[1]; break;
+        case 9: return -1; break;
         }
 
         std::cout << "error\n";
         return 0;
     }
 
-    long long getValue(int value, int type, const std::vector<long long>& memory)
+    memoryType getValue(int value, int type)
     {
         switch (type)
         {
         case 0: return memory[value];
         case 1: return value;
+        case 2: return memory[value + relativeBase];
         }
         std::cout << "error \n";
         return 0;
@@ -1219,14 +1224,15 @@ private:
         case 6: return 2;
         case 7:
         case 8: return 3;
+        case 9: return 1;
         }
         return 0;
     }
 
-    std::vector<long long> readParametersFromInstruction(std::vector<long long>& memory, int operation)
+    std::vector<memoryType> readParametersFromInstruction( int operation)
     {
         int totalParams = getParametersForOperation(operation);
-        std::vector<long long> result;
+        std::vector<memoryType> result;
         for (int i = 0; i < totalParams; ++i)
         {
             auto value = memory[instructionIndex + i + 1];
@@ -1234,62 +1240,33 @@ private:
         }
         return result;
     }
-    std::vector<long long> transformParameters(int operation, const std::vector<long long>& memory, const std::vector<long long>& params, const std::vector<int>& parameterInfo)
+    std::vector<memoryType> transformParameters(int operation, const std::vector<memoryType>& params, const std::vector<int>& parameterInfo)
     {
-        std::vector<long long> result;
+        std::vector<memoryType> result;
         for (int i = 0; i < params.size(); ++i)
         {
-            auto value = getValue(params[i], parameterInfo[i + 1], memory);
+            auto value = getValue(params[i], parameterInfo[i]);
             result.push_back(value);
         }
+
         //direct result
-        std::set<int> directResult = {1,2,3,7,8};
+        std::set<int> directResult = {1, 2, 3, 7, 8};
         if (directResult.find(operation) != directResult.end())
         {
-            result[result.size() - 1] = params.back();
-        }
-        return result;
-    }
-
-    std::vector<long long> getInstrucionInput_deprecated(std::vector<long long>& memory, int operation, std::vector<int> parameterInfo, inputFunction& inputFun)
-    {
-        std::vector<long long> result;
-
-        if (operation == 3)
-        {
-            auto val = inputFun();
-            result.push_back(val);
-
-            auto value2 = memory[instructionIndex + 1];
-            result.push_back(value2);
-            return result;
-        }
-
-        int totalParameters = getParametersForOperation(operation);
-        for (int i = 0; i < totalParameters - 1; ++i)
-        {
-            auto value = getValue(memory[instructionIndex + i + 1], parameterInfo[i + 1], memory);
-            result.push_back(value);
-        }
-
-        //exit
-        if (operation == 6 || operation == 5 || operation == 4)
-        {
-            int i = totalParameters - 1;
-            auto value = getValue(memory[instructionIndex + i + 1], parameterInfo[i + 1], memory);
-            result.push_back(value);
-        }
-        else
-        {
-            int i = totalParameters - 1;
-            auto value2 = memory[instructionIndex + 1 + i];
-            result.push_back(value2);
+            if (parameterInfo[result.size() -1] == 2)
+            {
+                result[result.size() - 1] = params.back() + relativeBase;
+            }
+            else
+            {
+                result[result.size() - 1] = params.back();
+            }
         }
 
         return result;
     }
 
-    void writeResult(std::vector<long long>& memory, long long result, int operation, std::vector<long long>& paramsTransformed)
+    void writeResult(memoryType result, int operation, std::vector<memoryType>& paramsTransformed)
     {
         if (operation == 5 || operation == 6)
         {
@@ -1301,18 +1278,22 @@ private:
             outputFun(paramsTransformed[0]);
             return;
         }
+        if (operation == 9)
+        {
+            relativeBase += paramsTransformed[0];
+            return;
+        }
 
         if (operation == 3)
         {
             result = inputFun();
         }
 
-
         int indexSave = paramsTransformed.back();
         memory[indexSave] = result;
     }
 
-    void updateIndex(std::vector<long long>& memory, std::vector<long long>& paramsTransformed, int operation, int result)
+    void updateIndex( std::vector<memoryType>& paramsTransformed, int operation, int result)
     {
         if (operation == 5 || operation == 6)
         {
@@ -1335,31 +1316,40 @@ private:
     //6:Jmp ==
     //7:<
     //8: ==
-
+    //9: +RelativeBase
     void runProgram()
     {
-        while (instructionIndex < memory.size() && memory[instructionIndex] != 99)
+        while ( memory[instructionIndex] != 99)
         {
+
+            int tmp_63 = memory[63];
+            int tmp_1000 = memory[1000];
+
+
+            auto instruction = memory[instructionIndex];
             auto paramsInfo = parseParamsInfo(memory[instructionIndex], 5);
             int operation = paramsInfo[0];
-            auto paramsForInstruction = readParametersFromInstruction(memory, operation);
-            auto paramsTransformed = transformParameters(operation, memory, paramsForInstruction, paramsInfo);
+            paramsInfo.erase(paramsInfo.begin());
+            auto paramsForInstruction = readParametersFromInstruction( operation);
+            auto paramsTransformed = transformParameters(operation, paramsForInstruction, paramsInfo);
 
             auto result = calculateInstruction(operation, paramsTransformed);
 
-            writeResult(memory, result, operation, paramsTransformed);
-            updateIndex(memory, paramsTransformed, operation, result);
+            writeResult( result, operation, paramsTransformed);
+            updateIndex( paramsTransformed, operation, result);
         }
     }
 
-    std::vector<long long> buildMemory(const std::string& txt)
+    std::map<int, memoryType> buildMemory(const std::string& txt)
     {
         auto split_value = split(txt, ",");
-        std::vector<long long> memory;
+        std::map<int, memoryType> memory;
 
+        int index = 0;
         for (auto v : split_value)
         {
-            memory.push_back(atoll(v.c_str()));
+            memory[index] = stoull(v.c_str());
+            ++index;
         }
 
         return memory;
@@ -1372,6 +1362,8 @@ public:
         inputFun = input;
         outputFun = output;
         memory = buildMemory(txt);
+        instructionIndex = 0;
+        relativeBase = 0;
     }
 
     void Run()
@@ -1382,10 +1374,35 @@ public:
 
 void day9()
 {
-    auto txt = ReadFile("./input/day5.txt")[0];
-    day9_intcode program;
-    program.Init(txt, []() {return 5; }, [](long long v) {std::cout << v; });
-    program.Run();
+    auto txt = ReadFile("./input/day9.txt")[0];
+    day9_intcode programA;
+    programA.Init(txt, 
+    []() 
+        {
+            return 1; 
+        }, 
+    [](day9_intcode::memoryType v)
+        {
+            std::cout << v <<","; 
+        });
+    std::cout << "day 9 => ";
+    programA.Run();
+    std::cout << "\n";
+
+    day9_intcode programB;
+    programB.Init(txt,
+        []()
+        {
+            return 2;
+        },
+        [](day9_intcode::memoryType v)
+        {
+            std::cout << v << ",";
+        });
+    std::cout << "day 9_B => ";
+    programB.Run();
+    std::cout << "\n";
+
 }
 
 int main()
