@@ -6,6 +6,8 @@
 
 using namespace std;
 
+constexpr float PI = 3.14159265f;
+
 std::vector<string> ReadFile(string path)
 {
     std::vector<string> result;

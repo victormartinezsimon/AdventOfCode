@@ -13,7 +13,6 @@
 #include <set>
 #include <numeric>
 #include <limits.h>
-#include <numeric>
 #include <array>
 #include <queue>
 #include <iomanip>
@@ -23,6 +22,7 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <cmath>
 using namespace std;
 
 int day1_b(int value, std::map<int, int>& cache)
@@ -1405,6 +1405,193 @@ void day9()
 
 }
 
+bool day10_clearPath(const std::vector<string>& board, int width, int height, const std::pair<int,int>& origin, const std::pair<int,int>& dest)
+{
+    int diffRow = dest.first - origin.first;
+    int diffCol = dest.second - origin.second;
+
+    int diffRowAbs = abs(diffRow);
+    int diffColAbs = abs(diffCol);
+
+    int diffGCD = std::gcd(diffRowAbs, diffColAbs);
+
+    int tendencyRow = diffRow / diffGCD;
+    int tendencyCol = diffCol / diffGCD;
+
+    std::pair<int, int> currentPosition = { origin.first + tendencyRow, origin.second + tendencyCol };;
+
+    while (currentPosition != dest)
+    {
+        if (board[currentPosition.first][currentPosition.second] == '#')
+        {
+            return false;
+        }
+
+        currentPosition = { currentPosition.first + tendencyRow, currentPosition.second + tendencyCol };
+    }
+
+    return true;
+}
+
+int day10_A(const std::vector<string>& board, int width, int height, const std::vector<std::pair<int, int>>& asteroids, std::pair<int, int>& bestCoords)
+{
+    std::vector<std::vector<int>> counts(height, std::vector<int>(width, 0));
+
+    for (int asteroid1 = 0; asteroid1 < asteroids.size(); ++asteroid1)
+    {
+        for (int asteroid2 = asteroid1 +1; asteroid2 < asteroids.size(); ++asteroid2)
+        {
+            auto ast1 = asteroids[asteroid1];
+            auto ast2 = asteroids[asteroid2];
+            bool clearPath = day10_clearPath(board, width, height, ast1, ast2);
+            if (clearPath)
+            {
+                counts[ast1.first][ast1.second]++;
+                counts[ast2.first][ast2.second]++;
+            }
+        }
+    }
+
+
+    int maxValue = 0;
+
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < width; ++col)
+        {
+            if (counts[row][col] > maxValue)
+            {
+                maxValue = counts[row][col];
+                bestCoords = { row, col };
+            }
+        }
+    }
+
+    return maxValue;
+}
+
+std::vector<std::pair<int, int>> day10_getVisibleAsteroids(const std::vector<string>& board, int width, int height, std::pair<int, int>& laserOrigin)
+{
+    std::vector<std::pair<int, int>> result;
+
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < width; ++col)
+        {
+            if (row == laserOrigin.first && col == laserOrigin.second)
+            {
+                continue;
+            }
+            if (board[row][col] == '#')
+            {
+                std::pair<int, int> asteroid = { row, col };
+                if (day10_clearPath(board, width, height, laserOrigin, asteroid))
+                {
+                    result.push_back({ row, col });
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
+struct day10_bAngles
+{
+    std::pair<int, int> position;
+    double angles;
+};
+
+void day10_B(std::vector<string> board, int width, int height, std::pair<int,int> laserOrigin)
+{
+    //Y  X
+    auto v0 = atan2(-5, 0);         v0 -= 3* PI / 2; while (v0 < 0) { v0 += 2*PI; }
+    auto v1 = atan2(-3, 3);         v1 -= 3* PI / 2; while (v1 < 0) { v1 += 2*PI; }
+    auto v2 = atan2( 0,5);          v2 -= 3* PI / 2; while (v2 < 0) { v2 += 2*PI; }
+    auto v3 = atan2( 3,3);          v3 -= 3* PI / 2; while (v3 < 0) { v3 += 2*PI; }
+    auto v4 = atan2( 5,0);          v4 -= 3* PI / 2; while (v4 < 0) { v4 += 2*PI; }
+    auto v5 = atan2(3, -3);         v5 -= 3* PI / 2; while (v5 < 0) { v5 += 2*PI; }
+    auto v6 = atan2( 0,-5);         v6 -= 3* PI / 2; while (v6 < 0) { v6 += 2*PI; }
+    auto v7 = atan2( -3,-3);        v7 -= 3* PI / 2; while (v7 < 0) { v7 += 2*PI; }
+
+
+    int count = 0;
+    int max = 200;
+    while (count < max)
+    {
+        auto visibles = day10_getVisibleAsteroids(board, width, height, laserOrigin);
+
+        if (count + visibles.size() < max)
+        {
+            //remove them
+            for (auto&& asteroid : visibles)
+            {
+                board[asteroid.first][asteroid.second] = 'D';
+            }
+        }
+        else
+        {
+            std::vector<day10_bAngles> asteroidsToInvestigate;
+            for (auto&& ast : visibles)
+            {
+                day10_bAngles data;
+                data.position = ast;
+
+                int diffY = ast.first - laserOrigin.first;
+                int diffX = ast.second - laserOrigin.second;
+
+                auto angles = atan2(diffY, diffX);
+                angles -= 3 * PI / 2;
+                while (angles < 0)
+                {
+                    angles += 2 * PI;
+                }
+                data.angles = angles;
+
+                asteroidsToInvestigate.push_back(data);
+            }
+
+            std::sort(asteroidsToInvestigate.begin(), asteroidsToInvestigate.end(), [](const day10_bAngles& a, const day10_bAngles& b) {return a.angles < b.angles; });
+
+            int index = max - count -1;
+            auto lastOne = asteroidsToInvestigate[index];
+            int valueB = lastOne.position.first + lastOne.position.second * 100;
+            std::cout << "day 10_B => " << valueB << "\n";
+        }
+
+        count += visibles.size();
+    }
+    
+}
+
+void day10()
+{
+    auto board = ReadFile("./input/day10.txt");
+
+    int width = board[0].size();
+    int height = board.size();
+    std::vector<std::pair<int, int>> asteroids;
+
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < width; ++col)
+        {
+            if (board[row][col] == '#')
+            {
+                asteroids.push_back({ row, col });
+            }
+        }
+    }
+
+    std::pair<int, int> bestCoordsA;
+    int valueA = day10_A(board, width, height, asteroids, bestCoordsA);
+    std::cout << "day 10 => " << valueA << "\n";
+
+
+    day10_B(board, width, height, bestCoordsA);
+}
+
+
 int main()
 {
     //day1();
@@ -1415,7 +1602,8 @@ int main()
     //day6();
     //day7 ();
     //day8();
-    day9();
+    //day9();
+    day10();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
