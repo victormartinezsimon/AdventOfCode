@@ -2010,6 +2010,149 @@ void day11()
 
 }
 
+struct day12_moon
+{
+public:
+    std::array<int, 3> position;
+    std::array<int, 3> velocity;
+
+    void build(const std::string& str)
+    {
+        //<x=9, y=-8, z=-3>
+        std::string regexTxt = "<x=(.*), y=(.*), z=(.*)";
+        std::regex numbersRegex(regexTxt);
+        std::smatch sm;
+        std::regex_search(str, sm, numbersRegex);
+
+        for (int i = 0; i < position.size(); ++i)
+        {
+            position[i] = atoi(sm.str(i + 1).c_str());
+        }
+        
+        velocity.fill(0);
+    }
+};
+
+void day12_runStep(std::vector< day12_moon>& moons, int indexPos)
+{
+    //update gravity
+    for (int moon1 = 0; moon1 < moons.size(); ++moon1)
+    {
+        for (int moon2 = moon1 + 1; moon2 < moons.size(); ++moon2)
+        {
+            if (moons[moon1].position[indexPos] < moons[moon2].position[indexPos])
+            {
+                moons[moon1].velocity[indexPos]++;
+                moons[moon2].velocity[indexPos]--;
+            }
+
+            if (moons[moon1].position[indexPos] > moons[moon2].position[indexPos])
+            {
+                moons[moon1].velocity[indexPos]--;
+                moons[moon2].velocity[indexPos]++;
+            }
+        }
+    }
+    
+    //update position
+    for (auto& moon : moons)
+    {
+        moon.position[indexPos] += moon.velocity[indexPos];
+    }
+}
+
+void day12_runStep(std::vector< day12_moon>& moons)
+{
+    day12_runStep(moons, 0);
+    day12_runStep(moons, 1);
+    day12_runStep(moons,2);
+}
+
+void day12_A(std::vector< day12_moon> moons)
+{
+    int totalSteps = 1000;
+    for (int i = 0; i < totalSteps; ++i)
+    {
+        day12_runStep(moons);
+    }
+
+    long long resultA = 0;
+
+    for (auto&& moon : moons)
+    {
+        long long vels = abs(moon.velocity[0]) + abs(moon.velocity[1]) + abs(moon.velocity[2]);
+        long long pos = abs(moon.position[0]) + abs(moon.position[1]) + abs(moon.position[2]);
+
+        resultA += vels * pos;
+    }
+
+    std::cout << "day12 => " << resultA << "\n";
+}
+
+bool day12_checkVelocityZero(const day12_moon& m, std::array<int, 3>& originalPosition, int index)
+{
+    bool checkVel = m.velocity[index] == 0 ;
+    bool checkPos = m.position[index] == originalPosition[index];
+
+    return checkVel && checkPos;
+}
+
+void day12_B(std::vector< day12_moon> moons)
+{
+
+    std::vector<std::array<int, 3>> originalPos;
+    for (int i = 0; i < moons.size(); ++i)
+    {
+        originalPos.push_back(moons[i].position);
+    }
+
+    std::array<long long, 3> resultPerAxis;
+
+    for (int axis = 0; axis < 3; ++axis)
+    {
+        bool stop = false;
+        unsigned long long count = 0;
+
+        while (!stop)
+        {
+            day12_runStep(moons, axis);
+            ++count;
+
+            stop = true;
+            for (int i = 0; i < moons.size(); ++i)
+            {
+                auto val = day12_checkVelocityZero(moons[i], originalPos[i], axis);
+                stop &= val;
+            }
+        }
+        resultPerAxis[axis] = count;
+    }
+
+    unsigned long long res1 = std::lcm(resultPerAxis[0], resultPerAxis[1]);
+    unsigned long long res2 = std::lcm(resultPerAxis[2],res1);
+
+    std::cout << "day 12_B => " << res2 << "\n";
+
+}
+
+void day12()
+{
+    auto fileTxt = ReadFile("./input/day12.txt");
+
+    std::vector< day12_moon> moons;
+
+    for (auto l : fileTxt)
+    {
+        day12_moon moon;
+        moon.build(l);
+        moons.push_back(moon);
+    }
+
+    day12_A(moons);
+    day12_B(moons);
+}
+
+
 int main()
 {
     //day1();
@@ -2022,7 +2165,8 @@ int main()
     //day8();
     //day9();
     //day10();
-    day11();
+    //day11();
+    day12();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
