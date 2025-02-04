@@ -1591,19 +1591,438 @@ void day10()
     day10_B(board, width, height, bestCoordsA);
 }
 
+class day11_intcode
+{
+public:
+    using memoryType = long long;
+    using inputFunction = function<memoryType()>;
+    using outputFunction = function<void(memoryType)>;
+
+private:
+    int instructionIndex = 0;
+    memoryType relativeBase = 0;
+    inputFunction inputFun;
+    outputFunction outputFun;
+    std::map<memoryType, memoryType> memory;
+
+    memoryType calculateInstruction(int operation, std::vector<memoryType> params)
+    {
+        switch (operation)
+        {
+        case 1: return params[0] + params[1]; break;
+        case 2: return params[0] * params[1]; break;
+        case 3: return -1; break;
+        case 4: return -1; break;
+        case 5: return params[0] != 0; break;
+        case 6: return params[0] == 0; break;
+        case 7: return params[0] < params[1]; break;
+        case 8: return params[0] == params[1]; break;
+        case 9: return -1; break;
+        }
+
+        std::cout << "error\n";
+        return 0;
+    }
+
+    memoryType getValue(memoryType value, int type)
+    {
+        switch (type)
+        {
+        case 0: return memory[value];
+        case 1: return value;
+        case 2: 
+            if (memory.find(value + relativeBase) == memory.end()) {
+                memory[value + relativeBase] = 0;
+            }
+            return memory[value + relativeBase];
+        }
+        std::cout << "error \n";
+        return 0;
+    }
+
+    std::vector<int> parseParamsInfo(int value, int totalElements)
+    {
+        std::vector<int> result;
+
+        int instruction = value % 100;
+        result.push_back(instruction);
+        totalElements -= 2;
+
+        value = value / 100;
+        while (totalElements >= 0)
+        {
+            int val = value % 10;
+            result.push_back(val);
+            value = value / 10;
+            --totalElements;
+        }
+
+        return result;
+    }
+
+    int getParametersForOperation(int operation)
+    {
+        switch (operation)
+        {
+        case 1:
+        case 2: return 3;
+        case 3:
+        case 4: return 1;
+        case 5:
+        case 6: return 2;
+        case 7:
+        case 8: return 3;
+        case 9: return 1;
+        }
+        return 0;
+    }
+
+    std::vector<memoryType> readParametersFromInstruction(int operation)
+    {
+        int totalParams = getParametersForOperation(operation);
+        std::vector<memoryType> result;
+        for (int i = 0; i < totalParams; ++i)
+        {
+            auto value = memory[instructionIndex + i + 1];
+            result.push_back(value);
+        }
+        return result;
+    }
+    std::vector<memoryType> transformParameters(int operation, const std::vector<memoryType>& params, const std::vector<int>& parameterInfo)
+    {
+        std::vector<memoryType> result;
+        for (int i = 0; i < params.size(); ++i)
+        {
+            auto value = getValue(params[i], parameterInfo[i]);
+            result.push_back(value);
+        }
+
+        //direct result
+        std::set<int> directResult = { 1, 2, 3, 7, 8 };
+        if (directResult.find(operation) != directResult.end())
+        {
+            if (parameterInfo[result.size() - 1] == 2)
+            {
+                result[result.size() - 1] = params.back() + relativeBase;
+            }
+            else
+            {
+                result[result.size() - 1] = params.back();
+            }
+        }
+
+        return result;
+    }
+
+    void writeResult(memoryType result, int operation, std::vector<memoryType>& paramsTransformed)
+    {
+        if (operation == 5 || operation == 6)
+        {
+            return;
+        }
+
+        if (operation == 4)
+        {
+            outputFun(paramsTransformed[0]);
+            return;
+        }
+        if (operation == 9)
+        {
+            relativeBase += paramsTransformed[0];
+            return;
+        }
+
+        if (operation == 3)
+        {
+            result = inputFun();
+        }
+
+        int indexSave = paramsTransformed.back();
+        memory[indexSave] = result;
+    }
+
+    void updateIndex(std::vector<memoryType>& paramsTransformed, int operation, int result)
+    {
+        if (operation == 5 || operation == 6)
+        {
+            if (result)
+            {
+                instructionIndex = paramsTransformed[1];
+                return;
+            }
+        }
+
+        int totalParams = getParametersForOperation(operation);
+        instructionIndex += totalParams + 1;
+    }
+    //
+    //1:+
+    //2:*
+    //3:Read
+    //4:Write
+    //5:Jmp !=
+    //6:Jmp ==
+    //7:<
+    //8: ==
+    //9: +RelativeBase
+    void runProgram()
+    {
+        while (memory[instructionIndex] != 99)
+        {
+            runOneInstruction();
+        }
+    }
+
+    void runOneInstruction()
+    {
+        auto instruction = memory[instructionIndex];
+        auto paramsInfo = parseParamsInfo(memory[instructionIndex], 5);
+        int operation = paramsInfo[0];
+        paramsInfo.erase(paramsInfo.begin());
+        auto paramsForInstruction = readParametersFromInstruction(operation);
+        auto paramsTransformed = transformParameters(operation, paramsForInstruction, paramsInfo);
+
+        auto result = calculateInstruction(operation, paramsTransformed);
+
+        writeResult(result, operation, paramsTransformed);
+        updateIndex(paramsTransformed, operation, result);
+    }
+
+    std::map<memoryType, memoryType> buildMemory(const std::string& txt)
+    {
+        auto split_value = split(txt, ",");
+        std::map<memoryType, memoryType> memory;
+
+        int index = 0;
+        for (auto v : split_value)
+        {
+            memory[index] = stoll(v.c_str());
+            ++index;
+        }
+
+        return memory;
+    }
+
+public:
+
+    void Init(const std::string& txt, inputFunction input, outputFunction output)
+    {
+        inputFun = input;
+        outputFun = output;
+        memory = buildMemory(txt);
+        instructionIndex = 0;
+        relativeBase = 0;
+    }
+
+    void Run()
+    {
+        runProgram();
+    }
+
+    void RunDebug()
+    {
+        runOneInstruction();
+    }
+
+    std::vector<int> GetMemoryIndexes()
+    {
+        std::vector<int> toReturn;
+        for (auto kvp : memory)
+        {
+            toReturn.push_back(kvp.first);
+        }
+        return toReturn;
+    }
+
+    memoryType GetValueInMemoryPosition(int index)
+    {
+        return memory[index];
+    }
+};
+
+void day11_A(std::string& code)
+{
+    day11_intcode programA;
+
+    using LL = day11_intcode::memoryType;
+
+    std::pair<LL, LL> robotPosition = { 50,50 };
+    Directions currentDir = Directions::NORTH;
+
+    std::set<std::pair<LL, LL>> positionsPainted;
+    std::map<std::pair<LL, LL>, int> colorInPosition;
+    bool outputIsDirection = false;
+
+    day11_intcode::inputFunction input = [&robotPosition, &colorInPosition]()
+    {
+        if (colorInPosition.find(robotPosition) == colorInPosition.end())
+        {
+            return 0;//black;
+        }
+
+        return colorInPosition[robotPosition];
+
+    };
+    day11_intcode::outputFunction output = [&robotPosition, &currentDir, &positionsPainted, &colorInPosition, &outputIsDirection](day11_intcode::memoryType value)
+    {
+        if (outputIsDirection)
+        {
+            //0 => turn -90
+            //1 => turn 90
+            if (value == 0)
+            {
+                currentDir = turnMinus90Degress(currentDir);
+            }
+
+            if (value == 1)
+            {
+                currentDir = turn90Degress(currentDir);
+            }
+
+            robotPosition = getNextPosition(robotPosition, currentDir);
+        }
+        else
+        {
+            //0 => paint black
+            //1 => paint white
+            colorInPosition[robotPosition] = value;
+            positionsPainted.insert(robotPosition);
+        }
+
+        outputIsDirection = !outputIsDirection;
+
+    };
+
+    programA.Init(code, input, output);
+    programA.Run();
+
+    std::cout << "day 11 =>" << positionsPainted.size() << "\n";
+}
+
+void day11_print(std::map<std::pair<day11_intcode::memoryType, day11_intcode::memoryType>, int>& colorInPosition)
+{
+    int minX = 1000;
+    int minY = 1000;
+    int maxX = -1;
+    int maxY = -1;
+
+    for (auto&& kvp : colorInPosition)
+    {
+        auto position = kvp.first;
+
+        if (position.first < minY) { minY = position.first; }
+        if (position.first > maxY) { maxY = position.first; }
+
+        if (position.second < minX) { minX = position.second; }
+        if (position.second > maxX) { maxX = position.second; }
+    }
+
+    for (int row = minY; row <= maxY; ++row)
+    {
+        for (int col = minX; col <= maxX; ++col)
+        {
+            std::pair<int, int> pos = { row, col };
+
+            if (colorInPosition.find(pos) != colorInPosition.end())
+            {
+                if (colorInPosition[pos] == 1)
+                {
+                    std::cout << "#";
+                }
+                else
+                {
+                    std::cout << ".";
+                }
+            }
+            else
+            {
+                std::cout << ".";
+            }
+        }
+        std::cout << "\n";
+    }
+
+    std::cout << "\n";
+}
+
+void day11_B(std::string& code)
+{
+    day11_intcode programB;
+
+    std::pair<day11_intcode::memoryType, day11_intcode::memoryType> robotPosition = { 100,100 };
+    Directions currentDir = Directions::NORTH;
+
+    std::map<std::pair<day11_intcode::memoryType, day11_intcode::memoryType>, int> colorInPosition;
+    colorInPosition[robotPosition] = 1;
+    bool outputIsDirection = false;
+
+    day11_intcode::inputFunction input = [&robotPosition, &colorInPosition]()
+    {
+        int toReturn = 0;
+        if (colorInPosition.find(robotPosition)  != colorInPosition.end())
+        {
+            toReturn = colorInPosition[robotPosition];
+        }
+        return toReturn;
+
+    };
+    day11_intcode::outputFunction output = [&robotPosition, &currentDir, &colorInPosition, &outputIsDirection](day11_intcode::memoryType value)
+    {
+        if (outputIsDirection)
+        {
+            //0 => turn -90
+            //1 => turn 90
+            if (value == 0)
+            {
+                currentDir = turnMinus90Degress(currentDir);
+            }
+
+            if (value == 1)
+            {
+                currentDir = turn90Degress(currentDir);
+            }
+
+            robotPosition = getNextPosition(robotPosition, currentDir);
+        }
+        else
+        {
+            //0 => paint black
+            //1 => paint white
+            colorInPosition[robotPosition] = value;
+        }
+
+        outputIsDirection = !outputIsDirection;
+
+    };
+
+    programB.Init(code, input, output);
+    programB.Run();
+
+    day11_print(colorInPosition);
+}
+
+void day11()
+{
+    auto code = ReadFile("./input/day11.txt")[0];
+
+    day11_A(code);
+    day11_B(code);
+
+}
 
 int main()
 {
     //day1();
     //day2();
     //day3();
-   // day4();
+    //day4();
     //day5();
     //day6();
     //day7 ();
     //day8();
     //day9();
-    day10();
+    //day10();
+    day11();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
