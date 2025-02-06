@@ -2552,14 +2552,224 @@ void day13_B(const std::string& code, int maxX, int maxY, bool paint)
 void day13()
 {
     auto code = ReadFile("./input/day13.txt")[0];
-    /*
+    
     int maxX = -1;
     int maxY = -1;
     day13_A(code, maxX, maxY);
-    */
-    int maxX = 37;
-    int maxY = 20;
     day13_B(code, maxX, maxY, false);
+}
+
+struct day14_chem
+{
+    string result;
+    int totalResult;
+    std::vector<pair<string, int>> needed;
+};
+
+long long day14_getORE(const std::map<string, day14_chem>& allChems, long long howMuch, const std::string& elemID, std::map<string, long long>& leftOvers)
+{
+    long long currentLeft = leftOvers[elemID];
+
+    if (currentLeft >= howMuch)
+    {
+        leftOvers[elemID] -= howMuch;
+        return 0;
+    }
+
+    howMuch -= currentLeft;
+    leftOvers[elemID] -= currentLeft;
+
+    if (elemID == "ORE")
+    {
+        return howMuch;
+    }
+
+    auto&& chem = allChems.at(elemID);
+
+    long long currentAmount = 0;
+
+    long long totalTimes = ceil(static_cast<float>(howMuch) / static_cast<float>(chem.totalResult));
+    for (auto&& source : chem.needed)
+    {
+        string id = source.first;
+        long long total = source.second;
+        long long realTotal = total*totalTimes;
+        auto res = day14_getORE(allChems, realTotal, id, leftOvers);
+        currentAmount += res;
+    }
+
+    leftOvers[elemID] += (chem.totalResult*totalTimes - howMuch);
+
+    return currentAmount;
+}
+
+bool day14_getFuel(const std::map<string, day14_chem>& allChems, long long howMuch, const std::string& elemID, std::map<string, long long>& leftOvers)
+{
+    long long currentLeft = leftOvers[elemID];
+
+    if (currentLeft >= howMuch)
+    {
+        leftOvers[elemID] -= howMuch;
+        return true;
+    }
+
+    howMuch -= currentLeft;
+    leftOvers[elemID] -= currentLeft;
+
+    if (elemID == "ORE")
+    {
+        return howMuch < 0;
+    }
+
+    auto&& chem = allChems.at(elemID);
+
+    long long totalTimes = ceil(static_cast<float>(howMuch) / static_cast<float>(chem.totalResult));
+    for (auto&& source : chem.needed)
+    {
+        string id = source.first;
+        long long total = source.second;
+        long long realTotal = total * totalTimes;
+        bool valid = day14_getFuel(allChems, realTotal, id, leftOvers);
+
+        if (!valid)
+        {
+            return false;
+        }
+    }
+
+    leftOvers[elemID] += (chem.totalResult * totalTimes - howMuch);
+
+    return true;
+}
+
+void day14_RestoreORE(std::map<string, day14_chem>& allChems, long long howMuch, const std::string& elemID, std::map<string, long long>& leftOvers)
+{
+    if (howMuch == 0) 
+    { 
+        return; 
+    }
+
+    if (elemID == "ORE")
+    {
+        //leftOvers["ORE"] += howMuch;
+        return;
+    }
+
+    auto&& chem = allChems.at(elemID);
+    long long totalToTransform = howMuch / chem.totalResult;
+    leftOvers[elemID] -= (totalToTransform * chem.totalResult);
+
+    for (auto&& source : chem.needed)
+    {
+        string id = source.first;
+        long long total = source.second;
+        leftOvers[id] += total * totalToTransform;
+
+        day14_RestoreORE(allChems, leftOvers[id], id, leftOvers);
+    }
+
+}
+
+void day14_restoreAllORE(std::map<string, day14_chem>& allChems, std::map<string, long long>& leftOvers)
+{
+    for (auto& kvp : leftOvers)
+    {
+        if (kvp.first == "ORE")
+        {
+            continue;
+        }
+        day14_RestoreORE(allChems, kvp.second, kvp.first, leftOvers);
+    }
+}
+
+
+void day14_B(std::map<string, day14_chem>& allChems, int resultA, std::map<string, long long>& leftOvers)
+{
+    long long totalORE = 1'000'000'000'000;
+    long long fuelGenerated = totalORE / resultA;
+    long long leftORE = totalORE - (resultA * fuelGenerated);
+
+    for (auto& kvp : leftOvers)
+    {
+        kvp.second *= fuelGenerated;
+    }
+
+    day14_restoreAllORE(allChems, leftOvers);
+    
+    leftOvers["ORE"] += leftORE;
+    int currentTry = 100000000;
+
+    while (currentTry > 0)
+    {
+        std::map < string, long long> copyLeftOvers = leftOvers;
+        bool valid = day14_getFuel(allChems, currentTry, "FUEL", copyLeftOvers);
+        long long copyLeftOREValue = copyLeftOvers["ORE"];
+        if (valid)
+        {
+            fuelGenerated += currentTry;
+
+            leftOvers = copyLeftOvers;
+
+            day14_restoreAllORE(allChems, leftOvers);
+        }
+        else
+        {
+            day14_restoreAllORE(allChems, leftOvers);
+            currentTry /= 10;
+        }
+    }
+
+    std::cout << "Day 14_B => "  << fuelGenerated << "\n";
+}
+
+std::map<string, day14_chem> day14_buildChems( const std::vector<string>& fileTxt)
+{
+    std::map<string, day14_chem> allChems;
+
+    std::string regexTxt = "(\\d+) (.*)";
+    std::regex numbersRegex(regexTxt);
+
+    for (auto&& line : fileTxt)
+    {
+        day14_chem chem;
+        //5 BHXH, 4 VRPVC => 5 LTCX
+        auto split1 = split(line, " => ");
+
+        {
+            std::smatch sm_dest;
+            std::regex_search(split1[1], sm_dest, numbersRegex);
+            chem.totalResult = atoi(sm_dest.str(1).c_str());
+            chem.result = trim_copy(sm_dest.str(2));
+        }
+
+        auto all_sources = split(split1[0], ",");
+        for (auto&& s : all_sources)
+        {
+            std::smatch sm_dest;
+            std::regex_search(s, sm_dest, numbersRegex);
+            int total = atoi(sm_dest.str(1).c_str());
+            string id = trim_copy(sm_dest.str(2));
+
+            chem.needed.push_back({ id, total });
+        }
+
+        allChems[chem.result] = chem;
+    }
+
+    return allChems;
+}
+
+void day14()
+{
+    auto fileTxt = ReadFile("./input/day14.txt");
+
+    std::map<string, day14_chem> allChems = day14_buildChems(fileTxt);
+
+    std::map<string, long long> leftOvers;
+    int resultA = day14_getORE(allChems, 1, "FUEL", leftOvers);
+    std::cout << "Day 14 => "  << resultA << "\n";
+
+    day14_B(allChems, resultA, leftOvers); 
 }
 
 int main()
@@ -2576,7 +2786,8 @@ int main()
     //day10();
     //day11();
     //day12();
-    day13();
+    //day13();
+    day14();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
