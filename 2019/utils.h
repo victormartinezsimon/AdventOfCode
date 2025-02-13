@@ -94,7 +94,7 @@ bool insideField(std::pair<int, int>position, int width, int height)
 }
 
 enum class Directions {
-    NORTH, SOUTH, EAST, WEST, NORTHEAST, NORTHWEST, SOUTHEAST, SOUTHWEST
+    NORTH, SOUTH, EAST, WEST, NORTHEAST, NORTHWEST, SOUTHEAST, SOUTHWEST, NONE
 };
 
 std::pair<int, int> getNextPosition(int row, int col, Directions dir)
