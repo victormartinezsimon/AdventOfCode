@@ -3321,6 +3321,141 @@ void day15()
     day15_b(end, board, false);
 }
 
+std::vector<int> day16_parseNumber(const std::string& str)
+{
+    std::vector<int> result;
+    for (auto c : str)
+    {
+        int value = c - '0';
+        result.push_back(value);
+    }
+
+    return result;
+}
+
+void day16_calculate_optimized(std::vector<int>& number, int totalSize)
+{
+    for (int numberIndex = 0; numberIndex < totalSize; ++numberIndex)
+    {
+        int startIndex = numberIndex;
+        int increase = (numberIndex + 1);
+        
+        bool add = true;
+        long long value = 0;
+
+        for (int idx = startIndex; idx < totalSize; idx += (increase*2))
+        {
+            long long acum = 0;
+            int startPos = idx;
+            int endPos = std::min(idx + increase, totalSize);
+            for (int pos = startPos; pos < endPos; ++pos)
+            {
+                acum += number[pos];
+            }
+
+            if (add)
+            {
+                value += acum;
+            }
+            else
+            {
+                value -= acum;
+            }
+            add = !add;
+        }
+        number[numberIndex] = (abs(value) % 10);
+    }
+}
+
+
+void day16_A(const std::string& number_str)
+{
+    auto number = day16_parseNumber(number_str);
+
+    for (int i = 0; i < 100; ++i)
+    {
+        day16_calculate_optimized(number, number.size());
+    }
+
+    int desiredSize = 8;
+
+    std::cout << "day16 =>";
+    for (int i = 0; i < desiredSize; ++i)
+    {
+        std::cout << number[i];
+    }
+    std::cout << "\n";
+}
+
+void day16_B(const std::string& number_str)
+{
+    auto number = day16_parseNumber(number_str);
+
+    std::vector<int> multNumber;
+    for (int i = 0; i < 10000; ++i)
+    {
+        multNumber.insert(multNumber.end(), number.begin(), number.end());
+    }
+
+    std::vector<int> start_values;
+    for (int i = 0; i < 7; ++i)
+    {
+        start_values.insert(start_values.begin(), number[i]);
+    }
+
+    long long skipValue = 0;
+    for (int i = 0; i < start_values.size(); ++i)
+    {
+        skipValue += start_values[i] * pow(10, i);
+    }
+
+   
+    //looking on the example:
+    //1*1  + 2*0  + 3*-1 + 4*0  + 5*1  + 6*0  + 7*-1 + 8*0  = 4
+    //1*0  + 2*1  + 3*1  + 4*0  + 5*0  + 6*-1 + 7*-1 + 8*0  = 8
+    //1*0  + 2*0  + 3*1  + 4*1  + 5*1  + 6*0  + 7*0  + 8*0  = 2
+    //1*0  + 2*0  + 3*0  + 4*1  + 5*1  + 6*1  + 7*1  + 8*0  = 2
+    // ---------------
+    //1*0  + 2*0  + 3*0  + 4*0  + 5*1  + 6*1  + 7*1  + 8*1  = 6
+    //1*0  + 2*0  + 3*0  + 4*0  + 5*0  + 6*1  + 7*1  + 8*1  = 1
+    //1*0  + 2*0  + 3*0  + 4*0  + 5*0  + 6*0  + 7*1  + 8*1  = 5
+    //1*0  + 2*0  + 3*0  + 4*0  + 5*0  + 6*0  + 7*0  + 8*1  = 8
+    //we can see that the last half number are calculated only adding the values
+    //so we can do something like:
+    //acum += number[i]
+    //number[i] = acum % 10;
+    //until the half of the numbers
+    //but, the initial skip is after the half, so we dont need to calculate the initial numbers
+
+    for (int phase = 0; phase < 100; ++phase)
+    {
+        long long acum = 0;
+
+        for (int idx = multNumber.size() - 1; idx >= skipValue; --idx)
+        {
+            acum += multNumber[idx];
+            multNumber[idx] = (acum % 10);
+        }
+    }
+
+    std::cout << "day16_B => ";
+    for (int i = skipValue; i < skipValue + 8; ++i)
+    {
+        std::cout << multNumber[i];
+    }
+    std::cout << "\n";
+}
+
+void day16()
+{
+    auto number_str = ReadFile("./input/day16.txt")[0];
+
+    day16_A(number_str);
+
+    day16_B(number_str);
+
+}
+
 int main()
 {
     //day1();
@@ -3337,7 +3472,8 @@ int main()
     //day12();
     //day13();
     //day14();
-    day15();
+    //day15();
+    day16();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
