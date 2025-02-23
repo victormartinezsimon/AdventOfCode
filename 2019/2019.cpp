@@ -3934,46 +3934,6 @@ void day17_b(const std::vector<std::string>& board, const std::string& code)
     //B : L, 6, R, 12, R, 12, L, 8,
     //C : L, 6, L, 10, L, 10, L, 6
 
-    /*
-    
-
-    std::vector<std::string> mainRutine =
-    { "A", ",", "B", ",", "A", ",", "C", ",", "B", ",", "A", ",", "C", ",", "B", ",", "A", ",", "C" };
-
-    std::vector<std::string> routineA =
-    { "L", ",", "6", ",", "L", ",", "4", ",", "R", ",", "12" };
-
-    std::vector<std::string> routineB = { "L", ",", "6", ",", "R", ",", "12", ",", "R", ",", "12", ",", "L", ",", "8" };
-    std::vector<std::string> routineC = { "L", ",", "6", ",", "L", ",", "10", ",", "L", ",", "10", ",", "L", ",", "6" };
-    std::vector<std::string> routineVideo = { "n" };
-
-    std::vector<std::vector<std::string>> inputs = { mainRutine, routineA, routineB, routineC, routineVideo };
-
-
-    int currentIndex = 0;
-    int currentInputIndex = 0;
-    day17_intcode program;
-
-    std::vector<std::string> board_str;
-    std::string currentString;
-
-    long long result;
-
-    day17_intcode::inputFunction input = [&currentIndex, &inputs, &currentInputIndex]
-    {
-        if (currentInputIndex >= inputs.size()) { return 10; }
-
-        if (currentIndex >= inputs[currentInputIndex].size())
-        {
-            currentIndex = 0;
-            ++currentInputIndex;
-            return 10;
-        }
-    };
-    
-    */
-
-
     std::string mainRutine = "A,B,A,C,B,A,C,B,A,C";
     std::string routineA = "L,6,L,4,R,12";
     std::string routineB = "L,6,R,12,R,12,L,8";
@@ -4038,6 +3998,276 @@ void day17()
     day17_b(board, code);
 }
 
+std::pair<int, int> day18_getStart(const std::vector<string>& board)
+{
+    int widht = board[0].size();
+    int height = board.size();
+
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < widht; ++col)
+        {
+            if (board[row][col] == '@')
+            {
+                return { row, col };
+            }
+        }
+    }
+    return { 0,0 };
+}
+
+int day18_getTotalKeys(const std::vector<string>& board)
+{
+    int widht = board[0].size();
+    int height = board.size();
+
+    int totalKeys = 0;
+
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < widht; ++col)
+        {
+            if ('a' <= board[row][col] && board[row][col] <= 'z')
+            {
+                ++totalKeys;
+            }
+        }
+    }
+    return totalKeys;
+}
+
+
+int day18_a(const std::vector<std::string>& board)
+{
+    auto startPos = day18_getStart(board);
+    auto totalKeys = day18_getTotalKeys(board);
+
+    int width = board[0].size();
+    int height = board.size();
+
+
+    struct NodeSearch
+    {
+        std::pair<int, int> position;
+        unsigned long long keys;
+        int cost = 0;
+    };
+
+    std::vector<NodeSearch> nodesToVisit;
+    {
+        NodeSearch startNode;
+        startNode.position = startPos;
+        startNode.keys = 0;
+        nodesToVisit.push_back(startNode);
+    }
+
+    std::vector<std::vector<std::set<unsigned long long>>> visited(height, std::vector<std::set<unsigned long long>>(width, std::set<unsigned long long>()));
+
+    unsigned long long expectedValue = pow(2, totalKeys) - 1;
+
+    std::bitset<26> bits;
+
+    while (!nodesToVisit.empty())
+    {
+        auto node = nodesToVisit.front();
+        nodesToVisit.erase(nodesToVisit.begin());
+
+        bits = node.keys;
+
+        if (bits.all())
+        {
+            return node.cost;
+        }
+
+        for (Directions dir : {Directions::EAST, Directions::WEST, Directions::NORTH, Directions::SOUTH})
+        {
+            auto newPosition = getNextPosition(node.position, dir);
+            //if (!insideField(newPosition, width, height)) { continue; }
+            if (board[newPosition.first][newPosition.second] == '#') { continue; }
+            if (visited[newPosition.first][newPosition.second].contains(node.keys)) { continue; }
+
+            auto boardValue = board[newPosition.first][newPosition.second];
+
+            if (isupper(boardValue))
+            {
+                if (bits[boardValue - 'A'] == 0)
+                {
+                    continue;
+                }
+            }
+
+            if (islower(boardValue))
+            {
+                bits[boardValue - 'a']  = true;
+            }
+
+            NodeSearch newNode;
+            newNode.cost = node.cost + 1;
+            newNode.position = newPosition;
+            newNode.keys = bits.to_ullong();
+            nodesToVisit.push_back(newNode);
+
+            visited[newPosition.first][newPosition.second].insert(bits.to_ullong());
+
+            if (islower(boardValue))
+            {
+                bits[boardValue - 'a'] = false;
+            }
+        }
+    }
+
+    return 0;
+}
+
+int day18_b(const std::vector<std::string>& board, std::pair<int, int>& start, unsigned long long keysFromOthersQuadrants)
+{
+    auto totalKeys = day18_getTotalKeys(board);
+
+    int width = board[0].size();
+    int height = board.size();
+
+
+    struct NodeSearch
+    {
+        std::pair<int, int> position;
+        unsigned long long keys;
+        int cost = 0;
+    };
+
+    std::vector<NodeSearch> nodesToVisit;
+    {
+        NodeSearch startNode;
+        startNode.position = start;
+        startNode.keys = keysFromOthersQuadrants;
+        nodesToVisit.push_back(startNode);
+    }
+
+    std::vector<std::vector<std::set<unsigned long long>>> visited(height, std::vector<std::set<unsigned long long>>(width, std::set<unsigned long long>()));
+
+    std::bitset<26> bits;
+
+    while (!nodesToVisit.empty())
+    {
+        auto node = nodesToVisit.front();
+        nodesToVisit.erase(nodesToVisit.begin());
+
+        bits = node.keys;
+
+        if (bits.all())
+        {
+            return node.cost;
+        }
+
+        for (Directions dir : {Directions::EAST, Directions::WEST, Directions::NORTH, Directions::SOUTH})
+        {
+            auto newPosition = getNextPosition(node.position, dir);
+            //if (!insideField(newPosition, width, height)) { continue; }
+            if (board[newPosition.first][newPosition.second] == '#') { continue; }
+            if (visited[newPosition.first][newPosition.second].contains(node.keys)) { continue; }
+
+            auto boardValue = board[newPosition.first][newPosition.second];
+
+            if (isupper(boardValue))
+            {
+                if (bits[boardValue - 'A'] == 0)
+                {
+                    continue;
+                }
+            }
+
+            if (islower(boardValue))
+            {
+                bits[boardValue - 'a'] = true;
+            }
+
+            NodeSearch newNode;
+            newNode.cost = node.cost + 1;
+            newNode.position = newPosition;
+            newNode.keys = bits.to_ullong();
+            nodesToVisit.push_back(newNode);
+
+            visited[newPosition.first][newPosition.second].insert(bits.to_ullong());
+
+            if (islower(boardValue))
+            {
+                bits[boardValue - 'a'] = false;
+            }
+        }
+    }
+
+    return 0;
+}
+
+
+std::vector<unsigned long long> day18_calculateKeysForOtherQuadrants(std::vector<std::string>& board, std::pair<int, int>& start)
+{
+    std::vector<std::bitset<26>> toReturn_tmp(4, 0);
+
+    int width = board[0].size();
+    int height = board.size();
+
+    for(int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < width; ++col)
+        {
+            if (islower(board[row][col]))
+            {
+                char value = board[row][col];
+                if (row >= start.first + 1 || col <= start.second - 1) toReturn_tmp[0][value - 'a'] = true;
+                if (row <= start.first - 1 || col <= start.second - 1) toReturn_tmp[1][value - 'a'] = true;
+                if (row <= start.first - 1 || col >= start.second + 1) toReturn_tmp[2][value - 'a'] = true;
+                if (row >= start.first + 1 || col >= start.second + 1) toReturn_tmp[3][value - 'a'] = true;
+            }
+        }
+    }
+
+    std::vector<unsigned long long> result;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        result.push_back(toReturn_tmp[i].to_ullong());
+    }
+
+    return result;
+}
+
+void day18()
+{
+    auto board = ReadFile("./input/day18.txt");
+
+    auto valueA = day18_a(board);
+    std::cout << "day 18 => " << valueA << "\n";
+
+    auto startPosition = day18_getStart(board);
+    board[startPosition.first][startPosition.second] = '#';
+    board[startPosition.first - 1][startPosition.second] = '#';
+    board[startPosition.first + 1][startPosition.second] = '#';
+    board[startPosition.first][startPosition.second - 1] = '#';
+    board[startPosition.first][startPosition.second + 1] = '#';
+
+    //quadrants
+    //  3   |   0
+    //------|-----
+    // 2    |   1
+    std::vector < std::pair<int, int>> newStarts = {
+        {startPosition.first - 1, startPosition.second + 1},
+        {startPosition.first + 1, startPosition.second + 1},
+        {startPosition.first + 1, startPosition.second - 1},
+        {startPosition.first - 1, startPosition.second - 1},
+    };
+
+    auto keysForOtherQuadrants = day18_calculateKeysForOtherQuadrants(board, startPosition);
+
+    int valueB = 0;
+
+    for (int i = 0; i < newStarts.size(); ++i)
+    {
+        valueB += day18_b(board, newStarts[i], keysForOtherQuadrants[i]);
+    }
+
+    std::cout << "day 18_B => " << valueB << "\n";
+}
+
 int main()
 {
     //day1();
@@ -4056,7 +4286,9 @@ int main()
     //day14();
     //day15();
     //day16();
-    day17();
+    //day17();
+    day18();
+
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
