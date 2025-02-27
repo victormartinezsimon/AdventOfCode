@@ -4657,6 +4657,362 @@ void day19()
     day19_B(code);
 }
 
+struct day20_portal
+{
+    std::pair<int, int> pos;
+    bool inside;
+};
+
+void day20_getPortalsData(const std::vector<std::string>& board,
+    std::map < string, std::vector < day20_portal>>& portals, std::vector<pair<int, int>>& toClear)
+{
+    int height = board.size();
+    int width = board[0].size();
+
+    //top=> down
+    for (int col = 0; col < width; ++col)
+    {
+        for (int row = 0; row < height - 1; ++row)
+        {
+            if (isupper(board[row][col] ) && isupper(board[row + 1][col]))
+            {
+                std::string key = string(1, board[row][col]) + string(1, board[row + 1][col]);
+
+                std::pair<int, int> position;
+                std::vector<std::pair<int, int>> clear;
+                bool inside = false;
+
+                if (row == 0)
+                {
+                    position = { row + 2, col };
+                    clear.push_back({ row + 1, col }); 
+                    clear.push_back({ row, col });
+                    inside = false;
+                }
+                else
+                {
+                    if (row == height - 2)
+                    {
+                        position = { row -1, col };
+                        clear.push_back({ row, col });
+                        clear.push_back({ row + 1, col });
+                        inside = false;
+                    }
+                    else
+                    {
+                        inside = true;
+                        char valueTop = board[row - 1][col];
+                        char valueBottom = board[row + 2][col];
+
+                        if (valueTop == '.')
+                        {
+                            position = { row - 1, col };
+                            clear.push_back({ row, col });
+                            clear.push_back({ row + 1, col });
+                        }
+                        else
+                        {
+                            position = { row + 2, col };
+                            clear.push_back({ row, col });
+                            clear.push_back({ row + 1, col });
+                        }
+                    }
+                }
+                day20_portal portal;
+                portal.pos = position;
+                portal.inside = inside;
+
+                portals[key].push_back(portal);
+                toClear.insert(toClear.end(), clear.begin(), clear.end());
+            }
+        }
+    }
+
+    //left right
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < width-1; ++col)
+        {
+            if (isupper(board[row][col]) && isupper(board[row][col + 1]))
+            {
+                std::string key = string(1, board[row][col]) + string(1, board[row][col + 1]);
+
+                std::pair<int, int> position;
+                std::vector<std::pair<int, int>> clear;
+                bool inside = false;
+
+                if (col == 0)
+                {
+                    position = { row, col + 2 };
+                    clear.push_back({ row, col });
+                    clear.push_back({ row, col + 1 });
+                    inside = false;
+                }
+                else
+                {
+                    if (col == width - 2)
+                    {
+                        position = { row, col - 1 };
+                        clear.push_back({ row, col });
+                        clear.push_back({ row, col + 1 });
+                        inside = false;
+
+                    }
+                    else
+                    {
+                        inside = true;
+
+                        char valueLeft = board[row][col - 1];
+                        char valueRight = board[row][col + 2];
+
+                        if (valueLeft == '.')
+                        {
+                            position = { row, col - 1 };
+                            clear.push_back({ row, col });
+                            clear.push_back({ row, col + 1 });
+                        }
+                        else
+                        {
+                            position = { row, col + 2 };
+                            clear.push_back({ row, col });
+                            clear.push_back({ row, col + 1 });
+                        }
+                    }
+                }
+                day20_portal portal;
+                portal.pos = position;
+                portal.inside = inside;
+
+                portals[key].push_back(portal);
+                toClear.insert(toClear.end(), clear.begin(), clear.end());
+            }
+        }
+    }
+}
+
+std::map < char, std::vector < day20_portal>> day20_redoPortals(const std::map < string, std::vector <day20_portal>>& portals)
+{
+    std::map < char, std::vector < day20_portal>> newPortals;
+
+    newPortals['A'] = portals.at("AA");
+    newPortals['Z'] = portals.at("ZZ");
+
+    char myChar = 'B';
+    for (auto&& portal : portals)
+    {
+        if (portal.first == "AA" || portal.first == "ZZ") { continue; }
+
+        newPortals[myChar] = portal.second;
+
+        myChar++;
+        if (myChar == 'Z') { myChar = 'a'; }
+    }
+
+    return newPortals;
+}
+
+void day20_redoBoard(std::vector<std::string>& board,
+    const std::map < char, std::vector < day20_portal>>& portals, const std::vector<pair<int, int>>& toClear)
+{
+    for (auto tc : toClear)
+    {
+        board[tc.first][tc.second] = ' ';
+    }
+
+    for (auto&& portal : portals)
+    {
+        for (auto portInfo : portal.second)
+        {
+            board[portInfo.pos.first][portInfo.pos.second] = portal.first;
+        }
+    }
+}
+
+int day20_partA(const std::vector<std::string>& board, const std::map < char, std::vector <day20_portal>>& portals)
+{
+    struct nodeSearch
+    {
+        std::pair<int, int> pos;
+        int cost;
+    };
+
+    int width = board[0].size();
+    int height = board.size();
+
+    std::vector<std::vector<bool>> visited(height, std::vector<bool>(width, false));
+
+    std::queue<nodeSearch> toVisit;
+    {
+        nodeSearch startNode;
+        startNode.pos = portals.at('A').front().pos;
+        startNode.cost = 0;
+        toVisit.push(startNode);
+    }
+
+    while (!toVisit.empty())
+    {
+        auto node = toVisit.front();
+        toVisit.pop();
+
+        auto valueInPos = board[node.pos.first][node.pos.second];
+
+        if (valueInPos == 'Z') { return node.cost; }
+
+        visited[node.pos.first][node.pos.second] = true;
+
+        for (Directions dir : {Directions::EAST, Directions::WEST, Directions::NORTH, Directions::SOUTH})
+        {
+            auto nextPosition = getNextPosition(node.pos, dir);
+
+            if (visited[nextPosition.first][nextPosition.second]) { continue; }
+
+            if (!insideField(nextPosition, width, height)) { continue; }
+
+            auto valueNext = board[nextPosition.first][nextPosition.second];
+
+            if (valueNext == '#' || valueNext == ' ') { continue; }
+
+            nodeSearch newNode;
+            newNode.pos = nextPosition;
+            newNode.cost = node.cost + 1;
+            toVisit.push(newNode);
+        }
+
+        if (islower(valueInPos) || isupper(valueInPos))
+        {
+            auto portalPositions = portals.at(valueInPos);
+
+            if (portalPositions.size() == 1) { continue; }
+            std::pair<int, int> destiny;
+            if (portalPositions[0].pos == node.pos) { destiny = portalPositions[1].pos; }
+            else { destiny = portalPositions[0].pos; }
+
+            if (visited[destiny.first][destiny.second]) { continue; }
+         
+            nodeSearch newNode;
+            newNode.pos = destiny;
+            newNode.cost = node.cost + 1;
+            toVisit.push(newNode);
+        }
+
+    }
+}
+
+int day20_partB(const std::vector<std::string>& board, const std::map < char, std::vector <day20_portal>>& portals)
+{
+    struct nodeSearch
+    {
+        std::pair<int, int> pos;
+        int cost;
+        int depth = 0;
+    };
+
+    int width = board[0].size();
+    int height = board.size();
+
+    std::vector<std::vector<std::set<int>>> visited(height, std::vector<std::set<int>>(width, std::set<int>()));
+
+    std::queue<nodeSearch> toVisit;
+    {
+        nodeSearch startNode;
+        startNode.pos = portals.at('A').front().pos;
+        startNode.cost = 0;
+        startNode.depth = 0;
+        toVisit.push(startNode);
+    }
+
+    while (!toVisit.empty())
+    {
+        auto node = toVisit.front();
+        toVisit.pop();
+
+        auto valueInPos = board[node.pos.first][node.pos.second];
+
+        if (valueInPos == 'Z')
+        {
+            if (node.depth == 0) 
+            {
+                return node.cost; 
+            }
+            continue;
+        }
+
+        visited[node.pos.first][node.pos.second].insert(node.depth);
+
+        for (Directions dir : {Directions::EAST, Directions::WEST, Directions::NORTH, Directions::SOUTH})
+        {
+            auto nextPosition = getNextPosition(node.pos, dir);
+
+            if (visited[nextPosition.first][nextPosition.second].contains(node.depth)) { continue; }
+
+            if (!insideField(nextPosition, width, height)) { continue; }
+
+            auto valueNext = board[nextPosition.first][nextPosition.second];
+
+            if (valueNext == '#' || valueNext == ' ') { continue; }
+
+            nodeSearch newNode;
+            newNode.pos = nextPosition;
+            newNode.cost = node.cost + 1;
+            newNode.depth = node.depth;
+            toVisit.push(newNode);
+        }
+
+        if (islower(valueInPos) || isupper(valueInPos))
+        {
+            auto portalPositions = portals.at(valueInPos);
+
+            if (portalPositions.size() == 1) { continue; }
+            std::pair<int, int> destiny;
+            int increaseDepth = 0;
+            if (portalPositions[0].pos == node.pos) 
+            { 
+                destiny = portalPositions[1].pos; 
+                increaseDepth = portalPositions[0].inside ? 1 : -1;
+            }
+            else 
+            {
+                destiny = portalPositions[0].pos; 
+                increaseDepth = portalPositions[1].inside ? 1 : -1;
+            }
+
+            int newDepth = node.depth + increaseDepth;
+
+            if (visited[destiny.first][destiny.second].contains(newDepth)) { continue; }
+            if (newDepth < 0) { continue; }
+
+            nodeSearch newNode;
+            newNode.pos = destiny;
+            newNode.cost = node.cost + 1;
+            newNode.depth = newDepth;
+            toVisit.push(newNode);
+        }
+
+    }
+    return 0;
+}
+
+void day20()
+{
+    auto board = ReadFile("./input/day20.txt");
+    std::map < string, std::vector < day20_portal>> portals;
+    std::vector<pair<int, int>> toClear;
+    day20_getPortalsData(board, portals, toClear);
+
+    auto realPortals = day20_redoPortals(portals);
+
+    day20_redoBoard(board, realPortals, toClear);
+
+    int partA = day20_partA(board, realPortals);
+
+    std::cout << "day20 =>" << partA << "\n";
+
+    int partB = day20_partB(board, realPortals);
+
+    std::cout << "day20_B =>" << partB << "\n";
+}
+
+
 int main()
 {
     //day1();
@@ -4677,7 +5033,8 @@ int main()
     //day16();
     //day17();
     //day18();
-    day19();
+    //day19();
+    day20();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
