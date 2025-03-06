@@ -5353,6 +5353,687 @@ void day21()
     
 
 }
+int day22_dealStack(long long currentPos, long long stackSize)
+{
+    //9 8 7 6 5 4 3 2 1 0 => 0 1 2 3 4 5 6 7 8 9
+    // 0 => stacksize - 1
+    // 1 => stackSize - 2;
+    // n => stackSize - n - 1;
+
+    int toReturn = stackSize - currentPos - 1;
+    return toReturn;
+}
+
+int day22_cut_reverse(long long currentPos, long long stackSize, int n)
+{
+    //0 1 2 3 4 5 6 7 | 8 9 => 8 9 | 0 1 2 3 4 5 6 7
+    //cut makes n after the cut
+    
+    int positionCut = stackSize - n;
+
+    if (currentPos < positionCut)
+    {
+        return currentPos + n;
+    }
+    else
+    {
+        return currentPos - positionCut;
+    }
+
+}
+
+int day22_cut(long long currentPos, long long stackSize, int n)
+{
+    int realN = (n + stackSize) % stackSize;
+
+    //0 1 2 3 4 5 6 7 | 8 9(N == 8)
+    //8 9 | 0 1 2 3 4 5 6 7
+    //realN = (8-1) = 7
+    //diff = 10 - 8 =  2;
+
+    if (currentPos < realN)
+    {
+        int diff = stackSize - realN;
+        return diff + currentPos;
+    }
+    else
+    {
+        return currentPos - realN;
+    }
+}
+
+// Algoritmo extendido de Euclides para encontrar el inverso modular
+tuple<long long, long long, long long> extended_gcd(long long a, long long b) {
+    if (b == 0)
+        return { a, 1, 0 };
+    auto [g, x1, y1] = extended_gcd(b, a % b);
+    return { g, y1, x1 - (a / b) * y1 };
+}
+
+// Función para encontrar b en la ecuación (a * b) % c = d
+long long find_b(long long a, long long c, long long d) {
+    auto [gcd, a_inv, _] = extended_gcd(a, c);
+    if (gcd != 1) {
+        std::cerr << "No existe solución única porque a y c no son coprimos." << std::endl;
+        return -1; // No hay solución única
+    }
+    a_inv = (a_inv % c + c) % c; // Asegurar que el inverso es positivo
+    return (d * a_inv) % c;
+}
+
+long long day22_dealIncrement_reverse(long long currentPos, long long stackSize, int n)
+{
+    //0 7 4 1 8 5 2 9 6 3 => 0 1 2 3 4 5 6 7 8 9 (N = 3);
+    //count from n to 0 num jump
+
+    //if i'm in position 1, original is 7: => (7*3) % 10 = 1; 
+    //(X * n) % stackSize = currentPos; => ((X * N) - currentPos) / stackSize = 0
+
+   // auto sol = find_b(n, stackSize, currentPos);
+
+    //return sol;
+    
+    for (int i = 0; i < stackSize; ++i)
+    {
+        long long value = (i * n) % stackSize;
+        if (value == currentPos)
+        {
+            return i;
+        }
+    }
+    return 0;
+    
+}
+
+int day22_dealIncrement(long long currentPos, long long stackSize, int n)
+{
+    int pos = (n * currentPos) % stackSize;
+    return pos;
+}
+
+long long day22_A(const std::vector<std::string>& instructions)
+{
+    long long stackSize = 10007;
+    long long cardPosition = 2019;
+    for (auto instruction : instructions)
+    {
+        if (instruction == "deal into new stack")
+        {
+            cardPosition = day22_dealStack(cardPosition, stackSize);
+        }
+        else
+        {
+            if (instruction[0] == 'c')//cut
+            {
+                string value_str = instruction.substr(4);
+                int n = atoi(value_str.c_str());
+                cardPosition = day22_cut(cardPosition, stackSize, n);
+            }
+            else
+            {
+                string value_str = instruction.substr(20);
+                int n = atoi(value_str.c_str());
+                cardPosition = day22_dealIncrement(cardPosition, stackSize, n);
+            }
+        }
+    }
+
+    return cardPosition;
+}
+
+//copy logic from: https://github.com/FirescuOvidiu/Advent-of-Code-2019/blob/master/Day%2022/day22-part2/day22-part2.cpp
+// Returns (a * b) % mod
+// If b is even then a * b = (2 * a) * (b / 2)
+// If b is odd  then a * b = a + (a * (b - 1))
+long long moduloMultiplication(long long a, long long b, long long mod)
+{
+    long long result = 0;
+
+    a = a % mod;
+    while (b)
+    {
+        // If b is odd, add a with result 
+        if (b & 1)
+        {
+            result = (result + a) % mod;
+        }
+
+        // Here we assume that doing 2*a 
+        // doesn't cause overflow 
+        a = (2 * a) % mod;
+        b >>= 1; // b = b / 2 
+    }
+
+    return result;
+}
+
+
+// Returns (a ^ b) % mod
+// If b is even then a * b = (a * a) ^ (b / 2)
+// If b is odd  then a * b = a * (a ^ (b - 1))
+long long pow(long long a, long long b, long long mod)
+{
+    long long result = 1;
+
+    a = a % mod;
+    while (b)
+    {
+        // If b is odd, multiply a with result 
+        if (b & 1)
+        {
+            result = moduloMultiplication(result, a, mod);
+        }
+
+        a = moduloMultiplication(a, a, mod);;
+        b = b >> 1; // b = b/2 
+    }
+    return result;
+}
+
+
+// Returns modulo inverse of input with respect 
+// to modulo using extended Euclid Algorithm 
+// Assumption: input and modulo are coprimes
+long long modInverse(long long input, long long modulo)
+{
+    long long original = modulo;
+    long long y = 0, x = 1;
+    long long q = 0, t = 0;
+
+    if (modulo == 1)
+    {
+        return 0;
+    }
+
+    while (input > 1)
+    {
+        // q is quotient 
+        q = input / modulo;
+        t = modulo;
+
+        // modulo is remainder now 
+        // process same as Euclid's algorithm
+        modulo = input % modulo;
+        input = t;
+        t = y;
+
+        // Update y and x
+        y = x - q * y;
+        x = t;
+    }
+
+    if (x < 0)
+    {
+        x += original;
+    }
+
+    return x;
+}
+
+long long day22_B_optimized(const std::vector<std::string>& instructions)
+{
+    long long a = 1, b = 0, aux = 0;
+    long long n = 119315717514047;
+    long long times = 101741582076661;
+
+    for (int i = instructions.size() - 1; i >= 0; i--)
+    {
+        auto instruction = instructions[i];
+
+        if (instruction == "deal into new stack")
+        {
+            a *= -1;
+            b = -b - 1;
+        }
+        else
+        {
+            if (instruction[0] == 'c')//cut
+            {
+                string value_str = instruction.substr(4);
+                long long value = atoll(value_str.c_str());
+
+                b = b + value;
+            }
+            else
+            {
+                string value_str = instruction.substr(20);
+                long long value = atoll(value_str.c_str());
+
+                aux = modInverse(value, n);
+
+                a = moduloMultiplication(a, aux, n);
+                b = moduloMultiplication(b, aux, n);
+            }
+        }
+        a = (a + n) % n;
+        b = (b + n) % n;
+    }
+
+    // f(x) = a * x + b    x = 2020
+    // f(f(f(x))) = a*(a*(a*x+b)+b)+b = a ^ 3 * x + a ^ 2 * b + a * b + b
+    // f^n(x) = a^n*x + a^(n-1)*b + a^(n-2)*b + ... + b = a ^ n * x + (a ^ n - 1) / (a - 1) * b
+    // f^n(x) = ((pow(a, times, n)*2020 + (pow(a, times, n)-1) * modInverse(a-1, n) * b) % n)
+    long long first = moduloMultiplication(pow(a, times, n), 2020, n);//119315717512027
+    long long second = (pow(a, times, n) + n - 1) % n;//119315717514045
+    long long third = moduloMultiplication(b, second, n);//119315717445303
+    long long fourth = pow(a - 1, n - 2, n);//59657858757023
+    long long result = (first + moduloMultiplication(third, fourth, n)) % n;//32352
+
+    return  result;
+}
+void day22()
+{
+    auto instructions = ReadFile("./input/day22.txt");
+
+    auto solA = day22_A(instructions);
+    std::cout << "day 22 => " << solA << "\n";
+
+    auto solB = day22_B_optimized(instructions);
+    std::cout << "day 22_B => " << solB << "\n";
+}
+
+class day23_intcode
+{
+public:
+    using memoryType = long long;
+    using inputFunction = function<memoryType()>;
+    using outputFunction = function<void(memoryType)>;
+
+private:
+    int instructionIndex = 0;
+    memoryType relativeBase = 0;
+    inputFunction inputFun;
+    outputFunction outputFun;
+    std::map<memoryType, memoryType> memory;
+    bool forceStop = false;
+
+    memoryType calculateInstruction(int operation, std::vector<memoryType> params)
+    {
+        switch (operation)
+        {
+        case 1: return params[0] + params[1]; break;
+        case 2: return params[0] * params[1]; break;
+        case 3: return -1; break;
+        case 4: return -1; break;
+        case 5: return params[0] != 0; break;
+        case 6: return params[0] == 0; break;
+        case 7: return params[0] < params[1]; break;
+        case 8: return params[0] == params[1]; break;
+        case 9: return -1; break;
+        }
+
+        std::cout << "error\n";
+        return 0;
+    }
+
+    memoryType getValue(memoryType value, int type)
+    {
+        switch (type)
+        {
+        case 0: return memory[value];
+        case 1: return value;
+        case 2:
+            if (memory.find(value + relativeBase) == memory.end()) {
+                memory[value + relativeBase] = 0;
+            }
+            return memory[value + relativeBase];
+        }
+        std::cout << "error \n";
+        return 0;
+    }
+
+    std::vector<int> parseParamsInfo(int value, int totalElements)
+    {
+        std::vector<int> result;
+
+        int instruction = value % 100;
+        result.push_back(instruction);
+        totalElements -= 2;
+
+        value = value / 100;
+        while (totalElements >= 0)
+        {
+            int val = value % 10;
+            result.push_back(val);
+            value = value / 10;
+            --totalElements;
+        }
+
+        return result;
+    }
+
+    int getParametersForOperation(int operation)
+    {
+        switch (operation)
+        {
+        case 1:
+        case 2: return 3;
+        case 3:
+        case 4: return 1;
+        case 5:
+        case 6: return 2;
+        case 7:
+        case 8: return 3;
+        case 9: return 1;
+        }
+        return 0;
+    }
+
+    std::vector<memoryType> readParametersFromInstruction(int operation)
+    {
+        int totalParams = getParametersForOperation(operation);
+        std::vector<memoryType> result;
+        for (int i = 0; i < totalParams; ++i)
+        {
+            auto value = memory[instructionIndex + i + 1];
+            result.push_back(value);
+        }
+        return result;
+    }
+    std::vector<memoryType> transformParameters(int operation, const std::vector<memoryType>& params, const std::vector<int>& parameterInfo)
+    {
+        std::vector<memoryType> result;
+        for (int i = 0; i < params.size(); ++i)
+        {
+            auto value = getValue(params[i], parameterInfo[i]);
+            result.push_back(value);
+        }
+
+        //direct result
+        std::set<int> directResult = { 1, 2, 3, 7, 8 };
+        if (directResult.find(operation) != directResult.end())
+        {
+            if (parameterInfo[result.size() - 1] == 2)
+            {
+                result[result.size() - 1] = params.back() + relativeBase;
+            }
+            else
+            {
+                result[result.size() - 1] = params.back();
+            }
+        }
+
+        return result;
+    }
+
+    void writeResult(memoryType result, int operation, std::vector<memoryType>& paramsTransformed)
+    {
+        if (operation == 5 || operation == 6)
+        {
+            return;
+        }
+
+        if (operation == 4)
+        {
+            outputFun(paramsTransformed[0]);
+            return;
+        }
+        if (operation == 9)
+        {
+            relativeBase += paramsTransformed[0];
+            return;
+        }
+
+        if (operation == 3)
+        {
+            result = inputFun();
+        }
+
+        int indexSave = paramsTransformed.back();
+        memory[indexSave] = result;
+    }
+
+    void updateIndex(std::vector<memoryType>& paramsTransformed, int operation, int result)
+    {
+        if (operation == 5 || operation == 6)
+        {
+            if (result)
+            {
+                instructionIndex = paramsTransformed[1];
+                return;
+            }
+        }
+
+        int totalParams = getParametersForOperation(operation);
+        instructionIndex += totalParams + 1;
+    }
+    //
+    //1:+
+    //2:*
+    //3:Read
+    //4:Write
+    //5:Jmp !=
+    //6:Jmp ==
+    //7:<
+    //8: ==
+    //9: +RelativeBase
+    void runProgram()
+    {
+        while (memory[instructionIndex] != 99)
+        {
+            if (forceStop)
+            {
+                return;
+            }
+
+            runOneInstruction();
+        }
+    }
+
+    void runOneInstruction()
+    {
+        auto instruction = memory[instructionIndex];
+        auto paramsInfo = parseParamsInfo(memory[instructionIndex], 5);
+        int operation = paramsInfo[0];
+        paramsInfo.erase(paramsInfo.begin());
+        auto paramsForInstruction = readParametersFromInstruction(operation);
+        auto paramsTransformed = transformParameters(operation, paramsForInstruction, paramsInfo);
+
+        auto result = calculateInstruction(operation, paramsTransformed);
+
+        writeResult(result, operation, paramsTransformed);
+        updateIndex(paramsTransformed, operation, result);
+    }
+
+    std::map<memoryType, memoryType> buildMemory(const std::string& txt)
+    {
+        auto split_value = split(txt, ",");
+        std::map<memoryType, memoryType> memory;
+
+        int index = 0;
+        for (auto v : split_value)
+        {
+            memory[index] = stoll(v.c_str());
+            ++index;
+        }
+
+        return memory;
+    }
+
+public:
+
+    void Init(const std::string& txt, inputFunction input, outputFunction output)
+    {
+        inputFun = input;
+        outputFun = output;
+        memory = buildMemory(txt);
+        instructionIndex = 0;
+        relativeBase = 0;
+    }
+
+    void Run()
+    {
+        runProgram();
+    }
+
+    void RunDebug()
+    {
+        runOneInstruction();
+    }
+
+    std::vector<int> GetMemoryIndexes()
+    {
+        std::vector<int> toReturn;
+        for (auto kvp : memory)
+        {
+            toReturn.push_back(kvp.first);
+        }
+        return toReturn;
+    }
+
+    memoryType GetValueInMemoryPosition(int index)
+    {
+        return memory[index];
+    }
+
+    void SetMemoryValue(memoryType value, memoryType index)
+    {
+        memory[index] = value;
+    }
+
+    void ForceStop()
+    {
+        forceStop = true;
+    }
+};
+
+struct day23_instruction
+{
+    day23_intcode::memoryType x = -1;
+    day23_intcode::memoryType y = -1;
+
+    bool setedX = false;
+    bool setedY = false;
+
+    bool readX = false;
+    bool readY = false;
+};
+
+void day23_A(const std::string& code)
+{
+    std::map<int, std::vector<day23_instruction>> blackboard;
+
+    const int totalComputers = 50;
+    std::array< day23_intcode*, totalComputers> allPrograms;
+    std::array<int, totalComputers> currentPositionWrite;
+    std::array<bool, totalComputers> settedNetworkID;
+    currentPositionWrite.fill(-1);
+    settedNetworkID.fill(false);
+
+    std::vector<thread> threads;
+    std::array<std::mutex, totalComputers> mutexes;
+    std::array < std::condition_variable, totalComputers> conditions;
+
+    for (int i = 0; i < totalComputers; ++i)
+    {
+        allPrograms[i] = new day23_intcode();
+    }
+
+    for (int i = 0; i < totalComputers; ++i)
+    {
+        day23_intcode::inputFunction input = [i, &mutexes, &blackboard, &settedNetworkID, &conditions]()
+        {
+            if (!settedNetworkID[i])
+            {
+                settedNetworkID[i] = true;
+                day23_intcode::memoryType value = i;
+                return value;
+            }
+
+            //wait notification
+            std::unique_lock<std::mutex> lk(mutexes[i]);
+
+            conditions[i].wait_for(lk, 250ms, [&blackboard, i] {
+                return blackboard[i].size() != 0;
+                });
+
+            //std::cout << i << "\n";
+            if (blackboard[i].empty())
+            {
+                day23_intcode::memoryType value = -1;
+                return value;
+            }
+
+            if (!blackboard[i].front().readX)
+            {
+                blackboard[i][0].readX = true;
+                day23_intcode::memoryType value = blackboard[i][0].x;
+                return value;
+            }
+            else
+            {
+                day23_intcode::memoryType value = blackboard[i][0].y;
+                blackboard[i][0].readY = true;
+
+                blackboard[i].erase(blackboard[i].begin());
+                return value;
+            }
+        };
+
+        day23_intcode::outputFunction output = [i, &mutexes, &blackboard, &currentPositionWrite, totalComputers, &conditions,allPrograms](day23_intcode::memoryType value)
+        {
+            int computerWrite = currentPositionWrite[i];
+            if (computerWrite == -1)
+            {
+                currentPositionWrite[i] = value;
+            }
+            else
+            {
+                if (blackboard[computerWrite].empty() || blackboard[computerWrite].back().setedY)
+                {
+                    //new one
+                    day23_instruction newInstruction;
+                    newInstruction.x = value;
+                    newInstruction.setedX = true;
+                    blackboard[computerWrite].push_back(newInstruction);
+                }
+                else
+                {
+                    int size = blackboard[computerWrite].size();
+                    blackboard[computerWrite][size - 1].y = value;
+                    blackboard[computerWrite][size - 1].setedY = true;
+                    currentPositionWrite[i] = -1;
+
+
+                    if (computerWrite < totalComputers)
+                        conditions[computerWrite].notify_all();
+
+
+                    if (computerWrite == 255)
+                    {
+                        for (int i = 0; i < totalComputers; ++i)
+                        {
+                            allPrograms[i]->ForceStop();
+                        }
+                    }
+                }
+            }
+        };
+        
+        allPrograms[i]->Init(code, input, output);
+        threads.push_back(std::thread(
+            [allPrograms, i]() {
+                allPrograms[i]->Run();
+            }
+        ));
+    }
+
+    for (auto& t : threads)
+    {
+        t.join();
+    }
+
+    auto valueA = blackboard[255][0].y;
+
+    std::cout << "day23 => " << valueA << "\n";
+}
+
+void day23()
+{
+    auto code = ReadFile("./input/day23.txt")[0];
+    day23_A(code);
+}
+
 int main()
 {
     //day1();
@@ -5375,7 +6056,9 @@ int main()
     //day18();
     //day19();
     //day20();
-    day21();
+    //day21();
+    //day22();
+    day23();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
