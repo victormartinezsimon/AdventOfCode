@@ -6028,10 +6028,187 @@ void day23_A(const std::string& code)
     std::cout << "day23 => " << valueA << "\n";
 }
 
+void day23_B(const std::string& code)
+{
+    std::map<int, std::vector<day23_instruction>> blackboard;
+
+    const int totalComputers = 50;
+    std::array< day23_intcode*, totalComputers> allPrograms;
+    std::array<int, totalComputers> currentPositionWrite;
+    std::array<bool, totalComputers> settedNetworkID;
+    std::array< int, totalComputers> computerInactivity;
+    currentPositionWrite.fill(-1);
+    settedNetworkID.fill(false);
+    computerInactivity.fill(0);
+
+    std::vector<thread> threads;
+    std::array<std::mutex, totalComputers> mutexes;
+    std::array < std::condition_variable, totalComputers> conditions;
+
+    //new things
+    std::vector<std::pair< day23_intcode::memoryType, day23_intcode::memoryType>> usedExtraValues;
+
+    for (int i = 0; i < totalComputers; ++i)
+    {
+        allPrograms[i] = new day23_intcode();
+    }
+
+    for (int i = 0; i < totalComputers; ++i)
+    {
+        day23_intcode::inputFunction input = [i, &mutexes, &blackboard, &settedNetworkID, &conditions, &computerInactivity, &usedExtraValues, allPrograms]()
+        {
+            if (!settedNetworkID[i])
+            {
+                settedNetworkID[i] = true;
+                day23_intcode::memoryType value = i;
+                return value;
+            }
+
+            //wait notification
+            std::unique_lock<std::mutex> lk(mutexes[i]);
+
+            bool timeOutValue = conditions[i].wait_for(lk, 250ms, [&blackboard, i] {
+                return blackboard[i].size() != 0;
+                });
+            
+            if (!timeOutValue)
+            {
+                computerInactivity[i]++;
+            }
+            else
+            {
+                computerInactivity[i] = 0;
+            }
+
+            if (blackboard[i].empty() && i != 0)
+            {
+                day23_intcode::memoryType value = -1;
+                return value;
+            }
+
+            if (blackboard[i].empty() && i == 0)
+            {
+                bool someActive = false;
+                for (int i = 0; i < totalComputers; ++i)
+                {
+                    if (computerInactivity[i] < 1)
+                    {
+                        someActive = true;
+                        break;
+                    }
+                }
+
+                if (someActive)
+                {
+                    day23_intcode::memoryType value = -1;
+                    return value;
+                }
+
+                if (!blackboard[255].empty())
+                {
+                    blackboard[0].push_back(blackboard[255][0]);
+                    computerInactivity[0] = 0;
+
+                    std::pair< day23_intcode::memoryType, day23_intcode::memoryType> valueToSet = { blackboard[255][0].x, blackboard[255][0].y };
+
+                    if (!usedExtraValues.empty() && valueToSet == usedExtraValues.back())
+                    {
+                        for (int i = 0; i < totalComputers; ++i)
+                        {
+                            allPrograms[i]->ForceStop();
+                        }
+                    }
+
+                    usedExtraValues.push_back(valueToSet);
+                }
+            }
+
+            if (!blackboard[i].front().readX)
+            {
+                blackboard[i][0].readX = true;
+                day23_intcode::memoryType value = blackboard[i][0].x;
+                return value;
+            }
+            else
+            {
+                day23_intcode::memoryType value = blackboard[i][0].y;
+                blackboard[i][0].readY = true;
+
+                blackboard[i].erase(blackboard[i].begin());
+                return value;
+            }
+        };
+
+        day23_intcode::outputFunction output = [i, &mutexes, &blackboard, &currentPositionWrite, totalComputers, &conditions](day23_intcode::memoryType value)
+        {
+            int computerWrite = currentPositionWrite[i];
+            if (computerWrite == -1)
+            {
+                currentPositionWrite[i] = value;
+            }
+            else
+            {
+                if (blackboard[computerWrite].empty() || blackboard[computerWrite].back().setedY)
+                {
+                    if (computerWrite == 255 && !blackboard[computerWrite].empty())
+                    {
+                        //reset original value
+                        blackboard[computerWrite][0].setedX = false;
+                        blackboard[computerWrite][0].setedY = false;
+                        blackboard[computerWrite][0].readX = false;
+                        blackboard[computerWrite][0].readY = false;
+
+                        //set new value
+                        blackboard[computerWrite][0].x = value;
+                        blackboard[computerWrite][0].setedX = true;
+                    }
+                    else
+                    {
+                        //new one
+                        day23_instruction newInstruction;
+                        newInstruction.x = value;
+                        newInstruction.setedX = true;
+                        blackboard[computerWrite].push_back(newInstruction);
+                    }
+                    
+                }
+                else
+                {
+                    int size = blackboard[computerWrite].size();
+                    blackboard[computerWrite][size - 1].y = value;
+                    blackboard[computerWrite][size - 1].setedY = true;
+                    currentPositionWrite[i] = -1;
+
+                    if (computerWrite < totalComputers)
+                        conditions[computerWrite].notify_all();
+                }
+            }
+        };
+
+        allPrograms[i]->Init(code, input, output);
+        threads.push_back(std::thread(
+            [allPrograms, i]() {
+                allPrograms[i]->Run();
+            }
+        ));
+    }
+
+    for (auto& t : threads)
+    {
+        t.join();
+    }
+
+    auto valueA = blackboard[255][0].y;
+
+    std::cout << "day23 => " << valueA << "\n";
+}
+
+
 void day23()
 {
     auto code = ReadFile("./input/day23.txt")[0];
     day23_A(code);
+    day23_B(code);
 }
 
 int main()
