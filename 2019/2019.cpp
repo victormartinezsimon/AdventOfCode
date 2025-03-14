@@ -6796,6 +6796,7 @@ void day25(bool solve)
     if (!solve)
     {
         std::cout << "day 25 =>" << 2214608912 << "\n";
+        std::cout << "take: coin, dark matter, hypercube, tambourine\n";
         return;
     }
 
