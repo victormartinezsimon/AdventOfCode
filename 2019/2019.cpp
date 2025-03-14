@@ -6121,6 +6121,11 @@ void day23_B(const std::string& code)
 
                     usedExtraValues.push_back(valueToSet);
                 }
+                else
+                {
+                    day23_intcode::memoryType value = -1;
+                    return value;
+                }
             }
 
             if (!blackboard[i].front().readX)
@@ -6211,6 +6216,315 @@ void day23()
     day23_B(code);
 }
 
+long long day24_calculateValue(std::vector<std::vector<bool>>& board, int width, int height)
+{
+    long long toReturn = 0;
+
+    int index = 0;
+
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < width; ++col)
+        {
+            if (board[row][col])
+            {
+                toReturn += pow(2, index);
+            }
+            ++index;
+        }
+    }
+
+    return toReturn;
+}
+
+bool day24_getNextValue(bool currentValue, int count)
+{
+    if (currentValue)
+    {
+        return count == 1;
+    }
+    else
+    {
+        return count == 1 || count == 2;
+    }
+}
+
+void day24_calculateStep(std::vector<std::vector<bool>>& origin, std::vector<std::vector<bool>>& destiny, int width, int height)
+{
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < width; ++col)
+        {
+            std::pair<int, int> position = { row, col };
+            int count = 0;
+            for (auto dir : { Directions::NORTH, Directions::SOUTH, Directions::EAST, Directions::WEST })
+            {
+                auto nextPos = getNextPosition(position, dir);
+                if (insideField(nextPos, width, height))
+                {
+                    if (origin[nextPos.first][nextPos.second])
+                    {
+                        ++count;
+                    }
+                }
+            }
+
+            destiny[row][col] = day24_getNextValue(origin[row][col], count);
+        }
+    }
+}
+
+void day24_A(std::vector<std::string>& board_txt)
+{
+    int width = board_txt[0].size();
+    int height = board_txt.size();
+
+    std::vector<std::vector<bool>> board1(height, std::vector<bool>(width, false));
+    std::vector<std::vector<bool>> board2(height, std::vector<bool>(width, false));
+
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < width; ++col)
+        {
+            if (board_txt[row][col] == '#')
+            {
+                board1[row][col] = true;
+                board2[row][col] = true;
+            }
+        }
+    }
+
+    long long currentValue = -1;
+
+    bool destinyOne = true;
+
+    std::set<long long> knowScores;
+
+    while (true)
+    {
+        if (destinyOne)
+        {
+            day24_calculateStep(board2, board1, width, height);
+            currentValue = day24_calculateValue(board1, width, height);
+        }
+        else
+        {
+            day24_calculateStep(board1, board2, width, height);
+            currentValue = day24_calculateValue(board2, width, height);
+        }
+
+        if (knowScores.contains(currentValue))
+        {
+            break;
+        }
+        knowScores.insert(currentValue);
+
+        destinyOne = !destinyOne;
+    }
+    std::cout << "day24 => " << currentValue << "\n";
+}
+
+bool day24_B_GetValue(std::vector<std::vector<std::vector<bool>>>& allBoards, int row, int col, int boardIdx)
+{
+    if (boardIdx >= allBoards.size())
+    {
+        return false;
+    }
+
+    return allBoards[boardIdx][row][col];
+}
+
+int day24_B_GetBoardIndex(int delta, int board0)
+{
+    return board0 + delta;
+}
+
+void day24_B_CalculateBoard(std::vector<std::vector<std::vector<bool>>>& origin, std::vector<std::vector<std::vector<bool>>>& destiny, int boardIdx, int width, int height)
+{
+    const std::pair<int, int> halfPosition = { 2,2 };
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < width; ++col)
+        {
+            int count = 0;
+            std::pair<int, int> pos = { row, col };
+            for (auto dir : { Directions::NORTH, Directions::SOUTH, Directions::EAST, Directions::WEST })
+            {
+                auto nextPos = getNextPosition(pos, dir);
+
+                if (insideField(nextPos, width, height))
+                {
+                    if (nextPos != halfPosition)
+                    {
+                        if (origin[boardIdx][nextPos.first][nextPos.second])
+                        {
+                            ++count;
+                        }
+                    }
+                    else
+                    {
+                        //check more deep
+                        switch (dir)
+                        {
+                        case Directions::NORTH:
+                            //U|V|W|X|Y
+                            count += day24_B_GetValue(origin, 4, 0, boardIdx + 1) ? 1 : 0;
+                            count += day24_B_GetValue(origin, 4, 1, boardIdx + 1) ? 1 : 0;
+                            count += day24_B_GetValue(origin, 4, 2, boardIdx + 1) ? 1 : 0;
+                            count += day24_B_GetValue(origin, 4, 3, boardIdx + 1) ? 1 : 0;
+                            count += day24_B_GetValue(origin, 4, 4, boardIdx + 1) ? 1 : 0;
+                            break;
+                        case Directions::SOUTH:
+                            //A|B|C|D|E
+                            count += day24_B_GetValue(origin, 0, 0, boardIdx + 1) ? 1 : 0;
+                            count += day24_B_GetValue(origin, 0, 1, boardIdx + 1) ? 1 : 0;
+                            count += day24_B_GetValue(origin, 0, 2, boardIdx + 1) ? 1 : 0;
+                            count += day24_B_GetValue(origin, 0, 3, boardIdx + 1) ? 1 : 0;
+                            count += day24_B_GetValue(origin, 0, 4, boardIdx + 1) ? 1 : 0;
+                            break;
+                        case Directions::EAST:
+                            //A|F|K|P|U
+                            count += day24_B_GetValue(origin, 0, 0, boardIdx + 1) ? 1 : 0;
+                            count += day24_B_GetValue(origin, 1, 0, boardIdx + 1) ? 1 : 0;
+                            count += day24_B_GetValue(origin, 2, 0, boardIdx + 1) ? 1 : 0;
+                            count += day24_B_GetValue(origin, 3, 0, boardIdx + 1) ? 1 : 0;
+                            count += day24_B_GetValue(origin, 4, 0, boardIdx + 1) ? 1 : 0;
+                            break;
+                        case Directions::WEST:
+                            //E|J|O|T|Y
+                            count += day24_B_GetValue(origin, 0, 4, boardIdx + 1) ? 1 : 0;
+                            count += day24_B_GetValue(origin, 1, 4, boardIdx + 1) ? 1 : 0;
+                            count += day24_B_GetValue(origin, 2, 4, boardIdx + 1) ? 1 : 0;
+                            count += day24_B_GetValue(origin, 3, 4, boardIdx + 1) ? 1 : 0;
+                            count += day24_B_GetValue(origin, 4, 4, boardIdx + 1) ? 1 : 0;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    bool currentValue = false;
+                    //check outside
+                    switch (dir)
+                    {
+                    case Directions::NORTH:
+                        //check 8
+                        currentValue = day24_B_GetValue(origin, 1, 2, boardIdx - 1);
+                        break;
+                    case Directions::SOUTH:
+                        currentValue = day24_B_GetValue(origin, 3, 2, boardIdx - 1);
+                        //check 18
+                        break;
+                    case Directions::EAST:
+                        currentValue = day24_B_GetValue(origin, 2, 3, boardIdx - 1);
+                        //check 14
+                        break;
+                    case Directions::WEST:
+                        //check 12
+                        currentValue = day24_B_GetValue(origin, 2, 1, boardIdx - 1);
+                        break;
+                    }
+
+                    if (currentValue)
+                    {
+                        ++count;
+                    }
+                }
+            }
+        
+            if (row == 2 && col == 2)
+            {
+                destiny[boardIdx][row][col] = false;
+            }
+            else
+            {
+                destiny[boardIdx][row][col] = day24_getNextValue(origin[boardIdx][row][col], count);
+            }
+        }
+    }
+}
+
+
+void day24_B_CalculateStep(std::vector<std::vector<std::vector<bool>>>& origin, std::vector<std::vector<std::vector<bool>>>& destiny, int width, int height, int board0)
+{
+    //calculte board0
+    day24_B_CalculateBoard(origin, destiny, board0, width, height);
+
+    //iterate all up
+    for (int i = 1; i < board0; ++i)
+    {
+        int boardIdx = day24_B_GetBoardIndex(i, board0);
+        day24_B_CalculateBoard(origin, destiny, boardIdx, width, height);
+    }
+
+    //iterate all down
+    for (int i = 1; i < board0; ++i)
+    {
+        int boardIdx = day24_B_GetBoardIndex(-i, board0);
+        day24_B_CalculateBoard(origin, destiny, boardIdx, width, height);
+    }
+}
+
+void day24_B(std::vector<std::string>& board_txt)
+{
+    int width = board_txt[0].size();
+    int height = board_txt.size();
+
+    int board0 = 200;
+    int totalBoards = board0 * 2;
+
+    std::vector<std::vector<std::vector<bool>>> allBoards1(totalBoards, std::vector<std::vector<bool>>(height, std::vector<bool>(width, false)));
+
+    std::vector<std::vector<std::vector<bool>>> allBoards2(totalBoards, std::vector<std::vector<bool>>(height, std::vector<bool>(width, false)));
+
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < width; ++col)
+        {
+            if (board_txt[row][col] == '#')
+            {
+                allBoards1[board0][row][col] = true;
+                allBoards2[board0][row][col] = true;
+            }
+        }
+    }
+
+    bool use1 = true;
+    int totalIterations = 200;
+    for (int i = 0; i < totalIterations; ++i)
+    {
+        if (use1)
+        {
+            day24_B_CalculateStep(allBoards2, allBoards1, width, height, board0);
+        }
+        else
+        {
+            day24_B_CalculateStep(allBoards1, allBoards2, width, height, board0);
+        }
+        use1 = !use1;
+    }
+    long long countB = 0;
+    for (auto&& board : allBoards2)
+    {
+        for (int row = 0; row < height; ++row)
+        {
+            for (int col = 0; col < width; ++col)
+            {
+                if (board[row][col]) { ++countB; }
+            }
+        }
+    }
+
+    std::cout << "day24_B => " << countB << "\n";
+}
+
+void day24()
+{
+    auto board_txt = ReadFile("./input/day24.txt");
+    day24_A(board_txt);
+    day24_B(board_txt);
+}
+
 int main()
 {
     //day1();
@@ -6235,7 +6549,8 @@ int main()
     //day20();
     //day21();
     //day22();
-    day23();
+    //day23();
+    day24();
 }
 
 // Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
