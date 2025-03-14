@@ -994,7 +994,7 @@ void day7B(std::string& txt)
 
     for (int combIdx = 0; combIdx < allCombinationsLow.size(); ++combIdx)
     {
-        std::cout << combIdx << " of " << allCombinationsLow.size() << "\n";
+            std::cout << combIdx << " of " << allCombinationsLow.size() << "\n";
         auto comb = allCombinationsLow[combIdx];
 
         //init amplifiers
@@ -1048,7 +1048,7 @@ void day7B(std::string& txt)
 
         }
 
-        //initialization
+        //initializationf
         inputs[0].push_back(0);
 
         std::vector<thread> threads;
@@ -6209,11 +6209,20 @@ void day23_B(const std::string& code)
 }
 
 
-void day23()
+void day23(bool calculate)
 {
-    auto code = ReadFile("./input/day23.txt")[0];
-    day23_A(code);
-    day23_B(code);
+    if (calculate)
+    {
+        auto code = ReadFile("./input/day23.txt")[0];
+        day23_A(code);
+        day23_B(code);
+    }
+    else
+    {
+        std::cout << "day23 => " << 22074 << "\n";
+        std::cout << "day23_B => " << 14257 << "\n";
+    }
+    
 }
 
 long long day24_calculateValue(std::vector<std::vector<bool>>& board, int width, int height)
@@ -6849,7 +6858,7 @@ int main()
     day4();
     day5();
     day6();
-    day7 ();
+    day7();
     day8();
     day9();
     day10();
@@ -6865,7 +6874,7 @@ int main()
     day20();
     day21();
     day22();
-    day23();
+    day23(false);
     day24();
     day25(false);
 }
