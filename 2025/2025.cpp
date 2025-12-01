@@ -25,48 +25,73 @@
 #include <cmath>
 using namespace std;
 
-int day1_b(int value, std::map<int, int>& cache)
+int day1_partA(int start, int size, std::vector<std::string>& movements)
 {
-    if (value <= 0) { return 0; }
-    
-    if (cache.find(value) != cache.end())
+    int value = start;
+    int result = 0;
+
+    for (auto&& movement : movements)
     {
-        return cache[value];
+        int multiplier = 1;
+        if (movement[0] == 'L')
+        {
+            multiplier = -1;
+        }
+
+        int number = atoi(movement.substr(1).c_str());
+        number *= multiplier;
+
+        value = (value + number + size) % size;
+        if (value == 0)
+        {
+            ++result;
+        }
     }
-    
-    int newValue = (value / 3) - 2;
+    return result;
+}
 
-    int toReturn = day1_b(newValue, cache);
+int day1_partB(int start, int size, std::vector<std::string>& movements)
+{
+    int value = start;
+    int result = 0;
 
-    if (newValue > 0)
+    for (auto&& movement : movements)
     {
-        toReturn += newValue;
-    }
+        int multiplier = 1;
+        if (movement[0] == 'L')
+        {
+            multiplier = -1;
+        }
+        int number = atoi(movement.substr(1).c_str());
 
-    cache[value] = toReturn;
-    return toReturn;
+        int totalLaps = number / size;
+        number = number - (totalLaps * size);
+
+        result += totalLaps;
+
+        number *= multiplier;
+
+        int oldValue = value;
+        value += number;
+
+        if ((value < 0 || value > size) && oldValue != 0)
+        {
+            result++;
+        }
+
+        value = ( value + size ) % size;
+    }
+    return result;
 }
 
 void day1()
 {
     auto fileTxt = ReadFile("./input/day1.txt");
 
-    long long acumA = 0;
-    long long acumB = 0;
-    std::map<int, int> cacheB;
-
-    for (auto n : fileTxt)
-    {
-        int val = atoi(n.c_str());
-        long long calcA = (val / 3) - 2;
-        acumA += calcA;
-
-       int calcB = day1_b(val, cacheB);
-       acumB += calcB;
-
-    }
-    std::cout << "day 1 => " << acumA << "\n";
-    std::cout << "day 1_B => " << acumB << "\n";
+    auto partA = day1_partA(50, 100, fileTxt);
+    auto partB = day1_partB(50, 100, fileTxt);
+    std::cout << "day 1 => " << partA << "\n";
+    std::cout << "day 1_B => " << partB + partA<< "\n";
 }
 
 int main()
