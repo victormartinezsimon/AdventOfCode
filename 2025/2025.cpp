@@ -94,11 +94,132 @@ void day1()
     std::cout << "day 1_B => " << partB + partA<< "\n";
 }
 
+long long day2_calculateA(long long start, long long end)
+{
+    auto decimalsStart = std::to_string(start).size();
+    auto decimalEnd = std::to_string(end).size();
+
+    if ((decimalsStart % 2) == 1)
+    {
+        start = pow(10, decimalsStart);
+        decimalsStart++;
+    }
+
+    if ((decimalEnd % 2) == 1)
+    {
+        end = pow(10, decimalEnd-1) -1;
+        decimalEnd--;
+    }
+
+    int divisionStart = pow(10, decimalsStart / 2);
+    int divisionEnd = pow(10, decimalEnd / 2);
+
+    int valueStart = start / divisionStart;
+    int valueEnd = end /  divisionEnd;
+
+    long long result = 0;
+
+    for (int value = valueStart; value <= valueEnd; ++value)
+    {
+        std::string valueToCheck_str = std::to_string(value) + std::to_string(value);
+
+        unsigned long long valueToCheck = atoll(valueToCheck_str.c_str());
+
+        if (start <= valueToCheck && valueToCheck <= end)
+        {
+            result += valueToCheck;
+        }
+    }
+
+
+    return result;
+}
+
+bool day2_numberValid(const std::string& value_str)
+{
+    int size = value_str.size();
+
+    for (int indexStart = 1; indexStart < size; ++indexStart)
+    {
+        string prefix = value_str.substr(0, indexStart);
+
+        bool finded = true;
+        for (int pos = indexStart; pos < size; pos += indexStart)
+        {
+            string toCheck = value_str.substr(pos, indexStart);
+
+            if (toCheck != prefix)
+            {
+                finded = false;
+                break;
+            }
+        }
+
+        if (finded)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+long long day2_calculateB(long long start, long long end)
+{
+    long long result = 0;
+
+    for (long long value = start; value <= end; ++value)
+    {
+        std::string value_str = std::to_string(value);
+
+        if (day2_numberValid(value_str))
+        {
+            result += value;
+        }
+    }
+
+    return result;
+}
+
+void day2( bool calculateB)
+{
+    auto v = day2_numberValid("11001100");
+
+    auto fileTxt = ReadFile("./input/day2.txt");
+
+    auto list = split(fileTxt[0], ",");
+
+    long long valueA = 0;
+    long long valueB = 0;
+
+    if (!calculateB)
+    {
+        valueB = 31578210022;
+    }
+
+    for (auto l : list)
+    {
+        auto values = split(l, "-");
+        long long v1 = std::atoll(values[0].c_str());
+        long long v2 = std::atoll(values[1].c_str());
+
+        valueA += day2_calculateA(v1, v2);
+        if (calculateB)
+        {
+            valueB += day2_calculateB(v1, v2);
+        }
+    }
+
+    std::cout << "day 2 => " << valueA << "\n";
+    std::cout << "day 2_B => " << valueB << "\n";
+
+}
+
 int main()
 {
-    day1();
+    //day1();
+    day2(false);
     /*
-    day2();
     day3();
     day4();
     day5();
