@@ -183,8 +183,6 @@ long long day2_calculateB(long long start, long long end)
 
 void day2( bool calculateB)
 {
-    auto v = day2_numberValid("11001100");
-
     auto fileTxt = ReadFile("./input/day2.txt");
 
     auto list = split(fileTxt[0], ",");
@@ -215,12 +213,88 @@ void day2( bool calculateB)
 
 }
 
+int day3_getBestDigit(const std::string& line, int start, int end)
+{
+    int best = -1;
+    int index = -1;
+
+    for (int i = start; i < end; ++i)
+    {
+        char v = line[i];
+        int value = v - '0';
+
+        if (value > best)
+        {
+            best = value;
+            index = i;
+        }
+    }
+    return index;
+}
+
+int day3_partA(const std::string& line)
+{
+    int indexFirst = day3_getBestDigit(line, 0, line.size() - 1);
+    int indexSecond = day3_getBestDigit(line, indexFirst + 1, line.size());
+
+    std::string first = line.substr(indexFirst, 1);
+    std::string second = line.substr(indexSecond, 1);
+    std::string result = first + second;
+
+    return atoi(result.c_str());
+}
+
+long long day3_partB(const std::string& line)
+{
+    std::vector<int> indexes;
+    int totalIndex = 12;
+
+    int lastIndex = 0;
+
+    for (int i = 0; i < totalIndex; ++i)
+    {
+        auto result = day3_getBestDigit(line, lastIndex, line.size() - totalIndex + i +1);
+        indexes.push_back(result);
+        lastIndex = result +1;
+    }
+
+    std::string result = "";
+
+    for (auto index : indexes)
+    {
+        result += line[index];
+    }
+
+    return atoll(result.c_str());
+
+}
+
+void day3()
+{
+    auto fileTxt = ReadFile("./input/day3.txt");
+
+    long long partA = 0;
+    long long partB = 0;
+
+    for (auto&& line : fileTxt)
+    {
+        auto v = day3_partA(line);
+        partA += v;
+
+        auto v_b = day3_partB(line);
+        partB += v_b;
+    }
+
+    std::cout << "day3 => " << partA << "\n";
+    std::cout << "day3_B => " << partB << "\n";
+}
+
 int main()
 {
     //day1();
-    day2(false);
-    /*
+    //day2(false);
     day3();
+    /*
     day4();
     day5();
     day6();
