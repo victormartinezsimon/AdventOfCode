@@ -289,13 +289,109 @@ void day3()
     std::cout << "day3_B => " << partB << "\n";
 }
 
+int day4_getCount(const std::vector<std::string>& board, int width, int height, int row, int col, char valueCheck)
+{
+    int count = 0;
+    for (Directions dir : {Directions::EAST, Directions::WEST, Directions::NORTH, Directions::SOUTH, Directions::NORTHEAST, Directions::NORTHWEST, Directions::SOUTHEAST, Directions::SOUTHWEST})
+    {
+        auto nextPosition = getNextPosition(row, col, dir);
+
+        if (insideField(nextPosition, width, height))
+        {
+            if (board[nextPosition.first][nextPosition.second] == valueCheck)
+            {
+                ++count;
+            }
+        }
+    }
+    return count;
+}
+
+long long day4_partA(const std::vector<std::string>& board, int width, int height)
+{
+    long long result = 0;
+
+    for (int row = 0; row < height; ++row)
+    {
+        for (int col = 0; col < width; ++col)
+        {
+            if (board[row][col] == '@')
+            {
+                auto count = day4_getCount(board, width, height, row, col, '@');
+                if (count < 4)
+                {
+                    ++result;
+                }
+            }
+        }
+    }
+    return result;
+}
+
+long long day4_partB(const std::vector<std::string>& board, int width, int height)
+{
+    std::vector<std::string> currentBoard = board;
+    std::vector<std::string> nextBoard = board;
+
+    long long result = 0;
+
+    int currentCount = 0;
+
+    do
+    {
+        currentCount = 0;
+        for (int row = 0; row < height; ++row)
+        {
+            for (int col = 0; col < width; ++col)
+            {
+                if (currentBoard[row][col] == '@')
+                {
+                    auto count = day4_getCount(currentBoard, width, height, row, col, '@');
+                    if (count < 4)
+                    {
+                        ++result;
+                        nextBoard[row][col] = 'x';
+                        ++currentCount;
+                    }
+                    else
+                    {
+                        nextBoard[row][col] = currentBoard[row][col];
+                    }
+                }
+                else
+                {
+                    nextBoard[row][col] = currentBoard[row][col];
+                }
+            }
+        }
+
+        currentBoard = nextBoard;
+
+    } while (currentCount != 0);
+
+    return result;
+}
+
+void day4()
+{
+    auto board = ReadFile("./input/day4.txt");
+    int width = board[0].size();
+    int height = board.size();
+
+    long long partA = day4_partA(board, width, height);
+    long long partB = day4_partB(board, width, height);
+
+    std::cout << "day4 => " << partA << "\n";
+    std::cout << "day4_B => " << partB << "\n";
+}
+
 int main()
 {
     //day1();
     //day2(false);
-    day3();
-    /*
+    //day3();
     day4();
+    /*
     day5();
     day6();
     day7();
