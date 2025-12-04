@@ -292,13 +292,13 @@ void day3()
 int day4_getCount(const std::vector<std::string>& board, int width, int height, int row, int col, char valueCheck)
 {
     int count = 0;
-    for (Directions dir : {Directions::EAST, Directions::WEST, Directions::NORTH, Directions::SOUTH, Directions::NORTHEAST, Directions::NORTHWEST, Directions::SOUTHEAST, Directions::SOUTHWEST})
+    for (Directions dir : all8Directions())
     {
         auto nextPosition = getNextPosition(row, col, dir);
 
         if (insideField(nextPosition, width, height))
         {
-            if (board[nextPosition.first][nextPosition.second] == valueCheck)
+            if (GetValueFromBoard(board, nextPosition) == valueCheck)
             {
                 ++count;
             }

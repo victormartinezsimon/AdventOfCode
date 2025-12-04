@@ -3,6 +3,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <array>
 
 using namespace std;
 
@@ -196,4 +197,37 @@ Directions turnMinus90Degress(Directions dir)
         break;
     }
     return dir;
+}
+
+template<typename T> 
+T GetValueFromBoard(const std::vector<std::vector<T>>& board, int row, int col)
+{
+    return board[row][col];
+}
+
+template<typename T>
+T GetValueFromBoard(const std::vector<std::vector<T>>& board, pair<int, int> position)
+{
+    return GetValueFromBoard(board, position.first,position.second);
+}
+
+char GetValueFromBoard(const std::vector<std::string>& board, pair<int, int> position)
+{
+    return board[position.first][position.second];
+}
+
+constexpr auto all8Directions() {
+    return std::array<Directions, 8>{
+        Directions::EAST, Directions::WEST,
+        Directions::NORTH, Directions::SOUTH,
+        Directions::NORTHEAST, Directions::NORTHWEST,
+        Directions::SOUTHEAST, Directions::SOUTHWEST
+    };
+}
+
+constexpr auto all4Directions() {
+    return std::array<Directions, 8>{
+        Directions::EAST, Directions::WEST,
+        Directions::NORTH, Directions::SOUTH,
+    };
 }
