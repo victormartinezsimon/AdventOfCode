@@ -385,14 +385,156 @@ void day4()
     std::cout << "day4_B => " << partB << "\n";
 }
 
+bool day5_valid(const std::vector<std::pair<long long, long long>>& groups, long long value)
+{
+    for (auto&& g : groups)
+    {
+        if (g.first > value) { return false; }
+
+        if (g.first <= value && value <= g.second)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void day5_buildInput(const std::vector<std::string>& fileTxt, std::vector<std::pair<long long, long long>>& groups, std::vector<long long>& values)
+{
+    int lineIndex = 0;
+    while (!fileTxt[lineIndex].empty())
+    {
+        auto values = split(fileTxt[lineIndex], "-");
+        long long v1 = atoll(values[0].c_str());
+        long long v2 = atoll(values[1].c_str());
+        groups.push_back({ v1,v2 });
+        ++lineIndex;
+    }
+
+    std::sort(groups.begin(), groups.end(), [](std::pair<long long, long long> a, std::pair<long long, long long> b)
+        {
+            if (a.first != b.first)
+            {
+                return a.first < b.first;
+            }
+
+            return a.second < b.second;
+
+        });
+
+
+    ++lineIndex;
+
+    while (lineIndex < fileTxt.size())
+    {
+        long long v = atoll(fileTxt[lineIndex].c_str());
+        values.push_back(v);
+        ++lineIndex;
+    }
+}
+
+long long day5_a(const std::vector<std::pair<long long, long long>>& groups, const std::vector<long long>& values)
+{
+    long long result= 0;
+    for (auto&& v : values)
+    {
+        if (day5_valid(groups, v))
+        {
+            ++result;
+        }
+    }
+
+    return result;
+}
+
+long long day5_b(std::vector<std::pair<long long, long long>> groups)
+{
+    bool someFusion = true;
+
+    while (someFusion)
+    {
+        someFusion = false;
+
+        int index = 0;
+
+        while (index < groups.size() && index +1 < groups.size())
+        {
+            auto g1 = groups[index];
+            auto g2 = groups[ index +1];
+
+            auto g1_start = g1.first;
+            auto g1_end = g1.second;
+
+            auto g2_start = g2.first;
+            auto g2_end = g2.second;
+
+            //g1s g2s g2e g1e
+            if (g1_start < g2_start && g2_end < g1_end)
+            {
+                groups.erase(groups.begin() + index + 1);
+                someFusion = true;
+                continue;
+            }
+
+            //g1s g2s g1e g2e
+            if (g1_start <= g2_start && g2_start <= g1_end && g1_end <= g2_end)
+            {
+                groups.erase(groups.begin() + index);//delete g1
+                groups.erase(groups.begin() + index);//delete g2
+
+                std::pair<long long, long long>newGroup = { std::min(g1_start, g2_start), std::max(g1_end, g2_end) };
+
+                groups.insert(groups.begin() + index, newGroup);
+                someFusion = true;
+                continue;
+            }
+
+            //g1s g1e g2e g2e
+            if (g1_end < g2_start)
+            {
+                ++index;
+            }
+        }
+
+    }
+
+    //check extra fusion?
+
+    long long result = 0;
+
+    for (auto&& g : groups)
+    {
+        result += (g.second - g.first + 1);
+    }
+
+    return result;
+
+}
+
+void day5()
+{
+    auto fileTxt = ReadFile("./input/day5.txt");
+
+    std::vector<std::pair<long long, long long>> groups;
+    std::vector<long long> values;
+    day5_buildInput(fileTxt, groups, values);
+
+    auto resultA = day5_a(groups, values);
+    auto resultB = day5_b(groups);
+
+    std::cout << "Day 5 => " << resultA << "\n";
+    std::cout << "Day 5_B => " << resultB << "\n";
+
+}
 int main()
 {
     //day1();
     //day2(false);
     //day3();
-    day4();
-    /*
+    //day4();
     day5();
+    /*
     day6();
     day7();
     day8();
