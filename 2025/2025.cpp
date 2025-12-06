@@ -527,15 +527,182 @@ void day5()
     std::cout << "Day 5_B => " << resultB << "\n";
 
 }
+
+void day6_getInput(const std::vector<std::string>& fileTxt, std::vector<std::vector<int>>& numbers, std::vector<std::string>& symbols)
+{
+    for (int lineIdx = 0; lineIdx < fileTxt.size() - 1; ++lineIdx)
+    {
+        auto&& line = fileTxt[lineIdx];
+
+        std::regex re("\\b\\d+\\b");
+        std::smatch match;
+
+        std::string::const_iterator searchStart(line.cbegin());
+
+        std::vector<int>number;
+
+        while (std::regex_search(searchStart, line.cend(), match, re)) {
+            number.push_back(std::stoi(match.str()));
+            searchStart = match.suffix().first;
+        }
+        numbers.push_back(number);
+    }
+
+    auto&& lastLine = fileTxt.back();
+    std::regex re("[\\+\\*]");
+
+    std::sregex_iterator it(lastLine.begin(), lastLine.end(), re);
+    std::sregex_iterator end;
+
+    while (it != end) {
+        symbols.push_back((*it).str());
+        ++it;
+    }
+
+}
+
+long long day6_partA(const std::vector<std::vector<int>>& numbers, const std::vector<std::string>& symbols)
+{
+    long long result = 0;
+    int totalCols = symbols.size();
+
+    for (int col = 0; col < totalCols; ++col)
+    {
+        long long acum = numbers[0][col];
+        bool multiply = symbols[col] == "*";
+
+        for (int row = 1; row < numbers.size(); ++row)
+        {
+            auto number = numbers[row][col];
+            if (multiply)
+            {
+                acum *= number;
+            }
+            else
+            {
+                acum += number;
+            }
+        }
+
+        result += acum;
+    }
+    return result;
+}
+
+int day6_getMaxDigits(const std::vector<int>& numbersToUse)
+{
+    int maxDigits = 0;
+    for (auto n : numbersToUse)
+    {
+        int size = std::to_string(n).size();
+        if (size > maxDigits)
+        {
+            maxDigits = size;
+        }
+    }
+
+    return maxDigits;
+}
+
+long long day6_calculateB(const std::vector<string>& stringToUse, const std::string& symbol)
+{
+    bool useMult = symbol == "*";
+    long long result = 0;
+    if (useMult) { result = 1; }
+
+    int sizeString = stringToUse[0].size();
+    for (int col = 0; col < sizeString; ++col)
+    {
+        int multiplier = 1;
+        long long numberToUse = 0;
+        for (int row = stringToUse.size() - 1; row >= 0; --row)
+        {
+            auto c = stringToUse[row][col];
+
+            if (c != ' ')
+            {
+                int val = c - '0';
+                numberToUse = numberToUse + val * multiplier;
+                if (numberToUse != 0)
+                {
+                    multiplier *= 10;
+                }
+            }
+        }
+
+        if (useMult)
+        {
+            result *= numberToUse;
+        }
+        else
+        {
+            result += numberToUse;
+        }
+    }
+
+    return result;
+}
+
+long long day6_partB(const std::vector<std::string>& fileTxt, const std::vector<std::vector<int>>& numbers, const std::vector<std::string>& symbols)
+{
+    int currentOffset = 0;
+    
+    int totalCols = symbols.size();
+    long long result = 0;
+
+    for (int col = 0; col < totalCols; ++col)
+    {
+        std::vector<int> numberToUse;
+        for (int row = 0; row < numbers.size(); ++row)
+        {
+            numberToUse.push_back(numbers[row][col]);
+        }
+
+        int maxDigits = day6_getMaxDigits(numberToUse);
+
+        std::vector<string> stringToUse;
+        for (int row = 0; row < numbers.size(); ++row)
+        {
+            std::string str = fileTxt[row].substr(currentOffset, maxDigits);
+            stringToUse.push_back(str);
+        }
+        currentOffset += maxDigits + 1;
+
+        auto tmpResult = day6_calculateB(stringToUse, symbols[col]);
+        result += tmpResult;
+
+    }
+
+    return result;
+}
+
+void day6()
+{
+    auto fileTxt = ReadFile("./input/day6.txt");
+
+    std::vector<std::vector<int>> numbers;
+    std::vector<std::string> symbols;
+
+    day6_getInput(fileTxt, numbers, symbols);
+
+    auto partA = day6_partA(numbers, symbols);
+    std::cout << "day 5 => " << partA << "\n";
+
+
+    auto partB = day6_partB(fileTxt, numbers, symbols);
+    std::cout << "day 5_B => " << partB << "\n";
+}
+
+
 int main()
 {
     //day1();
     //day2(false);
     //day3();
     //day4();
-    day5();
-    /*
+    //day5();
     day6();
+    /*
     day7();
     day8();
     day9();
