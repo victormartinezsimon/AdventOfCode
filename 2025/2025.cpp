@@ -692,7 +692,149 @@ void day6()
     auto partB = day6_partB(fileTxt, numbers, symbols);
     std::cout << "day 5_B => " << partB << "\n";
 }
+void day7_allCalculus(const std::vector<std::string>& board, long long& partA, long long& partB)
+{
+    int width = board[0].size();
+    int height = board.size();
 
+    std::vector<std::vector<long long>> particlesInPosition = std::vector<std::vector<long long>>(height, std::vector<long long>(width, 0));
+
+    int startCol = -1;
+    for (int i = 0; i < width; ++i)
+    {
+        if (board[0][i] == 'S')
+        {
+            startCol = i;
+            break;
+        }
+    }
+
+    particlesInPosition[0][startCol] = 1;
+
+    std::vector<std::pair<int, int>> particlesAlive;
+    particlesAlive.push_back({ 0, startCol });
+
+    long long countSplits = 0;
+
+    while (!particlesAlive.empty())
+    {
+        auto particleToAnalyze = particlesAlive.front();
+        particlesAlive.erase(particlesAlive.begin());
+
+        int nextHeight = particleToAnalyze.first + 1;
+        if (nextHeight >= height)
+        {
+            continue;
+        }
+
+        std::vector<std::pair<int, int>> nextParticles;
+
+        if (board[particleToAnalyze.first][particleToAnalyze.second] == '^')
+        {
+            //left
+            int leftPos = particleToAnalyze.second - 1;
+            bool createLeft = particlesInPosition[nextHeight][leftPos] == 0;
+            particlesInPosition[nextHeight][leftPos] += particlesInPosition[particleToAnalyze.first][particleToAnalyze.second];
+            
+            int rightPos = particleToAnalyze.second + 1;
+            bool createRight = particlesInPosition[nextHeight][rightPos] == 0;
+            particlesInPosition[nextHeight][rightPos] += particlesInPosition[particleToAnalyze.first][particleToAnalyze.second];
+
+            if (createLeft)
+            {
+                particlesAlive.push_back({ nextHeight, leftPos });
+            }
+            if (createRight)
+            {
+                particlesAlive.push_back({ nextHeight, rightPos });
+            }
+
+            ++countSplits;
+        }
+        else
+        {
+            bool createNext = particlesInPosition[nextHeight][particleToAnalyze.second] == 0;
+            particlesInPosition[nextHeight][particleToAnalyze.second] += particlesInPosition[particleToAnalyze.first][particleToAnalyze.second];
+            if (createNext)
+            {
+                particlesAlive.push_back({ nextHeight, particleToAnalyze.second });
+            }
+        }
+    }
+
+
+    long long countB = 0;
+    for (int col = 0; col < width; ++col)
+    {
+        countB += particlesInPosition[height - 1][col];
+    }
+
+    partA = countSplits;
+    partB = countB;
+}
+
+long long day7_partBCalculus(const std::vector<std::string>& board, std::pair<int, int> particle, int height, std::map<std::string, long long>& cache)
+{
+    if (particle.first >= height) { return 1; }
+
+    std::string key = std::to_string(particle.first) + "-" + std::to_string(particle.second);
+
+    if (cache.contains(key))
+    {
+        return cache[key];
+    }
+
+    long long result = 0;
+    if (board[particle.first][particle.second] == '^')
+    {
+        result += day7_partBCalculus(board, { particle.first + 1, particle.second-1 }, height, cache);
+        result += day7_partBCalculus(board, { particle.first + 1, particle.second+1 }, height, cache);
+    }
+    else
+    {
+        result = day7_partBCalculus(board, { particle.first + 1, particle.second }, height, cache);
+    }
+
+
+    cache[key] = result;
+    return result;
+
+}
+long long day7_partBCache(const std::vector<std::string>& board)
+{
+    std::map<std::string, long long> cache;
+
+    int width = board[0].size();
+    int height = board.size();
+
+    int startCol = -1;
+    for (int i = 0; i < width; ++i)
+    {
+        if (board[0][i] == 'S')
+        {
+            startCol = i;
+            break;
+        }
+    }
+
+    long long value = day7_partBCalculus(board, { 0, startCol }, height, cache);
+
+    return value;
+}
+
+void day7()
+{
+    auto board = ReadFile("./input/day7.txt");
+
+    long long partA;
+    long long partB_common;
+    day7_allCalculus(board, partA, partB_common);
+    auto partB = day7_partBCache(board);
+
+    std::cout << "day 7 => " << partA << "\n";
+    std::cout << "day 7_B (common) => " << partB_common << "\n";
+    std::cout << "day 7_B (cache)  => " << partB << "\n";
+}
 
 int main()
 {
@@ -701,9 +843,9 @@ int main()
     //day3();
     //day4();
     //day5();
-    day6();
-    /*
+    //day6();
     day7();
+    /*
     day8();
     day9();
     day10();
