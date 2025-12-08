@@ -18,11 +18,11 @@
 #include <iomanip>
 #include <stack>
 #include <bitset>
-#include <functional>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
 #include <cmath>
+#include <iterator>
 using namespace std;
 
 int day1_partA(int start, int size, std::vector<std::string>& movements)
@@ -836,6 +836,209 @@ void day7()
     std::cout << "day 7_B (cache)  => " << partB << "\n";
 }
 
+struct day8_node_distance
+{
+    int id1;
+    int id2;
+    double distance;
+};
+
+struct day8_node
+{
+    int x;
+    int y;
+    int z;
+};
+
+std::vector<day8_node> day8_buildNodes(const std::vector<string>& fileTxt)
+{
+    std::vector<day8_node> toReturn;
+    for (auto&& l : fileTxt)
+    {
+        auto values = split(l, ",");
+        day8_node node;
+        node.x = atoi(values[0].c_str());
+        node.y = atoi(values[1].c_str());
+        node.z = atoi(values[2].c_str());
+        toReturn.push_back(node);
+    }
+
+    return toReturn;
+}
+
+double day8_getDistance(const day8_node& node1, const day8_node& node2)
+{
+    return std::pow(node1.x - node2.x, 2) + std::pow(node1.y - node2.y, 2) + std::pow(node1.z - node2.z, 2);
+}
+
+std::vector<day8_node_distance> day8_calculateAllDistances(const std::vector<day8_node>& nodes)
+{
+    std::vector<day8_node_distance> toReturn;
+    for (int i = 0; i < nodes.size(); ++i)
+    {
+        for(int j = i+1; j < nodes.size(); ++j)
+        {
+            day8_node_distance node;
+            node.id1 = i;
+            node.id2 = j;
+            node.distance = day8_getDistance(nodes[i], nodes[j]);
+            toReturn.push_back(node);
+        }
+    }
+
+    std::sort(toReturn.begin(), toReturn.end(), [nodes](const day8_node_distance& n1, const day8_node_distance& n2)
+        {
+            if (n1.distance != n2.distance)
+            {
+                return n1.distance < n2.distance; 
+            }
+
+            if(n1.id1 != n2.id1)
+            {
+                return n1.id1 < n2.id1;
+            }
+
+            return n1.id2 < n2.id2;
+        });
+
+    return toReturn;
+}
+
+std::vector<std::set<int>> day8_buildAllSets(const std::vector<day8_node>& nodes)
+{
+    std::vector<std::set<int>> toReturn;
+
+    for (int i = 0; i < nodes.size(); ++i)
+    {
+        std::set<int> s = { i };
+        toReturn.push_back(s);
+    }
+
+    return toReturn;
+}
+
+int day8_getSetIndex(int id, const std::vector<std::set<int>>& sets)
+{
+    for (int i = 0; i < sets.size(); ++i)
+    {
+        if(sets[i].contains(id))
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void day8_mergeSets(std::vector<day8_node_distance>& distances, int iterations, std::vector<std::set<int>>& sets)
+{
+    for (int it = 0; it < iterations; ++it)
+    {
+        auto best = distances.front();
+        distances.erase(distances.begin());
+
+        int setIdx1 = day8_getSetIndex(best.id1, sets);
+        int setIdx2 = day8_getSetIndex(best.id2, sets);
+
+        if (setIdx1 != setIdx2)
+        {
+            std::set<int> newSet;
+            
+            std::set_union( sets[setIdx1].cbegin(), sets[setIdx1].cend(), 
+                            sets[setIdx2].cbegin(), sets[setIdx2].cend(), 
+                            std::inserter(newSet, newSet.begin()));
+                            
+            if (setIdx1 < setIdx2)
+            {
+                sets.erase(sets.begin() + setIdx2);
+                sets.erase(sets.begin() + setIdx1);
+            }
+            else
+            {
+                sets.erase(sets.begin() + setIdx1);
+                sets.erase(sets.begin() + setIdx2);
+            }
+                
+            sets.insert(sets.begin(), newSet);
+        }
+    }
+}
+
+std::pair<int, int> day8_infiniteMerge(std::vector<day8_node_distance>& distances, std::vector<std::set<int>>& sets)
+{
+    int lastId1 = -1;
+    int lastId2 = -1;
+    
+    while (sets.size() != 1)
+    {
+        auto best = distances.front();
+        distances.erase(distances.begin());
+
+        int setIdx1 = day8_getSetIndex(best.id1, sets);
+        int setIdx2 = day8_getSetIndex(best.id2, sets);
+
+        lastId1 = best.id1;
+        lastId2 = best.id2;
+
+        if (setIdx1 != setIdx2)
+        {
+            std::set<int> newSet;
+
+            std::set_union(sets[setIdx1].cbegin(), sets[setIdx1].cend(),
+                sets[setIdx2].cbegin(), sets[setIdx2].cend(),
+                std::inserter(newSet, newSet.begin()));
+
+            if (setIdx1 < setIdx2)
+            {
+                sets.erase(sets.begin() + setIdx2);
+                sets.erase(sets.begin() + setIdx1);
+            }
+            else
+            {
+                sets.erase(sets.begin() + setIdx1);
+                sets.erase(sets.begin() + setIdx2);
+            }
+
+            sets.insert(sets.begin(), newSet);
+        }
+    }
+
+    return { lastId1, lastId2 };
+}
+
+void day8()
+{
+    auto fileTxt = ReadFile("./input/day8.txt");
+
+    auto nodes = day8_buildNodes(fileTxt);
+
+    auto distances = day8_calculateAllDistances(nodes);
+
+    auto allSets = day8_buildAllSets(nodes);
+
+    day8_mergeSets(distances, 1000, allSets);
+
+
+    std::vector<int> allSizes;
+    for (auto&& s : allSets)
+    {
+        allSizes.push_back(s.size());
+    }
+    std::sort(allSizes.begin(), allSizes.end(), [](int a, int b)
+        {
+            return a > b;
+        });
+
+    long long partA = allSizes[0] * allSizes[1] * allSizes[2];
+
+    auto partBNodes = day8_infiniteMerge(distances, allSets);
+
+    long long partB = nodes[partBNodes.first].x * nodes[partBNodes.second].x;
+    
+
+    std::cout << "day8 => " << partA << "\n";
+    std::cout << "day8_B => " << partB << "\n";
+}
+
 int main()
 {
     //day1();
@@ -844,9 +1047,9 @@ int main()
     //day4();
     //day5();
     //day6();
-    day7();
-    /*
+    //day7();
     day8();
+    /*
     day9();
     day10();
     day11();
