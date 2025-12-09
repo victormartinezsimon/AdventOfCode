@@ -1039,6 +1039,226 @@ void day8()
     std::cout << "day8_B => " << partB << "\n";
 }
 
+long long day9_getArea(const std::pair<long long, long long> p1, const std::pair<long long, long long>& p2)
+{
+    auto width = std::abs(p1.first - p2.first ) + 1;
+    auto height = std::abs(p1.second - p2.second ) +1;
+
+    return width * height;
+}
+
+
+std::vector<std::pair<long long, long long>> day9_getSquarePoints(const std::pair<long long, long long>& p1, const std::pair<long long, long long>& p2)
+{
+    std::vector<std::pair<long long, long long>> toReturn;
+
+    toReturn.push_back({ p1.first,p2.second });
+    toReturn.push_back({ p2.first,p1.second });
+
+    return toReturn;
+
+}
+
+bool puntoEnSegmento(const std::pair<long long, long long>& a, const std::pair<long long, long long>& b, const std::pair<long long, long long>& p) {
+    double minX = std::min(a.first, b.first), maxX = std::max(a.first, b.first);
+    double minY = std::min(a.second, b.second), maxY = std::max(a.second, b.second);
+
+    // Comprobamos colinealidad: área = 0
+    double area = (b.first - a.first) * (p.second - a.second) - (b.second - a.second) * (p.first - a.first);
+    if (std::abs(area) > 1e-9) return false;
+
+    // Comprobar si p está dentro del rango del segmento
+    return (p.first >= minX && p.first <= maxX && p.second >= minY && p.second <= maxY);
+}
+
+bool IsPointInPolygon(std::pair<long long, long long> p, std::vector<std::pair<long long, long long>> poligono)
+{
+    bool dentro = false;
+    int n = poligono.size();
+
+    for (int i = 0, j = n - 1; i < n; j = i++) {
+        const auto& a = poligono[i];
+        const auto& b = poligono[j];
+
+        // Verificar si está sobre un borde
+        if (puntoEnSegmento(a, b, p)) return true;
+
+        // Comprobar cruce de rayos
+        bool intersecta = ((a.second > p.second) != (b.second > p.second)) &&
+            (p.first < (b.first - a.first) * (p.second - a.second) / (b.second - a.second) + a.first);
+
+        if (intersecta)
+            dentro = !dentro;
+    }
+
+    return dentro;
+
+}
+
+bool day9_inLine(std::pair<long long, long long> p, std::vector<std::pair<long long, long long>> polygon)
+{
+    for (int i = 0; i < polygon.size(); ++i)
+    {
+        int nextIndex = (i + 1) % polygon.size();
+
+        auto p1 = polygon[i];
+        auto p2 = polygon[nextIndex];
+
+        if (p1.first == p2.first && p1.first == p.first)
+        {
+            //all in same X
+            long long minY = std::min(p1.second, p2.second);
+            long long maxY = std::max(p1.second, p2.second);
+
+            return minY <= p.second && p.second <= maxY;
+
+        }
+
+        if (p1.second == p2.second && p1.second == p.second)
+        {
+            //all in same X
+
+            long long minX = std::min(p1.first, p2.first);
+            long long maxX = std::max(p1.first, p2.first);
+
+            return minX <= p.first && p.first <= maxX;
+        }
+    }
+
+    return false;
+}
+
+// Producto cruzado de (b - a) x (c - a)
+double cross(const std::pair<long long, long long>& a, const std::pair<long long, long long>& b, const std::pair<long long, long long>& c) {
+    return (b.first - a.first) * (c.second - a.second) -
+        (b.second - a.second) * (c.first - a.first);
+}
+
+// Comprueba si c está sobre el segmento [a,b]
+bool enSegmento(const std::pair<long long, long long>& a, const std::pair<long long, long long>& b, const std::pair<long long, long long>& c) {
+    return min(a.first, b.first) - 1e-12 <= c.first && c.first <= max(a.first, b.first) + 1e-12 &&
+        min(a.second, b.second) - 1e-12 <= c.second && c.second <= max(a.second, b.second) + 1e-12;
+}
+
+// Devuelve true si los segmentos [A,B] y [C,D] colisionan/intersectan
+bool intersectan(const std::pair<long long, long long>& A, const std::pair<long long, long long>& B,
+    const std::pair<long long, long long>& C, const std::pair<long long, long long>& D) {
+
+    double d1 = cross(A, B, C);
+    double d2 = cross(A, B, D);
+    double d3 = cross(C, D, A);
+    double d4 = cross(C, D, B);
+
+    // Caso general: se cruzan si los signos son opuestos
+    if ((d1 * d2 < 0) && (d3 * d4 < 0))
+        return true;
+
+    /*
+    // Casos colineales: puntos sobre el segmento
+    if (fabs(d1) < 1e-12 && enSegmento(A, B, C)) return true;
+    if (fabs(d2) < 1e-12 && enSegmento(A, B, D)) return true;
+    if (fabs(d3) < 1e-12 && enSegmento(C, D, A)) return true;
+    if (fabs(d4) < 1e-12 && enSegmento(C, D, B)) return true;
+    */
+    return false;
+}
+
+long long  day9_partB(const std::vector<std::pair<long long, long long>>& points)
+{
+    long long best = -1;
+    for (int i = 0; i < points.size(); ++i)
+    {
+        for (int j = i + 1; j < points.size(); ++j)
+        {
+            auto p1 = points[i];
+            auto p2 = points[j];
+
+            auto x0 = std::min(p1.first, p2.first);
+            auto y0 = std::min(p1.second, p2.second);
+            auto x1 = std::max(p1.first, p2.first);
+            auto y1 = std::max(p1.second, p2.second);
+
+            std::pair<long long, long long> pa = { x0,y0 };
+            std::pair<long long, long long> pb = { x1,y0 };
+            std::pair<long long, long long> pc = { x1,y1 };
+            std::pair<long long, long long> pd = { x0,y1 };
+
+
+            if (!IsPointInPolygon(pa, points)) continue;
+            if (!IsPointInPolygon(pb, points)) continue;
+            if (!IsPointInPolygon(pc, points)) continue;
+            if (!IsPointInPolygon(pd, points)) continue;
+
+            bool valid = true;
+            int lastK = -1;
+            for (int k = 0; k < points.size(); ++k)
+            {
+                lastK = k;
+
+                auto pr1 = points[k];
+                auto pr2 = points[(k + 1) % points.size()];
+
+                if (intersectan(pa, pb, pr1, pr2)) { valid = false; break; }
+                if (intersectan(pb, pc, pr1, pr2)) { valid = false; break; }
+                if (intersectan(pc, pd, pr1, pr2)) { valid = false; break; }
+                if (intersectan(pd, pa, pr1, pr2)) { valid = false; break; }
+            }
+
+            if (valid)
+            {
+                auto area = day9_getArea(p1, p2);
+                auto area2 = day9_getArea(pa, pd);
+                if (area > best)
+                {
+                    best = area;
+                }
+            }
+           
+        }
+    }
+
+    return best;
+}
+
+
+long long day9_calculateA(const std::vector<std::pair<long long, long long>>& points)
+{
+    long long best = -1;
+
+    for (int i = 0; i < points.size(); ++i)
+    {
+        for (int j = i + 1; j < points.size(); ++j)
+        {
+            auto area = day9_getArea(points[i], points[j]);
+            if (area > best)
+            {
+                best = area;
+            }
+        }
+    }
+    return best;
+}
+
+void day9()
+{
+    auto fileTxt = ReadFile("./input/day9.txt");
+    std::vector<std::pair<long long, long long>> points;
+
+    for (auto&& l : fileTxt)
+    {
+        auto values = split(l, ",");
+        auto x = atoll(values[0].c_str());
+        auto y = atoll(values[1].c_str());
+        points.push_back({ x,y });
+    }
+
+    auto valueA = day9_calculateA(points);
+    std::cout << "day 9 => " << valueA << "\n";
+
+    auto valueB = day9_partB(points);
+    std::cout << "day 9_B => " << valueB << "\n";
+}
+
 int main()
 {
     //day1();
@@ -1048,9 +1268,13 @@ int main()
     //day5();
     //day6();
     //day7();
-    day8();
-    /*
+    //day8();
     day9();
+    other_9();
+    //day9_gpt();
+    //std::cout << "mine\n";
+    //day9();
+    /*
     day10();
     day11();
     day12();
