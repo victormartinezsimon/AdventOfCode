@@ -1259,6 +1259,78 @@ void day9()
     std::cout << "day 9_B => " << valueB << "\n";
 }
 
+
+long long day11_solver(const std::map<std::string,std::vector<std::string>>& nodes,const std::string& currentNode,
+	const std::string& end,const std::set<std::string>& invalidNodes, std::map<std::string,long long>& cache)
+{
+	if(currentNode == end)
+	{
+		return 1;
+	}
+
+	if(cache.contains(currentNode))
+	{
+		return cache[currentNode];
+	}
+
+	if(nodes.contains(currentNode) == false)
+	{
+		return 0;
+	}
+
+	long long count = 0;
+
+	auto sons = nodes.at(currentNode);
+	for(auto d: sons)
+	{
+		if(invalidNodes.contains(d))
+		{
+			continue;
+		}
+
+		count += day11_solver(nodes,d,end,invalidNodes, cache);
+	}
+
+	cache[currentNode] = count;
+
+	return count;
+}
+
+
+void day11()
+{
+	 auto fileTxt = ReadFile("./input/day11.txt");
+
+	 auto nodes = day11_getNodes(fileTxt);
+
+	 std::map<std::string,long long> cache_partA;
+	 auto partA = day11_solver(nodes, "you", "out", {}, cache_partA);
+
+	 std::cout << "day 11 => " << partA << "\n";
+
+	 std::map<std::string,long long> cache_svr_dac;
+	 auto from_svr_dac = day11_solver(nodes, "svr", "dac", {"fft"}, cache_svr_dac);
+
+	 std::map<std::string,long long> cache_dac_fft;
+	 auto from_dac_fft = day11_solver(nodes, "dac", "fft", {}, cache_dac_fft);
+
+	 std::map<std::string,long long> cache_fft_out;
+	 auto from_fft_out = day11_solver(nodes, "svr", "fft", {"dac"}, cache_fft_out);
+	 
+	 std::map<std::string,long long> cache_svr_fft;
+	 auto from_svr_fft = day11_solver(nodes, "svr", "fft", {"dac"}, cache_svr_fft);
+
+	 std::map<std::string,long long> cache_fft_dac;
+	 auto from_fft_dac = day11_solver(nodes, "fft", "dac", {"svr"},cache_fft_dac);
+
+	 std::map<std::string,long long> cache_dac_out;
+	 auto from_dac_out = day11_solver(nodes, "dac", "out", {"fft"}, cache_dac_out);
+	 
+	 long long partB = from_svr_dac * from_dac_fft * from_fft_out + from_svr_fft * from_fft_dac * from_dac_out;
+
+	 std::cout << "day 11_B => " << partB << "\n";
+}
+
 int main()
 {
     //day1();
