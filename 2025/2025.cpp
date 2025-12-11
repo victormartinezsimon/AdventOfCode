@@ -1587,6 +1587,24 @@ long long day11_solver(const std::map<std::string,std::vector<std::string>>& nod
 	return count;
 }
 
+std::map<std::string, std::vector<std::string>> day11_getNodes(const std::vector<std::string>& fileTxt)
+{
+    std::map<std::string, std::vector<std::string>> result;
+    for (auto&& l : fileTxt)
+    {
+        auto head = split(l, ":");
+        auto nodeIdx = trim_copy(head[0]);
+
+        auto nodes = split(head[1], " ");
+        std::vector<std::string> toAdd;
+        for (auto n : nodes)
+        {
+            toAdd.push_back(trim_copy(n));
+        }
+        result[nodeIdx] = toAdd;
+    }
+    return result;
+}
 
 void day11()
 {
@@ -1633,7 +1651,7 @@ int main()
     //day7();
     //day8();
     //day9();
-    day10();
+    //day10();
     day11();
     /*
     day12();
