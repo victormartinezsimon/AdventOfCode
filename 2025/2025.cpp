@@ -23,6 +23,7 @@
 #include <condition_variable>
 #include <cmath>
 #include <iterator>
+#include <future>
 using namespace std;
 
 int day1_partA(int start, int size, std::vector<std::string>& movements)
@@ -1259,6 +1260,298 @@ void day9()
     std::cout << "day 9_B => " << valueB << "\n";
 }
 
+std::string day10_getFinalConfiguration(const std::string& line)
+{
+    std::size_t pos = line.find("]");
+
+    return line.substr(1, pos -1);
+}
+
+std::vector<std::vector<int>> day10_getMovements(const std::string& line)
+{
+    auto values = split(line, " ");
+
+    std::vector<std::vector<int>> result;
+    for (int i = 1; i < values.size() -1; ++i)
+    {
+        std::string removeChars = values[i].substr(1, values[i].size() - 1);
+        auto numbers = split(removeChars, ",");
+        std::vector<int> toAdd;
+
+        for (auto&& v : numbers)
+        {
+            toAdd.push_back(atoi(v.c_str()));
+        }
+
+        result.push_back(toAdd);
+    }
+    return result;
+}
+
+std::vector<int> day10_getJoltage(const std::string& line)
+{
+    std::size_t pos = line.find("{");
+
+    auto allValues = line.substr(pos + 1, line.size() - pos - 1);
+
+    auto values = split(allValues, ",");
+    std::vector<int> toReturn;
+
+    for (auto&& v : values)
+    {
+        toReturn.push_back(atoi(v.c_str()));
+    }
+
+    return toReturn;
+}
+
+void day10_applyTransform(std::string& board, const std::vector<int>& transform)
+{
+    for (auto pos : transform)
+    {
+        if (board[pos] == '.') { board[pos] = '#'; }
+        else { board[pos] = '.'; }
+    }
+}
+
+std::vector<std::vector<int>> day10_buildMatrix(const std::vector<std::vector<int>>& transforms, int totalEquations)
+{
+    int totalButtons = transforms.size();
+    std::vector<std::vector<int>> result = std::vector<std::vector<int>>(totalEquations, std::vector<int>(totalButtons, 0));
+
+    for (int transformIdx = 0; transformIdx < transforms.size(); ++ transformIdx)
+    {
+        for (auto&& v : transforms[transformIdx])
+        {
+            result[v][transformIdx] = 1;
+        }
+    }
+
+    return result;
+}
+
+#pragma region day10_b_fail
+std::vector<int> day10_getMultiplication(const std::vector<std::vector<int>>& matrix, const std::vector<int>& count)
+{
+    std::vector<int> result = std::vector<int>(matrix.size(), 0);
+
+    for (int row = 0; row < matrix.size(); ++row)
+    {
+        for (int col = 0; col < matrix[0].size(); ++col)
+        {
+            result[row] += matrix[row][col] * count[col];
+        }
+    }
+
+    return result;
+}
+
+enum class DAY10_POSSIBILITIES
+{
+    EXACT, UP, DOWN
+};
+
+DAY10_POSSIBILITIES day10_checkPossibility(const std::vector<std::vector<int>>& matrix, const std::vector<int>& result, const std::vector<int>& joltage)
+{
+    auto myResult = day10_getMultiplication(matrix, result);
+
+    bool allEqual = true;
+
+    for (int i = 0; i < joltage.size(); ++i)
+    {
+        if (myResult[i] > joltage[i]) { return DAY10_POSSIBILITIES::UP; }
+
+        if (myResult[i] < joltage[i]) { allEqual = false; }
+    }
+
+    if (allEqual)
+    {
+        return DAY10_POSSIBILITIES::EXACT;
+    }
+    else
+    {
+        return DAY10_POSSIBILITIES::DOWN;
+    }
+}
+
+int day10_calculatePossibility(const std::vector<std::vector<int>>& matrix, const std::vector<int>& joltageResult, std::vector<int>& currentResult, int buttonToSelect, bool currentIncrementButton)
+{
+    if (!currentIncrementButton)
+    {
+        auto possibilty = day10_checkPossibility(matrix, currentResult, joltageResult);
+        if (possibilty == DAY10_POSSIBILITIES::EXACT)
+        {
+            int count = 0;
+            for (auto r : currentResult)
+            {
+                count += r;
+            }
+            return count;
+        }
+
+        if (possibilty == DAY10_POSSIBILITIES::UP)
+        {
+            return 100000;//big number
+        }
+    }
+
+    if (buttonToSelect >= currentResult.size())
+    {
+        return 100000;//big number
+    }
+
+    currentResult[buttonToSelect]++;
+    auto useSameButton = day10_calculatePossibility(matrix, joltageResult, currentResult, buttonToSelect, false);
+    currentResult[buttonToSelect]--;
+
+    int nextButton = buttonToSelect + 1;
+    auto useOtherButton = day10_calculatePossibility(matrix, joltageResult, currentResult, nextButton, true);
+
+
+    return std::min(useSameButton, useOtherButton);
+}
+
+
+long long day10_partB_individual(const std::string& line, int index)
+{
+    //[] (),(),()... {}
+    auto finalForm = day10_getFinalConfiguration(line);
+    auto transforms = day10_getMovements(line);
+    auto joltage = day10_getJoltage(line);
+
+    auto matrix = day10_buildMatrix(transforms, joltage.size());
+
+    int totalEquations = matrix[0].size();
+    std::vector<int> buttonsSelected = std::vector<int>(totalEquations, 0);
+
+    auto result = day10_calculatePossibility(matrix, joltage, buttonsSelected, 0, false);
+    cout << "terminado: " << index << "\n";
+    return result;
+}
+
+long long day10_partB(const std::vector<std::string>& fileTxt)
+{
+    long long partB = 0;
+    std::vector<std::future<long long>> futuresToWait;
+
+    for (int i = 0; i < fileTxt.size(); ++i)
+    {
+        futuresToWait.push_back(std::async(std::launch::async, day10_partB_individual, fileTxt[i], i));
+    }
+
+    for (size_t i = 0; i < futuresToWait.size(); ++i) {
+        auto result = futuresToWait[i].get();
+        partB += result;
+    }
+
+    return partB;
+}
+
+#pragma endregion
+
+#pragma region day 10 - Z3
+namespace z3
+{
+#include <z3++.h>
+    long long day10_solveEquations(const std::vector<std::vector<int>>& matrix, const std::vector<int>& solutions)
+    {
+        z3::context ctx;
+        z3::optimize opt(ctx);
+
+        int totalUnknowns = matrix[0].size();
+        // ----------------------------------------------------
+        // 6 variables ENTERAS: x0 .. x5
+        // ----------------------------------------------------
+        std::vector<z3::expr> x;
+        for (int i = 0; i < totalUnknowns; ++i) {
+            x.push_back(ctx.int_const(("x" + std::to_string(i)).c_str()));
+        }
+
+
+        // ----------------------------------------------------
+        // Añadir ecuaciones al solver
+        // ----------------------------------------------------
+        for (size_t i = 0; i < matrix.size(); ++i) {
+            z3::expr lhs = ctx.int_val(0);
+
+            for (size_t j = 0; j < x.size(); ++j) {
+                lhs = lhs + ctx.int_val(matrix[i][j]) * x[j];
+            }
+
+            opt.add(lhs == ctx.int_val(solutions[i]));
+        }
+
+        // ----------------------------------------------------
+        // RESTRICCIONES: 0 < xi < 200  →  xi >= 1 AND xi <= 199
+        // ----------------------------------------------------
+        for (auto& xi : x) {
+            opt.add(xi >= ctx.int_val(0));
+            opt.add(xi <= ctx.int_val(199));
+        }
+
+        // ----------------------------------------------------
+        // Objetivo: minimizar la suma de las seis incógnitas
+        // ----------------------------------------------------
+        z3::expr sum = ctx.int_val(0);
+        for (auto& xi : x) sum = sum + xi;
+
+        opt.minimize(sum);
+
+        // ----------------------------------------------------
+        // Ejecutar solver
+        // ----------------------------------------------------
+        auto result = opt.check();
+
+        if (result == z3::unsat) {
+            std::cout << "No existe solucion entera con los limites dados.\n";
+            return 0;
+        }
+        if (result == z3::unknown) {
+            std::cout << "Z3 no pudo decidir (unknown).\n";
+            return 0;
+        }
+
+        z3::model m = opt.get_model();
+        
+        long long value = m.eval(sum).as_int64();
+
+        return value;
+    }
+
+    long long day10_partB(const std::string& line)
+    {
+        auto finalForm = day10_getFinalConfiguration(line);
+        auto transforms = day10_getMovements(line);
+        auto joltage = day10_getJoltage(line);
+
+        auto matrix = day10_buildMatrix(transforms, joltage.size());
+
+        auto sol = day10_solveEquations(matrix, joltage);
+
+        return sol;
+    }
+}
+
+#pragma endregion
+
+void day10()
+{
+    auto fileTxt = ReadFile("./input/day10.txt");
+
+    long long partA = 0;
+    long long partB = 0;
+    int count = 0;
+
+    for (auto l : fileTxt)
+    {
+        //partA += day10_partA(l);
+        partB += z3::day10_partB(l);
+    }
+    std::cout << "day 10(missing in code => " << "517" << "\n";
+    std::cout << "day 10_B => " << partB << "\n";
+   
+}
+
 int main()
 {
     //day1();
@@ -1269,13 +1562,9 @@ int main()
     //day6();
     //day7();
     //day8();
-    day9();
-    other_9();
-    //day9_gpt();
-    //std::cout << "mine\n";
     //day9();
-    /*
     day10();
+    /*
     day11();
     day12();
     day13();
