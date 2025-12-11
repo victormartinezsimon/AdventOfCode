@@ -1330,123 +1330,175 @@ std::vector<std::vector<int>> day10_buildMatrix(const std::vector<std::vector<in
     return result;
 }
 
-#pragma region day10_b_fail
-std::vector<int> day10_getMultiplication(const std::vector<std::vector<int>>& matrix, const std::vector<int>& count)
+long long day10_partA(const std::string& line)
 {
-    std::vector<int> result = std::vector<int>(matrix.size(), 0);
-
-    for (int row = 0; row < matrix.size(); ++row)
-    {
-        for (int col = 0; col < matrix[0].size(); ++col)
-        {
-            result[row] += matrix[row][col] * count[col];
-        }
-    }
-
-    return result;
-}
-
-enum class DAY10_POSSIBILITIES
-{
-    EXACT, UP, DOWN
-};
-
-DAY10_POSSIBILITIES day10_checkPossibility(const std::vector<std::vector<int>>& matrix, const std::vector<int>& result, const std::vector<int>& joltage)
-{
-    auto myResult = day10_getMultiplication(matrix, result);
-
-    bool allEqual = true;
-
-    for (int i = 0; i < joltage.size(); ++i)
-    {
-        if (myResult[i] > joltage[i]) { return DAY10_POSSIBILITIES::UP; }
-
-        if (myResult[i] < joltage[i]) { allEqual = false; }
-    }
-
-    if (allEqual)
-    {
-        return DAY10_POSSIBILITIES::EXACT;
-    }
-    else
-    {
-        return DAY10_POSSIBILITIES::DOWN;
-    }
-}
-
-int day10_calculatePossibility(const std::vector<std::vector<int>>& matrix, const std::vector<int>& joltageResult, std::vector<int>& currentResult, int buttonToSelect, bool currentIncrementButton)
-{
-    if (!currentIncrementButton)
-    {
-        auto possibilty = day10_checkPossibility(matrix, currentResult, joltageResult);
-        if (possibilty == DAY10_POSSIBILITIES::EXACT)
-        {
-            int count = 0;
-            for (auto r : currentResult)
-            {
-                count += r;
-            }
-            return count;
-        }
-
-        if (possibilty == DAY10_POSSIBILITIES::UP)
-        {
-            return 100000;//big number
-        }
-    }
-
-    if (buttonToSelect >= currentResult.size())
-    {
-        return 100000;//big number
-    }
-
-    currentResult[buttonToSelect]++;
-    auto useSameButton = day10_calculatePossibility(matrix, joltageResult, currentResult, buttonToSelect, false);
-    currentResult[buttonToSelect]--;
-
-    int nextButton = buttonToSelect + 1;
-    auto useOtherButton = day10_calculatePossibility(matrix, joltageResult, currentResult, nextButton, true);
-
-
-    return std::min(useSameButton, useOtherButton);
-}
-
-
-long long day10_partB_individual(const std::string& line, int index)
-{
-    //[] (),(),()... {}
     auto finalForm = day10_getFinalConfiguration(line);
     auto transforms = day10_getMovements(line);
     auto joltage = day10_getJoltage(line);
 
-    auto matrix = day10_buildMatrix(transforms, joltage.size());
-
-    int totalEquations = matrix[0].size();
-    std::vector<int> buttonsSelected = std::vector<int>(totalEquations, 0);
-
-    auto result = day10_calculatePossibility(matrix, joltage, buttonsSelected, 0, false);
-    cout << "terminado: " << index << "\n";
-    return result;
-}
-
-long long day10_partB(const std::vector<std::string>& fileTxt)
-{
-    long long partB = 0;
-    std::vector<std::future<long long>> futuresToWait;
-
-    for (int i = 0; i < fileTxt.size(); ++i)
+    std::set<std::string> visited;
+   
+    std::queue<std::pair<std::string, long long>> toVisit;
+    std::string startNode = "";
+    for (auto c : finalForm)
     {
-        futuresToWait.push_back(std::async(std::launch::async, day10_partB_individual, fileTxt[i], i));
+        startNode += ".";
+    }
+    toVisit.push({ startNode, 0 });
+
+    while (!toVisit.empty())
+    {
+        auto node = toVisit.front();
+        toVisit.pop();
+
+        auto currentBoard = node.first;
+        auto score = node.second;
+
+        if (visited.contains(currentBoard))
+        {
+            continue;
+        }
+
+        if (currentBoard == finalForm)
+        {
+            return score;
+        }
+
+        visited.insert(currentBoard);
+
+        for (auto&& t : transforms)
+        {
+            day10_applyTransform(currentBoard, t);
+            if (!visited.contains(currentBoard))
+            {
+                toVisit.push({ currentBoard, score + 1 });
+            }
+            day10_applyTransform(currentBoard, t);
+        }
     }
 
-    for (size_t i = 0; i < futuresToWait.size(); ++i) {
-        auto result = futuresToWait[i].get();
-        partB += result;
-    }
-
-    return partB;
+    return 0;
 }
 
+#pragma region day10_b_fail
+namespace day10_b_fail
+{
+    std::vector<int> day10_getMultiplication(const std::vector<std::vector<int>>& matrix, const std::vector<int>& count)
+    {
+        std::vector<int> result = std::vector<int>(matrix.size(), 0);
+
+        for (int row = 0; row < matrix.size(); ++row)
+        {
+            for (int col = 0; col < matrix[0].size(); ++col)
+            {
+                result[row] += matrix[row][col] * count[col];
+            }
+        }
+
+        return result;
+    }
+
+    enum class DAY10_POSSIBILITIES
+    {
+        EXACT, UP, DOWN
+    };
+
+    DAY10_POSSIBILITIES day10_checkPossibility(const std::vector<std::vector<int>>& matrix, const std::vector<int>& result, const std::vector<int>& joltage)
+    {
+        auto myResult = day10_getMultiplication(matrix, result);
+
+        bool allEqual = true;
+
+        for (int i = 0; i < joltage.size(); ++i)
+        {
+            if (myResult[i] > joltage[i]) { return DAY10_POSSIBILITIES::UP; }
+
+            if (myResult[i] < joltage[i]) { allEqual = false; }
+        }
+
+        if (allEqual)
+        {
+            return DAY10_POSSIBILITIES::EXACT;
+        }
+        else
+        {
+            return DAY10_POSSIBILITIES::DOWN;
+        }
+    }
+
+    int day10_calculatePossibility(const std::vector<std::vector<int>>& matrix, const std::vector<int>& joltageResult, std::vector<int>& currentResult, int buttonToSelect, bool currentIncrementButton)
+    {
+        if (!currentIncrementButton)
+        {
+            auto possibilty = day10_checkPossibility(matrix, currentResult, joltageResult);
+            if (possibilty == DAY10_POSSIBILITIES::EXACT)
+            {
+                int count = 0;
+                for (auto r : currentResult)
+                {
+                    count += r;
+                }
+                return count;
+            }
+
+            if (possibilty == DAY10_POSSIBILITIES::UP)
+            {
+                return 100000;//big number
+            }
+        }
+
+        if (buttonToSelect >= currentResult.size())
+        {
+            return 100000;//big number
+        }
+
+        currentResult[buttonToSelect]++;
+        auto useSameButton = day10_calculatePossibility(matrix, joltageResult, currentResult, buttonToSelect, false);
+        currentResult[buttonToSelect]--;
+
+        int nextButton = buttonToSelect + 1;
+        auto useOtherButton = day10_calculatePossibility(matrix, joltageResult, currentResult, nextButton, true);
+
+
+        return std::min(useSameButton, useOtherButton);
+    }
+
+
+    long long day10_partB_individual(const std::string& line, int index)
+    {
+        //[] (),(),()... {}
+        auto finalForm = day10_getFinalConfiguration(line);
+        auto transforms = day10_getMovements(line);
+        auto joltage = day10_getJoltage(line);
+
+        auto matrix = day10_buildMatrix(transforms, joltage.size());
+
+        int totalEquations = matrix[0].size();
+        std::vector<int> buttonsSelected = std::vector<int>(totalEquations, 0);
+
+        auto result = day10_calculatePossibility(matrix, joltage, buttonsSelected, 0, false);
+        cout << "terminado: " << index << "\n";
+        return result;
+    }
+
+    long long day10_partB(const std::vector<std::string>& fileTxt)
+    {
+        long long partB = 0;
+        std::vector<std::future<long long>> futuresToWait;
+
+        for (int i = 0; i < fileTxt.size(); ++i)
+        {
+            futuresToWait.push_back(std::async(std::launch::async, day10_partB_individual, fileTxt[i], i));
+        }
+
+        for (size_t i = 0; i < futuresToWait.size(); ++i) {
+            auto result = futuresToWait[i].get();
+            partB += result;
+        }
+
+        return partB;
+    }
+}
 #pragma endregion
 
 #pragma region day 10 - Z3
@@ -1544,10 +1596,10 @@ void day10()
 
     for (auto l : fileTxt)
     {
-        //partA += day10_partA(l);
+        partA += day10_partA(l);
         partB += z3::day10_partB(l);
     }
-    std::cout << "day 10(missing in code => " << "517" << "\n";
+    std::cout << "day 10 => " << partA << "\n";
     std::cout << "day 10_B => " << partB << "\n";
 }
 
@@ -1651,8 +1703,8 @@ int main()
     //day7();
     //day8();
     //day9();
-    //day10();
-    day11();
+    day10();
+    //day11();
     /*
     day12();
     day13();
