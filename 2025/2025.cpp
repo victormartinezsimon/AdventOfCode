@@ -1692,6 +1692,349 @@ void day11()
 	 std::cout << "day 11_B => " << partB << "\n";
 }
 
+using day12_shape = std::vector<std::string>;
+
+struct day12_board_data
+{
+    int width;
+    int height;
+    std::vector<int> total;
+};
+
+using day12_board = std::vector<std::string>;
+
+day12_shape day12_rotate90(const day12_shape& s)
+{
+    int original_width = s[0].size();
+    int original_height = s.size();
+
+    day12_shape newShape = std::vector<std::string>(original_width, std::string(original_height, '.'));
+    
+    for (int row = 0; row < original_height; ++row)
+    {
+        for (int col = 0; col < original_width; ++col)
+        {
+            int new_col = original_height - 1 -row;
+            int new_row = col;
+
+            newShape[new_row][new_col] = s[row][col];
+        }
+    }
+    return newShape;
+}
+
+std::vector<day12_shape> day12_readShapes(const std::vector<std::string>& fileTxt, int& currentLine)
+{
+    std::vector<day12_shape> original_shapes;
+    constexpr int totalOriginalShapes = 6;
+    constexpr int shapeHeight = 3;
+    for (int i = 0; i < totalOriginalShapes; ++i)
+    {
+        int start = currentLine;
+        day12_shape s;
+        for (int pos = start; pos < start + shapeHeight; ++pos)
+        {
+            s.push_back(fileTxt[pos]);
+            ++currentLine;
+        }
+        currentLine += 2;
+        original_shapes.push_back(s);
+    }
+    --currentLine;
+    return original_shapes;
+}
+
+std::vector<day12_board_data>day12_readBoards(const std::vector<std::string>& fileTxt, int& currentLine)
+{
+    std::vector<day12_board_data> toReturn;
+    while (currentLine != fileTxt.size())
+    {
+        const auto line = fileTxt[currentLine];
+
+        auto size = split(line, ":");
+        auto size_split = split(size[0], "x");
+        int width = atoi(size_split[0].c_str());
+        int height = atoi(size_split[1].c_str());
+
+        day12_board_data newBoard;
+        newBoard.width = width;
+        newBoard.height = height;
+
+        auto numbers_str = trim_copy(size[1]);
+        auto numbers = split(numbers_str, " ");
+
+        for (auto&& n : numbers)
+        {
+            newBoard.total.push_back(atoi(n.c_str()));
+        }
+
+        toReturn.push_back(newBoard);
+
+        ++currentLine;
+    }
+    return toReturn;
+}
+
+std::vector<std::vector<day12_shape>> day12_getAllShapes(const std::vector<day12_shape>& originalShapes)
+{
+    std::vector<std::vector<day12_shape>> toReturn;
+
+    for (auto&& s : originalShapes)
+    {
+        std::vector<day12_shape> rotations;
+        day12_shape s1 = s;
+        day12_shape s2 = day12_rotate90(s1);
+        day12_shape s3 = day12_rotate90(s2);
+        day12_shape s4 = day12_rotate90(s3);
+
+        for (auto&& toAdd : { s1,s2,s3,s4 })
+        {
+            if (std::find(rotations.begin(), rotations.end(), toAdd) == rotations.end())
+            {
+                rotations.push_back(toAdd);
+            }
+        }
+        toReturn.push_back(rotations);
+    }
+    return toReturn;
+}
+
+bool day12_canAddShape(const day12_shape& shape, int row, int col, const day12_board& board)
+{
+    int height = shape.size();
+    int width = shape[0].size();
+
+    if (row + height > board.size()) { return false; }
+    if (col + width > board[0].size()) { return false; }
+
+
+    for (int r = row; r < row + height; ++r)
+    {
+        for (int c = col; c < col + width; ++c)
+        {
+            int shapeRow = r - row;
+            int shapeCol = c - col;
+
+            if (shape[shapeRow][shapeCol] == '#' && board[r][c] == '#')
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+void day12_switchShape(const day12_shape& shape, int row, int col, day12_board& board)
+{
+    int height = shape.size();
+    int width = shape[0].size();
+
+    for (int r = row; r < row + height; ++r)
+    {
+        for (int c = col; c < col + width; ++c)
+        {
+            int shapeRow = r - row;
+            int shapeCol = c - col;
+
+            if (shape[shapeRow][shapeCol] == '#' )
+            {
+                if (board[r][c] == '#')
+                {
+                    board[r][c] = '.';
+                }
+                else
+                {
+                    board[r][c] = '#';
+                }
+            }
+        }
+    }
+}
+using day12_cache = std::map<std::string, bool>;
+
+std::string day12_getKey(const day12_board& currentBoard, const std::vector<int>& toAdd, int row, int col, int currentShapeToCheck, int shapeIndex)
+{
+    std:string s = "";
+    for (auto l : currentBoard)
+    {
+        s += l+ "|";
+    }
+
+    s += "-";
+    for (auto l : toAdd)
+    {
+        s += std::to_string(l) + ",";
+    }
+
+    s += "-";
+    for (int l : {row, col, currentShapeToCheck, shapeIndex})
+    {
+        s += std::to_string(l) + ",";
+    }
+
+    return s;
+}
+
+
+bool day12_solverA(const std::vector<std::vector<day12_shape>>& allShapes, std::vector<int>& toAdd,
+    day12_board& currentBoard, int currentShapeToCheck, int shapeIndex, int row, int col, int width, int height, day12_cache& cache)
+{
+    if (currentShapeToCheck >= toAdd.size())
+    {
+        for (auto elem : toAdd)
+        {
+            if (elem != 0) { return false; }
+        }
+        return true;
+    }
+
+    auto key = day12_getKey(currentBoard, toAdd, row, col, currentShapeToCheck, shapeIndex);
+    if (cache.contains(key))
+    {
+        return cache[key];
+    }
+
+    if (toAdd[currentShapeToCheck] == 0)
+    {
+        bool result = day12_solverA(allShapes, toAdd, currentBoard, currentShapeToCheck + 1, 0, row, col, width, height, cache);
+        cache[key] = result;
+        return result;
+    }
+
+    if (row >= height) { return false; }
+    if (col >= width)
+    {
+        bool result = day12_solverA(allShapes, toAdd, currentBoard, currentShapeToCheck, shapeIndex, row + 1, 0, width, height, cache);
+        cache[key] = result;
+        return result;
+    }
+    if (currentBoard[row][col] == '#')
+    {
+        bool result = day12_solverA(allShapes, toAdd, currentBoard, currentShapeToCheck, shapeIndex, row, col +1, width, height, cache);
+        cache[key] = result;
+        return result;
+    }
+    
+    if (shapeIndex >= allShapes[currentShapeToCheck].size()) { return false; }
+
+    bool someSuccess = false;
+    //try to add allShapes[currentShapeToCheck][shapeIndex] en pos row y col 
+    if (day12_canAddShape(allShapes[currentShapeToCheck][shapeIndex], row, col, currentBoard))
+    {
+        day12_switchShape(allShapes[currentShapeToCheck][shapeIndex], row, col, currentBoard);
+        toAdd[currentShapeToCheck]--;
+
+        int nextCol = col + allShapes[currentShapeToCheck][shapeIndex].size();
+        int nextRow = row;
+        someSuccess = day12_solverA(allShapes, toAdd, currentBoard, currentShapeToCheck, shapeIndex, nextRow, nextCol, width, height, cache);
+
+        toAdd[currentShapeToCheck]++;
+        day12_switchShape(allShapes[currentShapeToCheck][shapeIndex], row, col, currentBoard);
+    }
+
+    if (someSuccess)
+    {
+        cache[key] = true;
+        return true;
+    }
+
+    //move col +1
+    someSuccess = day12_solverA(allShapes, toAdd, currentBoard, currentShapeToCheck, shapeIndex, row, col + 1, width, height, cache);
+    if (someSuccess)
+    {
+        cache[key] = true;
+        return true;
+    }
+
+    //move to next shapeIndex
+    someSuccess = day12_solverA(allShapes, toAdd, currentBoard, currentShapeToCheck, shapeIndex + 1, row, col, width, height, cache);
+    if (someSuccess)
+    {
+        cache[key] = true;
+        return true;
+    }
+
+    return false;
+}
+
+long long day12_partA(const std::vector<day12_shape>& originalShape, const std::vector<day12_board_data>& allBoardsData)
+{
+    long long result = 0;
+
+    
+    std::vector<int> counts;
+
+    for (auto shape : originalShape)
+    {
+        int count = 0;
+        for (auto s : shape)
+        {
+            for (auto c : s)
+            {
+                if (c == '#')
+                {
+                    count++;
+                }
+            }
+        }
+        counts.push_back(count);
+    }
+
+
+
+    for (auto&& data : allBoardsData)
+    {
+        int width = data.width;
+        int height = data.height;
+        
+        long long totalSize = width * height;
+
+        long long current = 0;
+        for(int i = 0; i < data.total.size(); ++i)
+        {
+            current += counts[i] * data.total[i];
+        }
+
+        if (current < totalSize)
+        {
+            ++result;
+        }
+
+        /*
+        std::string key = std::to_string(width) + "x" + std::to_string(height);
+        auto total = data.total;
+
+        std::vector<std::string> currentBoard = std::vector<std::string>(height, std::string(width, '.'));
+
+        bool result = day12_solverA(allShapes, total, currentBoard, 0, 0, 0, 0, width, height, cacheOfCaches[key]);
+        if (result)
+        {
+            ++count;
+        }
+        std::cout << "terminado 1 caso\n";
+        */
+    }
+
+
+    return result;
+}
+
+void day12()
+{
+    auto fileTxt = ReadFile("./input/day12.txt");
+
+    int currentLine = 1;
+    auto original_shapes = day12_readShapes(fileTxt, currentLine);
+    auto boards = day12_readBoards(fileTxt, currentLine);
+    
+    auto allShapes = day12_getAllShapes(original_shapes);
+
+    auto partA = day12_partA(original_shapes, boards);
+
+    std::cout << "day12 => " << partA << "\n";
+}
+
+
 int main()
 {
     //day1();
@@ -1703,10 +2046,10 @@ int main()
     //day7();
     //day8();
     //day9();
-    day10();
+    //day10();
     //day11();
-    /*
     day12();
+    /*
     day13();
     day14();
     day15();
