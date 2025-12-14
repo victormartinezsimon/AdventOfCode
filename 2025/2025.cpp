@@ -687,11 +687,11 @@ void day6()
     day6_getInput(fileTxt, numbers, symbols);
 
     auto partA = day6_partA(numbers, symbols);
-    std::cout << "day 5 => " << partA << "\n";
+    std::cout << "day 6 => " << partA << "\n";
 
 
     auto partB = day6_partB(fileTxt, numbers, symbols);
-    std::cout << "day 5_B => " << partB << "\n";
+    std::cout << "day 6_B => " << partB << "\n";
 }
 void day7_allCalculus(const std::vector<std::string>& board, long long& partA, long long& partB)
 {
@@ -1775,188 +1775,6 @@ std::vector<day12_board_data>day12_readBoards(const std::vector<std::string>& fi
     return toReturn;
 }
 
-std::vector<std::vector<day12_shape>> day12_getAllShapes(const std::vector<day12_shape>& originalShapes)
-{
-    std::vector<std::vector<day12_shape>> toReturn;
-
-    for (auto&& s : originalShapes)
-    {
-        std::vector<day12_shape> rotations;
-        day12_shape s1 = s;
-        day12_shape s2 = day12_rotate90(s1);
-        day12_shape s3 = day12_rotate90(s2);
-        day12_shape s4 = day12_rotate90(s3);
-
-        for (auto&& toAdd : { s1,s2,s3,s4 })
-        {
-            if (std::find(rotations.begin(), rotations.end(), toAdd) == rotations.end())
-            {
-                rotations.push_back(toAdd);
-            }
-        }
-        toReturn.push_back(rotations);
-    }
-    return toReturn;
-}
-
-bool day12_canAddShape(const day12_shape& shape, int row, int col, const day12_board& board)
-{
-    int height = shape.size();
-    int width = shape[0].size();
-
-    if (row + height > board.size()) { return false; }
-    if (col + width > board[0].size()) { return false; }
-
-
-    for (int r = row; r < row + height; ++r)
-    {
-        for (int c = col; c < col + width; ++c)
-        {
-            int shapeRow = r - row;
-            int shapeCol = c - col;
-
-            if (shape[shapeRow][shapeCol] == '#' && board[r][c] == '#')
-            {
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
-void day12_switchShape(const day12_shape& shape, int row, int col, day12_board& board)
-{
-    int height = shape.size();
-    int width = shape[0].size();
-
-    for (int r = row; r < row + height; ++r)
-    {
-        for (int c = col; c < col + width; ++c)
-        {
-            int shapeRow = r - row;
-            int shapeCol = c - col;
-
-            if (shape[shapeRow][shapeCol] == '#' )
-            {
-                if (board[r][c] == '#')
-                {
-                    board[r][c] = '.';
-                }
-                else
-                {
-                    board[r][c] = '#';
-                }
-            }
-        }
-    }
-}
-using day12_cache = std::map<std::string, bool>;
-
-std::string day12_getKey(const day12_board& currentBoard, const std::vector<int>& toAdd, int row, int col, int currentShapeToCheck, int shapeIndex)
-{
-    std:string s = "";
-    for (auto l : currentBoard)
-    {
-        s += l+ "|";
-    }
-
-    s += "-";
-    for (auto l : toAdd)
-    {
-        s += std::to_string(l) + ",";
-    }
-
-    s += "-";
-    for (int l : {row, col, currentShapeToCheck, shapeIndex})
-    {
-        s += std::to_string(l) + ",";
-    }
-
-    return s;
-}
-
-
-bool day12_solverA(const std::vector<std::vector<day12_shape>>& allShapes, std::vector<int>& toAdd,
-    day12_board& currentBoard, int currentShapeToCheck, int shapeIndex, int row, int col, int width, int height, day12_cache& cache)
-{
-    if (currentShapeToCheck >= toAdd.size())
-    {
-        for (auto elem : toAdd)
-        {
-            if (elem != 0) { return false; }
-        }
-        return true;
-    }
-
-    auto key = day12_getKey(currentBoard, toAdd, row, col, currentShapeToCheck, shapeIndex);
-    if (cache.contains(key))
-    {
-        return cache[key];
-    }
-
-    if (toAdd[currentShapeToCheck] == 0)
-    {
-        bool result = day12_solverA(allShapes, toAdd, currentBoard, currentShapeToCheck + 1, 0, row, col, width, height, cache);
-        cache[key] = result;
-        return result;
-    }
-
-    if (row >= height) { return false; }
-    if (col >= width)
-    {
-        bool result = day12_solverA(allShapes, toAdd, currentBoard, currentShapeToCheck, shapeIndex, row + 1, 0, width, height, cache);
-        cache[key] = result;
-        return result;
-    }
-    if (currentBoard[row][col] == '#')
-    {
-        bool result = day12_solverA(allShapes, toAdd, currentBoard, currentShapeToCheck, shapeIndex, row, col +1, width, height, cache);
-        cache[key] = result;
-        return result;
-    }
-    
-    if (shapeIndex >= allShapes[currentShapeToCheck].size()) { return false; }
-
-    bool someSuccess = false;
-    //try to add allShapes[currentShapeToCheck][shapeIndex] en pos row y col 
-    if (day12_canAddShape(allShapes[currentShapeToCheck][shapeIndex], row, col, currentBoard))
-    {
-        day12_switchShape(allShapes[currentShapeToCheck][shapeIndex], row, col, currentBoard);
-        toAdd[currentShapeToCheck]--;
-
-        int nextCol = col + allShapes[currentShapeToCheck][shapeIndex].size();
-        int nextRow = row;
-        someSuccess = day12_solverA(allShapes, toAdd, currentBoard, currentShapeToCheck, shapeIndex, nextRow, nextCol, width, height, cache);
-
-        toAdd[currentShapeToCheck]++;
-        day12_switchShape(allShapes[currentShapeToCheck][shapeIndex], row, col, currentBoard);
-    }
-
-    if (someSuccess)
-    {
-        cache[key] = true;
-        return true;
-    }
-
-    //move col +1
-    someSuccess = day12_solverA(allShapes, toAdd, currentBoard, currentShapeToCheck, shapeIndex, row, col + 1, width, height, cache);
-    if (someSuccess)
-    {
-        cache[key] = true;
-        return true;
-    }
-
-    //move to next shapeIndex
-    someSuccess = day12_solverA(allShapes, toAdd, currentBoard, currentShapeToCheck, shapeIndex + 1, row, col, width, height, cache);
-    if (someSuccess)
-    {
-        cache[key] = true;
-        return true;
-    }
-
-    return false;
-}
-
 long long day12_partA(const std::vector<day12_shape>& originalShape, const std::vector<day12_board_data>& allBoardsData)
 {
     long long result = 0;
@@ -1999,22 +1817,7 @@ long long day12_partA(const std::vector<day12_shape>& originalShape, const std::
         {
             ++result;
         }
-
-        /*
-        std::string key = std::to_string(width) + "x" + std::to_string(height);
-        auto total = data.total;
-
-        std::vector<std::string> currentBoard = std::vector<std::string>(height, std::string(width, '.'));
-
-        bool result = day12_solverA(allShapes, total, currentBoard, 0, 0, 0, 0, width, height, cacheOfCaches[key]);
-        if (result)
-        {
-            ++count;
-        }
-        std::cout << "terminado 1 caso\n";
-        */
     }
-
 
     return result;
 }
@@ -2027,8 +1830,6 @@ void day12()
     auto original_shapes = day12_readShapes(fileTxt, currentLine);
     auto boards = day12_readBoards(fileTxt, currentLine);
     
-    auto allShapes = day12_getAllShapes(original_shapes);
-
     auto partA = day12_partA(original_shapes, boards);
 
     std::cout << "day12 => " << partA << "\n";
@@ -2037,41 +1838,16 @@ void day12()
 
 int main()
 {
-    //day1();
-    //day2(false);
-    //day3();
-    //day4();
-    //day5();
-    //day6();
-    //day7();
-    //day8();
-    //day9();
-    //day10();
-    //day11();
+    day1();
+    day2(true);
+    day3();
+    day4();
+    day5();
+    day6();
+    day7();
+    day8();
+    day9();
+    day10();
+    day11();
     day12();
-    /*
-    day13();
-    day14();
-    day15();
-    day16();
-    day17();
-    day18();
-    day19();
-    day20();
-    day21();
-    day22();
-    day23(false);
-    day24();
-    day25(false);
-    */
 }
-
-// Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
-// Depurar programa: F5 o menú Depurar > Iniciar depuración
-
-// Sugerencias para primeros pasos: 1. Use la ventana del Explorador de soluciones para agregar y administrar archivos
-//   2. Use la ventana de Team Explorer para conectar con el control de código fuente
-//   3. Use la ventana de salida para ver la salida de compilación y otros mensajes
-//   4. Use la ventana Lista de errores para ver los errores
-//   5. Vaya a Proyecto > Agregar nuevo elemento para crear nuevos archivos de código, o a Proyecto > Agregar elemento existente para agregar archivos de código existentes al proyecto
-//   6. En el futuro, para volver a abrir este proyecto, vaya a Archivo > Abrir > Proyecto y seleccione el archivo .sln
