@@ -102,29 +102,29 @@ long long day2_calculateA(long long start, long long end)
 
     if ((decimalsStart % 2) == 1)
     {
-        start = pow(10, decimalsStart);
+        start = static_cast<long long>(pow(10, decimalsStart));
         decimalsStart++;
     }
 
     if ((decimalEnd % 2) == 1)
     {
-        end = pow(10, decimalEnd-1) -1;
+        end = static_cast<long long>(pow(10, decimalEnd-1)) -1;
         decimalEnd--;
     }
 
-    int divisionStart = pow(10, decimalsStart / 2);
-    int divisionEnd = pow(10, decimalEnd / 2);
+    long long divisionStart = static_cast<long long>(pow(10, decimalsStart / 2));
+    long long divisionEnd = static_cast<long long>(pow(10, decimalEnd / 2));
 
-    int valueStart = start / divisionStart;
-    int valueEnd = end /  divisionEnd;
+    long long valueStart = start / divisionStart;
+    long long valueEnd = end /  divisionEnd;
 
     long long result = 0;
 
-    for (int value = valueStart; value <= valueEnd; ++value)
+    for (long long value = valueStart; value <= valueEnd; ++value)
     {
         std::string valueToCheck_str = std::to_string(value) + std::to_string(value);
 
-        unsigned long long valueToCheck = atoll(valueToCheck_str.c_str());
+        long long valueToCheck = atoll(valueToCheck_str.c_str());
 
         if (start <= valueToCheck && valueToCheck <= end)
         {
@@ -138,7 +138,7 @@ long long day2_calculateA(long long start, long long end)
 
 bool day2_numberValid(const std::string& value_str)
 {
-    int size = value_str.size();
+    auto size = value_str.size();
 
     for (int indexStart = 1; indexStart < size; ++indexStart)
     {
@@ -235,8 +235,8 @@ int day3_getBestDigit(const std::string& line, int start, int end)
 
 int day3_partA(const std::string& line)
 {
-    int indexFirst = day3_getBestDigit(line, 0, line.size() - 1);
-    int indexSecond = day3_getBestDigit(line, indexFirst + 1, line.size());
+    int indexFirst = day3_getBestDigit(line, 0, static_cast<int>(line.size()) - 1);
+    int indexSecond = day3_getBestDigit(line, indexFirst + 1, static_cast<int>(line.size()));
 
     std::string first = line.substr(indexFirst, 1);
     std::string second = line.substr(indexSecond, 1);
@@ -254,7 +254,7 @@ long long day3_partB(const std::string& line)
 
     for (int i = 0; i < totalIndex; ++i)
     {
-        auto result = day3_getBestDigit(line, lastIndex, line.size() - totalIndex + i +1);
+        auto result = day3_getBestDigit(line, lastIndex, static_cast<int>(line.size()) - totalIndex + i +1);
         indexes.push_back(result);
         lastIndex = result +1;
     }
@@ -376,8 +376,8 @@ long long day4_partB(const std::vector<std::string>& board, int width, int heigh
 void day4()
 {
     auto board = ReadFile("./input/day4.txt");
-    int width = board[0].size();
-    int height = board.size();
+    int width = static_cast<int>(board[0].size());
+    int height = static_cast<int>(board.size());
 
     long long partA = day4_partA(board, width, height);
     long long partB = day4_partB(board, width, height);
@@ -1696,8 +1696,8 @@ using day12_shape = std::vector<std::string>;
 
 struct day12_board_data
 {
-    int width;
-    int height;
+    int width = 0;
+    int height = 0;
     std::vector<int> total;
 };
 
